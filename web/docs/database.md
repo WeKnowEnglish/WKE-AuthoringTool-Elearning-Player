@@ -1,7 +1,9 @@
 # WeKnow English Database Architecture
 
 Last verified: 2026-09-15
-Registry review boundary: migration 149
+Registry review boundary: migration 151
+
+Migrations 150 and 151 sit outside the eight learning-critical journeys. 150 records marketing attribution. 151 adds an opt-in public preview of open trial times on a published Classroom Wall.
 Scope: learning-critical public data plus storage and realtime policy surfaces
 
 ## Purpose

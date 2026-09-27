@@ -900,7 +900,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/teacher/availability",
     title: "Trial availability + booking",
     description:
-      "Teacher publishes open trial slots; parent books via /parent/book-trial (linked child or prospect); confirm creates student+guardian link for prospects, then trial class enrollment.",
+      "Teacher publishes open trial slots and can show the next two weeks on the Classroom Wall. Parents book via /parent/book-trial (linked child or prospect); confirm creates student+guardian link for prospects, then trial class enrollment.",
     group: "classroom",
     status: "review",
   },

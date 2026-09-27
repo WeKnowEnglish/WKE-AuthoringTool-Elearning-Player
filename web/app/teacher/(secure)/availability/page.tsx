@@ -29,13 +29,24 @@ export default async function TeacherAvailabilityPage() {
   ]);
 
   let trialsEnabled = false;
+  let showTrialTimes = false;
   if (space) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("teacher_spaces")
-      .select("trials_enabled")
+      .select("trials_enabled, show_trial_times")
       .eq("id", space.id)
       .maybeSingle();
-    trialsEnabled = Boolean(data?.trials_enabled);
+    if (error && /show_trial_times/i.test(error.message)) {
+      const fallback = await supabase
+        .from("teacher_spaces")
+        .select("trials_enabled")
+        .eq("id", space.id)
+        .maybeSingle();
+      trialsEnabled = Boolean(fallback.data?.trials_enabled);
+    } else {
+      trialsEnabled = Boolean(data?.trials_enabled);
+      showTrialTimes = Boolean(data?.show_trial_times);
+    }
   }
 
   const origin = appOrigin();
@@ -65,6 +76,7 @@ export default async function TeacherAvailabilityPage() {
           bookingLink={bookingLink}
           publicBookPath={publicBookPath}
           trialsEnabled={trialsEnabled}
+          showTrialTimes={showTrialTimes}
           spacePublished={Boolean(space?.is_published)}
         />
         <TeacherTrialInbox initialBookings={bookings} />

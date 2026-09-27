@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   cancelTeacherAvailabilitySlot,
   createTeacherAvailabilitySeries,
+  setTeacherShowTrialTimes,
   setTeacherTrialsEnabled,
   updateTeacherAvailabilitySlot,
 } from "@/lib/actions/trial-availability";
@@ -21,6 +22,7 @@ type Props = {
   bookingLink: string;
   publicBookPath: string | null;
   trialsEnabled: boolean;
+  showTrialTimes: boolean;
   spacePublished: boolean;
 };
 
@@ -61,6 +63,7 @@ export function TeacherAvailabilityPanel({
   bookingLink,
   publicBookPath,
   trialsEnabled: initialTrialsEnabled,
+  showTrialTimes: initialShowTrialTimes,
   spacePublished,
 }: Props) {
   const router = useRouter();
@@ -75,12 +78,15 @@ export function TeacherAvailabilityPanel({
   const [note, setNote] = useState("");
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
   const [trialsEnabled, setTrialsEnabled] = useState(initialTrialsEnabled);
+  const [showTrialTimes, setShowTrialTimes] = useState(initialShowTrialTimes);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => setSlots(initialSlots), [initialSlots]);
+  useEffect(() => setShowTrialTimes(initialShowTrialTimes), [initialShowTrialTimes]);
+  useEffect(() => setTrialsEnabled(initialTrialsEnabled), [initialTrialsEnabled]);
   useEffect(() => {
     const detected = detectBrowserTimeZone();
     setDetectedZone(detected);
@@ -177,10 +183,30 @@ export function TeacherAvailabilityPanel({
         return;
       }
       setTrialsEnabled(enabled);
+      if (!enabled) setShowTrialTimes(false);
       setMessage(
         enabled
           ? "Parents can find you in the teacher directory and on your Classroom Wall."
           : "Trial discovery turned off.",
+      );
+      router.refresh();
+    });
+  };
+
+  const toggleShowTimes = (enabled: boolean) => {
+    setError(null);
+    setMessage(null);
+    startTransition(async () => {
+      const result = await setTeacherShowTrialTimes(enabled);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setShowTrialTimes(enabled);
+      setMessage(
+        enabled
+          ? "Open trial times will show on your Classroom Wall."
+          : "Trial times are hidden on your Classroom Wall.",
       );
       router.refresh();
     });
@@ -220,6 +246,21 @@ export function TeacherAvailabilityPanel({
             <span className="mt-0.5 block text-xs font-semibold text-slate-500">
               Requires a published Classroom Wall and Teacher Plus for live hosting.
               {!spacePublished ? " Publish your space first." : null}
+            </span>
+          </span>
+        </label>
+        <label className="mt-3 flex items-start gap-3 border-t border-slate-200 pt-3 text-sm font-semibold text-slate-800">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={trialsEnabled && showTrialTimes}
+            disabled={isPending || !trialsEnabled}
+            onChange={(event) => toggleShowTimes(event.target.checked)}
+          />
+          <span>
+            Show open times on my wall
+            <span className="mt-0.5 block text-xs font-semibold text-slate-500">
+              Visitors see the next two weeks of open trial times. They still sign in to book.
             </span>
           </span>
         </label>

@@ -176,16 +176,38 @@ export async function getPublishedTeacherSpaceByHandle(
   supabase: SupabaseClient,
   handle: string,
 ): Promise<PublicTeacherSpacePage | null> {
-  const { data: space, error } = await supabase
+  const { data: loadedSpace, error } = await supabase
     .from("teacher_spaces")
-    .select("id, handle, title, bio, is_published, hero_image_url, profile_image_url, activity_layout, wall_sections, theme_id, trials_enabled")
+    .select(
+      "id, handle, title, bio, is_published, hero_image_url, profile_image_url, activity_layout, wall_sections, theme_id, trials_enabled, show_trial_times",
+    )
     .eq("handle", handle)
     .eq("is_published", true)
     .maybeSingle();
 
-  if (error) {
+  let spaceRow = loadedSpace;
+  let spaceError = error;
+  let showTrialTimes = false;
+  if (spaceError && /show_trial_times/i.test(spaceError.message)) {
+    const fallback = await supabase
+      .from("teacher_spaces")
+      .select(
+        "id, handle, title, bio, is_published, hero_image_url, profile_image_url, activity_layout, wall_sections, theme_id, trials_enabled",
+      )
+      .eq("handle", handle)
+      .eq("is_published", true)
+      .maybeSingle();
+    spaceRow = fallback.data;
+    spaceError = fallback.error;
+  } else if (spaceRow) {
+    showTrialTimes = Boolean(
+      (spaceRow as { show_trial_times?: boolean }).show_trial_times,
+    );
+  }
+
+  if (spaceError) {
     // Pre-migration 115: column missing — fall back without trials flag.
-    if (/trials_enabled/i.test(error.message)) {
+    if (/trials_enabled/i.test(spaceError.message)) {
       const { data: legacy, error: legacyError } = await supabase
         .from("teacher_spaces")
         .select("id, handle, title, bio, is_published, hero_image_url, theme_id")
@@ -217,16 +239,18 @@ export async function getPublishedTeacherSpaceByHandle(
           wall_sections: [{ id: "activities", label: "Activities" }],
           theme_id: theme.id,
           trials_enabled: false,
+          show_trial_times: false,
         },
         items: (items ?? []).map((row) =>
           mapItemSummary(row as Parameters<typeof mapItemSummary>[0], legacy.handle),
         ),
       };
     }
-    throw new Error(`${error.message}${migrationHint(error.message)}`);
+    throw new Error(`${spaceError.message}${migrationHint(spaceError.message)}`);
   }
-  if (!space) return null;
+  if (!spaceRow) return null;
 
+  const space = spaceRow;
   const theme = resolveClassroomTheme(space.theme_id);
 
   const { data: items, error: itemsErr } = await supabase
@@ -253,6 +277,7 @@ export async function getPublishedTeacherSpaceByHandle(
       trials_enabled: Boolean(
         (space as { trials_enabled?: boolean }).trials_enabled,
       ),
+      show_trial_times: showTrialTimes,
     },
     items: (items ?? []).map((row) =>
       mapItemSummary(row as Parameters<typeof mapItemSummary>[0], space.handle),

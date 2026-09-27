@@ -5,6 +5,7 @@ import {
   mapAvailabilitySlotRow,
   mapTrialBookingRow,
   mapTrialOccurrenceRow,
+  type PublicTrialTime,
 } from "@/lib/class-schedule/trial-format";
 import type {
   TeacherAvailabilitySlot,
@@ -116,6 +117,50 @@ export const listMyTrialBookings = cache(async function listMyTrialBookings(): P
     };
   });
 });
+
+/** Open trial times safe to show on a public Classroom Wall. No slot ids or notes. */
+export async function listPublicTrialTimes(handle: string): Promise<PublicTrialTime[]> {
+  noStore();
+  const normalized = handle.trim().toLowerCase();
+  if (!normalized) return [];
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("list_public_trial_times", {
+    p_handle: normalized,
+  });
+
+  if (error) {
+    const message = (error.message ?? "").toLowerCase();
+    if (
+      message.includes("list_public_trial_times") ||
+      message.includes("show_trial_times") ||
+      error.code === "PGRST202" ||
+      error.code === "42883"
+    ) {
+      return [];
+    }
+    throw error;
+  }
+
+  return (data ?? [])
+    .map((row) => {
+      const record = row as {
+        starts_at?: string;
+        duration_minutes?: number;
+        timezone?: string;
+      };
+      if (typeof record.starts_at !== "string" || typeof record.timezone !== "string") {
+        return null;
+      }
+      const duration = Number(record.duration_minutes);
+      if (!Number.isFinite(duration)) return null;
+      return {
+        startsAt: record.starts_at,
+        durationMinutes: duration,
+        timezone: record.timezone,
+      };
+    })
+    .filter((time): time is PublicTrialTime => Boolean(time));
+}
 
 export async function listOpenAvailabilityForTeacher(
   teacherId: string,

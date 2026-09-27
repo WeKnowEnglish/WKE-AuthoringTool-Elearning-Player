@@ -132,6 +132,17 @@ curl -sS -X POST -H "Authorization: Bearer <CRON_SECRET>" https://weknowenglish.
 
 `vercel.json` only schedules diagnostics-retention at `17 3 * * *` UTC. Schedule that daily. `daily-cleanup` should run every 15–60 minutes. Confirm whether `class-clock` is already ticked elsewhere before adding a frequent job.
 
+### Managed Node.js cron fallback
+
+Some managed Node.js dashboards do not expose the website-level Cron Jobs page. In that case, use `.github/workflows/hostinger-maintenance.yml` instead:
+
+1. Add the same `CRON_SECRET` value under GitHub repository **Settings → Secrets and variables → Actions → New repository secret**.
+2. Merge the workflow into the default branch (`main`); scheduled workflows run from the default branch.
+3. Open **Actions → Hostinger maintenance → Run workflow** and run `daily-cleanup` once.
+4. Keep the workflow enabled. It runs diagnostics retention daily at 03:17 UTC and Daily cleanup at minutes 7 and 37 of every hour.
+
+Do not configure both hPanel and GitHub schedules for the same endpoint.
+
 6. Leave the Vercel project in place for rollback. Pause production deploys after 24–48 healthy hours so the Vercel quota stops draining.
 
 ## Rollback

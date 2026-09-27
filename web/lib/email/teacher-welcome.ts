@@ -90,6 +90,7 @@ export async function sendTeacherAccessAdminNotification(input: {
   email: string;
   school: string;
   reason: string;
+  attributionLines?: string[];
 }): Promise<SendEmailResult> {
   const to = process.env.TEACHER_ACCESS_NOTIFICATION_EMAIL?.trim();
   if (!to) {
@@ -111,6 +112,7 @@ export async function sendTeacherAccessAdminNotification(input: {
       "How they plan to use the portal:",
       input.reason,
       "",
+      ...(input.attributionLines ?? []),
       "Review the request in Teacher → Admin → Requests before creating an account.",
     ].join("\n"),
   });

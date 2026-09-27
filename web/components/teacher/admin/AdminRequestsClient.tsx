@@ -8,6 +8,7 @@ import {
   resendTeacherWelcomeEmail,
 } from "@/lib/actions/admin-users";
 import type { AdminAccessRequest } from "@/lib/data/admin-users";
+import { formatTrafficSource } from "@/lib/traffic/attribution";
 
 function formatWhen(iso: string | null) {
   if (!iso) return "—";
@@ -177,7 +178,9 @@ export function AdminRequestsClient({
         </p>
       ) : (
         <ul className="space-y-3">
-          {requests.map((request) => (
+          {requests.map((request) => {
+            const source = formatTrafficSource(request);
+            return (
             <li
               key={request.id}
               className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm"
@@ -187,6 +190,7 @@ export function AdminRequestsClient({
                   <p className="text-lg font-bold text-neutral-900">{request.fullName}</p>
                   <p className="font-mono text-sm text-neutral-700">{request.email}</p>
                   <p className="mt-1 text-sm text-neutral-600">{request.school}</p>
+                  {source ? <p className="mt-1 text-xs text-neutral-500">{source}</p> : null}
                 </div>
                 <div className="text-right text-xs text-neutral-500">
                   <p className="font-semibold capitalize text-neutral-800">{request.status}</p>
@@ -262,7 +266,8 @@ export function AdminRequestsClient({
                 </div>
               ) : null}
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
     </div>

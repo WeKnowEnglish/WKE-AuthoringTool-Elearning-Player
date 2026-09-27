@@ -3,7 +3,11 @@ import {
   createResourceDownloadToken,
   verifyResourceDownloadToken,
 } from "@/lib/lesson-plans/download-token";
-import { findLessonBySlug, parseMiniSeriesResourceId } from "@/lib/lesson-plans/mini-series-manifest";
+import {
+  findLessonBySlug,
+  miniSeriesDownloadLabel,
+  parseMiniSeriesResourceId,
+} from "@/lib/lesson-plans/mini-series-manifest";
 
 describe("resource download token", () => {
   it("round-trips a valid token", () => {
@@ -31,6 +35,8 @@ describe("mini-series manifest", () => {
       kind: "lesson",
       lessonSlug: "a1-pets",
     });
+    expect(miniSeriesDownloadLabel("library")).toBe("Full library");
+    expect(miniSeriesDownloadLabel("lesson:a1-pets")).toBe("Caring for a Pet");
   });
 
   it("finds imported lesson files in manifest", () => {

@@ -36,6 +36,8 @@ Create this as a third, independent Node.js web application:
 - Node.js: 24.x
 - Build command: `npm run build`
 - Start command: `npm start`
+- Output directory (when Hostinger requests one): `.next/standalone`
+- Entry file (when Hostinger requests one): `server.js`
 - Intended hostname: `deploy.weknowenglish.online`
 
 Set the three variables above in the Hostinger application. The dashboard health check is available at `/api/health`.

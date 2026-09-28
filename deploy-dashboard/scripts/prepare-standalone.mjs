@@ -1,4 +1,4 @@
-import { access, cp, mkdir } from "node:fs/promises";
+import { access, cp, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const projectRoot = process.cwd();
@@ -24,5 +24,18 @@ await mkdir(path.join(standaloneAppRoot, ".next"), { recursive: true });
 await cp(path.join(projectRoot, ".next", "static"), path.join(standaloneAppRoot, ".next", "static"), {
   recursive: true,
 });
+
+if (standaloneAppRoot !== standaloneRoot) {
+  const nestedServer = `./${path.basename(projectRoot)}/server.js`;
+  await writeFile(
+    path.join(standaloneRoot, "server.js"),
+    [
+      '"use strict";',
+      'process.env.HOSTNAME = "0.0.0.0";',
+      `require(${JSON.stringify(nestedServer)});`,
+      "",
+    ].join("\n"),
+  );
+}
 
 console.log("Prepared the WKE Deploy standalone runtime.");

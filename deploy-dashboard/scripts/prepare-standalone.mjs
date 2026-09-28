@@ -3,8 +3,17 @@ import path from "node:path";
 
 const projectRoot = process.cwd();
 const standaloneRoot = path.join(projectRoot, ".next", "standalone");
-const candidates = [standaloneRoot, path.join(standaloneRoot, path.basename(projectRoot))];
+const candidates = [path.join(standaloneRoot, path.basename(projectRoot)), standaloneRoot];
 let standaloneAppRoot;
+
+async function exists(target) {
+  try {
+    await access(target);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 for (const candidate of candidates) {
   try {
@@ -40,6 +49,17 @@ if (standaloneAppRoot !== standaloneRoot) {
 
 const deployRoot = path.join(projectRoot, "dist");
 await rm(deployRoot, { recursive: true, force: true });
-await cp(standaloneRoot, deployRoot, { recursive: true });
+await cp(standaloneAppRoot, deployRoot, { recursive: true });
+
+const standaloneNodeModules = path.join(standaloneRoot, "node_modules");
+if (
+  standaloneAppRoot !== standaloneRoot &&
+  (await exists(standaloneNodeModules)) &&
+  !(await exists(path.join(deployRoot, "node_modules")))
+) {
+  await cp(standaloneNodeModules, path.join(deployRoot, "node_modules"), {
+    recursive: true,
+  });
+}
 
 console.log("Prepared the WKE Deploy standalone runtime in dist/.");

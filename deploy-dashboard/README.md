@@ -4,6 +4,8 @@ This is the independent operational dashboard for We Know English deployments. I
 
 The first milestone is read-only. It checks the public `/api/health` endpoints for production and preview, displays their release metadata, and holds the promotion gate closed when preview is not verifiably ready. It does not store Hostinger, GitHub, or Supabase credentials and cannot change production.
 
+Dashboard changes are validated independently by `.github/workflows/deploy-dashboard-gates.yml` so they do not inherit or weaken the learning application's release checks.
+
 ## Local setup
 
 ```bash

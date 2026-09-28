@@ -1,4 +1,4 @@
-import { access, cp, mkdir, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const projectRoot = process.cwd();
@@ -38,4 +38,8 @@ if (standaloneAppRoot !== standaloneRoot) {
   );
 }
 
-console.log("Prepared the WKE Deploy standalone runtime.");
+const deployRoot = path.join(projectRoot, "dist");
+await rm(deployRoot, { recursive: true, force: true });
+await cp(standaloneRoot, deployRoot, { recursive: true });
+
+console.log("Prepared the WKE Deploy standalone runtime in dist/.");

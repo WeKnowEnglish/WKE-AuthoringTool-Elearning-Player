@@ -33,10 +33,11 @@ Create this as a third, independent Node.js web application:
 - Repository: `WeKnowEnglish/WKE-AuthoringTool-Elearning-Player`
 - Branch: the branch containing this dashboard until it is merged
 - Root directory: `deploy-dashboard`
+- Framework: `Other`
 - Node.js: 24.x
 - Build command: `npm run build`
-- Start command: `npm start`
-- Output directory (when Hostinger requests one): `.next/standalone`
+- Start command (when Hostinger requests one): `node server.js`
+- Output directory: `dist`
 - Entry file (when Hostinger requests one): `server.js`
 - Intended hostname: `deploy.weknowenglish.online`
 

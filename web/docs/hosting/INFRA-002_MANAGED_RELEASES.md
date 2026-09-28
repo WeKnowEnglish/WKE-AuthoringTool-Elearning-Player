@@ -59,6 +59,20 @@ The command exits successfully only after the expected release is stable. On fai
 4. Configure commit metadata at build time so `/api/health` can identify the exact release.
 5. Store the preview hostname in the future dashboard configuration; do not expose Hostinger or GitHub credentials to the browser.
 
+## Dashboard milestone
+
+The first independent dashboard implementation now lives in `deploy-dashboard/`. It is designed to run as its own Hostinger Node.js web application at `deploy.weknowenglish.online`, separate from both WKE production and WKE preview.
+
+The initial dashboard is deliberately read-only. It:
+
+- checks production and preview `/api/health` endpoints at request time;
+- displays health, environment, version, commit, and HTTP status;
+- recognizes Hostinger 403/404 responses as domain-routing problems;
+- keeps the promotion gate visibly closed until both endpoints identify valid releases; and
+- contains no GitHub, Hostinger, Supabase, student, or teacher credentials.
+
+This separation ensures the operational view can remain available while the learning application is building or restarting. Authentication and an audit trail are required before promotion or rollback controls are added.
+
 ## Diagnosing deployment downtime now
 
 Hostinger's current deployment layout should leave `hbuilds/current` pointing at the previous successful build until a replacement succeeds. If the public site is unavailable for the entire build:
@@ -69,4 +83,3 @@ Hostinger's current deployment layout should leave `hbuilds/current` pointing at
 4. Record whether the outage lasts for the whole build or only for the final process restart.
 
 If an uninterrupted final handoff is required and Hostinger still restarts the only production process, managed hosting cannot provide an application-controlled atomic switch. The next tier is either two production applications behind an external router or the Docker/VPS blue-green design in `HOSTINGER_VPS_DOCKER.md`, where Caddy changes upstream only after the new container is healthy.
-

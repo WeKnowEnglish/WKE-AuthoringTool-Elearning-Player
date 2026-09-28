@@ -6,8 +6,8 @@ export type AppReleaseEnvironment = {
 
 /**
  * Release id shown in platform diagnostics.
- * Vercel injects NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA. Hostinger does not —
- * set NEXT_PUBLIC_GIT_COMMIT_SHA at build time if you want a real sha.
+ * Vercel injects NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA. The managed Hostinger
+ * build derives NEXT_PUBLIC_GIT_COMMIT_SHA from the checked-out Git commit.
  */
 export function resolveAppReleaseVersion(
   environment: AppReleaseEnvironment = process.env,

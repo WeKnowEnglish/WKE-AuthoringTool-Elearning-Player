@@ -56,7 +56,7 @@ The command exits successfully only after the expected release is stable. On fai
 1. Keep the existing `weknowenglish.online` application as production.
 2. Create a second Hostinger Node.js application using a temporary hostname and a dedicated preview branch.
 3. Copy the non-production-safe environment configuration to that app. Use the temporary origin for `APP_ORIGIN` and `NEXT_PUBLIC_APP_ORIGIN`; add its callback URLs to Supabase Auth.
-4. Configure commit metadata at build time so `/api/health` can identify the exact release.
+4. The managed build derives commit metadata from the checked-out Git commit so `/api/health` can identify the exact release. A manually configured `NEXT_PUBLIC_GIT_COMMIT_SHA` remains only a fallback.
 5. Store the preview hostname in the future dashboard configuration; do not expose Hostinger or GitHub credentials to the browser.
 
 ## Dashboard milestone

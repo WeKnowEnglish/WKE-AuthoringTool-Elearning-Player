@@ -64,6 +64,9 @@ jobs:
       - name: Test Hostinger release controller
         run: npm run test:hostinger:release-controller
 
+      - name: Test Hostinger release metadata
+        run: npm run test:hostinger:release-metadata
+
       - name: Install browser
         run: npx playwright install chromium
 

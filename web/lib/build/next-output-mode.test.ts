@@ -28,7 +28,9 @@ describe("Next deployment output mode", () => {
     expect(rootPackage.scripts.start).toContain("web/.next/standalone/server.js");
     expect(packagingScript).toContain('process.env.HOSTNAME = "0.0.0.0"');
     expect(packagingScript).toContain('require("./web/server.js")');
-    expect(webPackage.scripts["build:managed"]).toBe("next build --webpack");
+    expect(webPackage.scripts["build:managed"]).toBe(
+      "node ./scripts/run-managed-build.mjs",
+    );
     expect(webPackage.scripts["postbuild:managed"]).toBe(
       "node ./scripts/prepare-managed-standalone.mjs",
     );

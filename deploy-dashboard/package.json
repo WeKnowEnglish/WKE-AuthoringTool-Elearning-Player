@@ -7,10 +7,10 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack && node scripts/prepare-standalone.mjs",
+    "build": "node scripts/run-managed-build.mjs && node scripts/prepare-standalone.mjs",
     "start": "node scripts/start-standalone.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --test lib/deployment-status.test.mjs"
+    "test": "node --test lib/*.test.mjs"
   },
   "dependencies": {
     "next": "16.3.4",

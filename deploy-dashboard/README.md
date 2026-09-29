@@ -22,7 +22,7 @@ Open `http://localhost:3000`.
 | --- | --- | --- |
 | `WKE_PRODUCTION_ORIGIN` | Production WKE origin to observe | `https://weknowenglish.online` |
 | `WKE_PREVIEW_ORIGIN` | Preview WKE origin to observe | `https://preview.weknowenglish.online` |
-| `WKE_DASHBOARD_GIT_COMMIT_SHA` | Commit identifying this dashboard build | `development` |
+| `WKE_DASHBOARD_GIT_COMMIT_SHA` | Optional fallback commit when Git metadata is unavailable | `development` |
 
 These values remain server-side. No application or database secrets belong in this dashboard milestone.
 
@@ -33,12 +33,11 @@ Create this as a third, independent Node.js web application:
 - Repository: `WeKnowEnglish/WKE-AuthoringTool-Elearning-Player`
 - Branch: the branch containing this dashboard until it is merged
 - Root directory: `deploy-dashboard`
-- Framework: `Other`
+- Framework: `Next.js`
 - Node.js: 24.x
 - Build command: `npm run build`
-- Start command (when Hostinger requests one): `node server.js`
-- Output directory: `dist`
-- Entry file (when Hostinger requests one): `server.js`
+- Output directory: `.next`
+- Entry file: leave blank
 - Intended hostname: `deploy.weknowenglish.online`
 
 Set the three variables above in the Hostinger application. The dashboard health check is available at `/api/health`.

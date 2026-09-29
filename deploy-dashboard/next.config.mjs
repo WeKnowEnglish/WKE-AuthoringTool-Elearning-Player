@@ -2,6 +2,10 @@
 const nextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  env: {
+    WKE_DASHBOARD_BUILD_COMMIT_SHA:
+      process.env.WKE_DASHBOARD_BUILD_COMMIT_SHA?.trim() || "development",
+  },
   headers: async () => [
     {
       source: "/:path*",

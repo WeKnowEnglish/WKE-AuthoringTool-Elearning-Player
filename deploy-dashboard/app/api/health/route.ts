@@ -7,7 +7,10 @@ export function GET() {
       status: "ok",
       service: "wke-deploy-dashboard",
       version: "0.1.0",
-      commit: process.env.WKE_DASHBOARD_GIT_COMMIT_SHA?.trim() || "development",
+      commit:
+        process.env.WKE_DASHBOARD_BUILD_COMMIT_SHA?.trim() ||
+        process.env.WKE_DASHBOARD_GIT_COMMIT_SHA?.trim() ||
+        "development",
       environment: process.env.NODE_ENV,
       timestamp: new Date().toISOString(),
     },

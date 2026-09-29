@@ -1,9 +1,9 @@
 # WeKnow English Database Architecture
 
-Last verified: 2026-09-29
-Registry review boundary: migration 153
+Last verified: 2026-09-30
+Registry review boundary: migration 154
 
-Migrations 150, 151, 152, and 153 sit outside the eight learning-critical journeys. 150 records first-touch marketing attribution. 151 adds an opt-in public preview of open trial times on a published Classroom Wall. 152 records each lesson-plan file download and whether the file was sent. 153 adds service-only administrator email logging plus private teacher-to-teacher conversations, safe directory profiles, membership-scoped messages, and Realtime publication for new messages.
+Migrations 150 through 154 sit outside the eight learning-critical journeys. 150 records first-touch marketing attribution. 151 adds an opt-in public preview of open trial times on a published Classroom Wall. 152 records each lesson-plan file download and whether the file was sent. 153 adds service-only administrator email logging plus private teacher-to-teacher conversations, safe directory profiles, membership-scoped messages, and Realtime publication for new messages. 154 adds a service-only audit trail for security-sensitive administrator actions.
 Scope: learning-critical public data plus storage and realtime policy surfaces
 
 ## Purpose
@@ -102,6 +102,11 @@ The linked audit reports three new advisory-only foreign-key index candidates fr
 `admin_email_sends.sent_by`, `teacher_conversations.created_by`, and `teacher_messages.sender_id`.
 They are recorded for measured follow-up rather than automatically creating indexes without query
 or delete-path evidence.
+
+Migration 154 adds `admin_audit_log` as a service-role-only operational security record. It stores
+allowlisted administrator action metadata and explicitly excludes credentials, PINs, invitation
+links, tokens, and request bodies. Browser roles receive no access. This table is outside the eight
+learning-critical journeys and is intentionally not registered as student learning state.
 
 ## Learning-Critical Data Chains
 

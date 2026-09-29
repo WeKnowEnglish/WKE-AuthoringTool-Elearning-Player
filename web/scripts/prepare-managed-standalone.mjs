@@ -55,4 +55,19 @@ cpSync(standaloneNodeModules, resolve(deployRoot, "node_modules"), {
   force: true,
 });
 
+writeFileSync(
+  resolve(deployRoot, "package.json"),
+  `${JSON.stringify(
+    {
+      name: "wke-preview-runtime",
+      version: "0.1.0",
+      private: true,
+      engines: { node: "24.x" },
+      scripts: { start: "node server.js" },
+    },
+    null,
+    2,
+  )}\n`,
+);
+
 console.log("Managed-hosting standalone bundle: OK (web/dist)");

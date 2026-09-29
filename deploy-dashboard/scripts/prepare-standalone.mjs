@@ -62,4 +62,19 @@ if (
   });
 }
 
+await writeFile(
+  path.join(deployRoot, "package.json"),
+  `${JSON.stringify(
+    {
+      name: "wke-deploy-dashboard-runtime",
+      version: "0.1.0",
+      private: true,
+      engines: { node: "24.x" },
+      scripts: { start: "node server.js" },
+    },
+    null,
+    2,
+  )}\n`,
+);
+
 console.log("Prepared the WKE Deploy standalone runtime in dist/.");

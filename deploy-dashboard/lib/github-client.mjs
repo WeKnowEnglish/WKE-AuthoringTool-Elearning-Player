@@ -19,19 +19,26 @@ export function releaseBranchForCommit(commit) {
   return `wke-release/${normalizeCommit(commit).slice(0, 12)}`;
 }
 
-export function createGitHubClient({ token, owner, repository, fetchImplementation = fetch }) {
-  if (!token?.trim()) throw new Error("GITHUB_DEPLOY_TOKEN is required.");
+export function previewBranchForCommit(commit) {
+  return `wke-preview/${normalizeCommit(commit).slice(0, 12)}`;
+}
+
+export function createGitHubClient({ token, tokenProvider, owner, repository, fetchImplementation = fetch }) {
+  if (!token?.trim() && typeof tokenProvider !== "function") {
+    throw new Error("A GitHub token or token provider is required.");
+  }
   if (!owner?.trim() || !repository?.trim()) throw new Error("GitHub repository is required.");
 
   const repositoryPath = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}`;
 
   async function request(path, options = {}) {
+    const requestToken = typeof tokenProvider === "function" ? await tokenProvider() : token;
     const response = await fetchImplementation(`${API_ORIGIN}${path}`, {
       ...options,
       cache: "no-store",
       headers: {
         accept: "application/vnd.github+json",
-        authorization: `Bearer ${token}`,
+        authorization: `Bearer ${requestToken}`,
         "x-github-api-version": "2022-11-28",
         ...(options.body ? { "content-type": "application/json" } : {}),
         ...options.headers,
@@ -62,28 +69,36 @@ export function createGitHubClient({ token, owner, repository, fetchImplementati
     return normalizeCommit(payload.sha);
   }
 
+  async function ensureImmutableBranch(commitish, branchForCommit) {
+    const sha = await resolveCommit(commitish);
+    const branch = branchForCommit(sha);
+    try {
+      await request(`${repositoryPath}/git/refs`, {
+        method: "POST",
+        body: JSON.stringify({ ref: `refs/heads/${branch}`, sha }),
+      });
+    } catch (error) {
+      if (!(error instanceof GitHubApiError) || error.status !== 422) throw error;
+      const existing = await request(
+        `${repositoryPath}/git/ref/heads/${encodeURIComponent(branch)}`,
+      );
+      const existingSha = normalizeCommit(existing?.object?.sha);
+      if (existingSha !== sha) {
+        throw new GitHubApiError("Existing immutable branch points to another commit.", 409);
+      }
+    }
+    return { branch, sha };
+  }
+
   return {
     resolveCommit,
 
+    async ensurePreviewBranch(commitish) {
+      return ensureImmutableBranch(commitish, previewBranchForCommit);
+    },
+
     async ensureReleaseBranch(commitish) {
-      const sha = await resolveCommit(commitish);
-      const branch = releaseBranchForCommit(sha);
-      try {
-        await request(`${repositoryPath}/git/refs`, {
-          method: "POST",
-          body: JSON.stringify({ ref: `refs/heads/${branch}`, sha }),
-        });
-      } catch (error) {
-        if (!(error instanceof GitHubApiError) || error.status !== 422) throw error;
-        const existing = await request(
-          `${repositoryPath}/git/ref/heads/${encodeURIComponent(branch)}`,
-        );
-        const existingSha = normalizeCommit(existing?.object?.sha);
-        if (existingSha !== sha) {
-          throw new GitHubApiError("Existing release branch points to another commit.", 409);
-        }
-      }
-      return { branch, sha };
+      return ensureImmutableBranch(commitish, releaseBranchForCommit);
     },
   };
 }

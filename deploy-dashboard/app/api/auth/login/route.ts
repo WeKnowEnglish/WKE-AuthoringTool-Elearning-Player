@@ -7,7 +7,7 @@ import {
   SESSION_COOKIE_NAME,
   verifyPassword,
 } from "../../../../lib/auth.mjs";
-import { readAdminConfig } from "../../../../lib/control-config.mjs";
+import { readAdminConfig, readIdentityConfig } from "../../../../lib/control-config.mjs";
 import { consumeLoginAttempt } from "../../../../lib/login-rate-limit.mjs";
 
 const WINDOW_MS = 15 * 60 * 1_000;
@@ -31,8 +31,9 @@ export async function POST(request: Request) {
     return new Response("Forbidden", { status: 403 });
   }
 
+  const identity = readIdentityConfig();
   const admin = readAdminConfig();
-  if (!admin.configured || !admin.config.password || !admin.config.sessionSecret) {
+  if (!identity.legacyEnabled || !admin.configured || !admin.config.password || !admin.config.sessionSecret) {
     return new Response("Administrator login is not configured.", { status: 503 });
   }
 

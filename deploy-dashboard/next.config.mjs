@@ -11,6 +11,7 @@ const nextConfig = {
       source: "/:path*",
       headers: [
         { key: "X-Content-Type-Options", value: "nosniff" },
+        { key: "X-DNS-Prefetch-Control", value: "off" },
         { key: "Referrer-Policy", value: "no-referrer" },
         { key: "X-Frame-Options", value: "DENY" },
         { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
@@ -35,6 +36,14 @@ const nextConfig = {
           ].join("; "),
         },
       ],
+    },
+    {
+      source: "/deployments/:path*",
+      headers: [{ key: "Cache-Control", value: "private, no-store, max-age=0" }],
+    },
+    {
+      source: "/api/:path*",
+      headers: [{ key: "Cache-Control", value: "no-store, max-age=0" }],
     },
   ],
 };

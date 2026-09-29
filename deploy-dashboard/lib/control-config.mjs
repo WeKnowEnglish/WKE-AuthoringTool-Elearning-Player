@@ -2,6 +2,7 @@ const DOMAIN_PATTERN = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)
 const REPOSITORY_NAME_PATTERN = /^[A-Za-z0-9._-]{1,100}$/;
 const OWNER_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const DASHBOARD_ROLES = new Set(["owner", "administrator", "developer", "viewer"]);
 
 function value(environment, key) {
   const normalized = environment[key]?.trim();
@@ -23,6 +24,29 @@ function validate(name, resolved, pattern) {
 
 export function readControlPlaneConfig(environment = process.env) {
   const missing = [];
+  const githubToken = value(environment, "GITHUB_DEPLOY_TOKEN");
+  const githubAppId = validate(
+    "WKE_GITHUB_APP_ID",
+    value(environment, "WKE_GITHUB_APP_ID"),
+    /^\d+$/,
+  );
+  const githubAppPrivateKey = value(environment, "WKE_GITHUB_APP_PRIVATE_KEY");
+  const githubAppInstallationId = validate(
+    "WKE_GITHUB_APP_INSTALLATION_ID",
+    value(environment, "WKE_GITHUB_APP_INSTALLATION_ID"),
+    /^\d+$/,
+  );
+  const anyGitHubAppValue = Boolean(githubAppId || githubAppPrivateKey || githubAppInstallationId);
+  const githubAppConfigured = Boolean(githubAppId && githubAppPrivateKey && githubAppInstallationId);
+  if (!githubToken && !githubAppConfigured) {
+    if (anyGitHubAppValue) {
+      if (!githubAppId) missing.push("WKE_GITHUB_APP_ID");
+      if (!githubAppPrivateKey) missing.push("WKE_GITHUB_APP_PRIVATE_KEY");
+      if (!githubAppInstallationId) missing.push("WKE_GITHUB_APP_INSTALLATION_ID");
+    } else {
+      missing.push("GitHub App credentials or GITHUB_DEPLOY_TOKEN");
+    }
+  }
   const config = {
     hostingerApiToken: required(environment, "HOSTINGER_API_TOKEN", missing),
     hostingerUsername: required(environment, "WKE_HOSTINGER_USERNAME", missing),
@@ -31,7 +55,11 @@ export function readControlPlaneConfig(environment = process.env) {
       required(environment, "WKE_HOSTINGER_GIT_INSTALLATION_UUID", missing),
       UUID_PATTERN,
     ),
-    githubToken: required(environment, "GITHUB_DEPLOY_TOKEN", missing),
+    githubToken,
+    githubAppId,
+    githubAppPrivateKey,
+    githubAppInstallationId,
+    githubAuthentication: githubAppConfigured ? "app" : githubToken ? "token" : undefined,
     githubOwner: validate(
       "WKE_GITHUB_OWNER",
       required(environment, "WKE_GITHUB_OWNER", missing),
@@ -80,5 +108,87 @@ export function readAdminConfig(environment = process.env) {
     configured: missing.length === 0,
     missing,
     config: { password, sessionSecret },
+  };
+}
+
+function parseRoleMap(raw) {
+  if (!raw) return {};
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("WKE_DASHBOARD_GITHUB_ROLE_MAP must be valid JSON.");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("WKE_DASHBOARD_GITHUB_ROLE_MAP must be a JSON object.");
+  }
+  const result = {};
+  for (const [login, role] of Object.entries(parsed)) {
+    if (!/^[A-Za-z0-9-]{1,39}$/.test(login) || !DASHBOARD_ROLES.has(role)) {
+      throw new Error("WKE_DASHBOARD_GITHUB_ROLE_MAP contains an invalid login or role.");
+    }
+    result[login.toLowerCase()] = role;
+  }
+  return result;
+}
+
+export function readIdentityConfig(environment = process.env) {
+  const githubClientId = value(environment, "WKE_DASHBOARD_GITHUB_CLIENT_ID");
+  const githubClientSecret = value(environment, "WKE_DASHBOARD_GITHUB_CLIENT_SECRET");
+  const databaseUrl = value(environment, "CONTROL_PLANE_SUPABASE_URL");
+  const databaseServiceRoleKey = value(environment, "CONTROL_PLANE_SUPABASE_SERVICE_ROLE_KEY");
+  const roleMap = parseRoleMap(value(environment, "WKE_DASHBOARD_GITHUB_ROLE_MAP"));
+  const oauthMissing = [];
+  if (!githubClientId) oauthMissing.push("WKE_DASHBOARD_GITHUB_CLIENT_ID");
+  if (!githubClientSecret) oauthMissing.push("WKE_DASHBOARD_GITHUB_CLIENT_SECRET");
+  if (!databaseUrl) oauthMissing.push("CONTROL_PLANE_SUPABASE_URL");
+  if (!databaseServiceRoleKey) oauthMissing.push("CONTROL_PLANE_SUPABASE_SERVICE_ROLE_KEY");
+  if (!Object.keys(roleMap).length) oauthMissing.push("WKE_DASHBOARD_GITHUB_ROLE_MAP");
+
+  const legacy = readAdminConfig(environment);
+  const oauthConfigured = oauthMissing.length === 0;
+  const breakGlassEnabled = value(environment, "WKE_DASHBOARD_BREAK_GLASS_ENABLED") === "true";
+  const legacyEnabled = legacy.configured && (!oauthConfigured || breakGlassEnabled);
+
+  return {
+    configured: oauthConfigured || legacyEnabled,
+    mode: oauthConfigured ? "github" : legacyEnabled ? "legacy" : "unconfigured",
+    oauthConfigured,
+    oauthMissing,
+    legacyEnabled,
+    breakGlassEnabled,
+    config: {
+      githubClientId,
+      githubClientSecret,
+      databaseUrl,
+      databaseServiceRoleKey,
+      roleMap,
+      requireGitHub2FA: value(environment, "WKE_DASHBOARD_REQUIRE_GITHUB_2FA") !== "false",
+    },
+  };
+}
+
+export function readDeploymentContextConfig(environment = process.env) {
+  const missing = [];
+  const organizationId = validate(
+    "CONTROL_PLANE_ORGANIZATION_ID",
+    required(environment, "CONTROL_PLANE_ORGANIZATION_ID", missing),
+    UUID_PATTERN,
+  );
+  const projectId = validate(
+    "CONTROL_PLANE_PROJECT_ID",
+    required(environment, "CONTROL_PLANE_PROJECT_ID", missing),
+    UUID_PATTERN,
+  );
+
+  return {
+    configured: missing.length === 0,
+    missing,
+    config: {
+      organizationId,
+      projectId,
+      singleAdministratorBreakGlass:
+        value(environment, "WKE_DEPLOY_SINGLE_ADMIN_BREAK_GLASS") === "true",
+    },
   };
 }

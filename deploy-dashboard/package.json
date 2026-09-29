@@ -10,7 +10,8 @@
     "build": "node scripts/run-managed-build.mjs && node scripts/prepare-standalone.mjs",
     "start": "node scripts/start-standalone.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --test lib/*.test.mjs"
+    "test": "node --test lib/*.test.mjs",
+    "control:bootstrap": "node scripts/bootstrap-control-plane.mjs"
   },
   "dependencies": {
     "next": "16.3.4",

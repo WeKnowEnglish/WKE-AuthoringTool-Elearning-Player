@@ -1,0 +1,32 @@
+name: WKE Deploy control worker
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wke-deploy-control-worker
+  cancel-in-progress: false
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Process and reconcile deployment jobs
+        env:
+          DASHBOARD_ORIGIN: ${{ vars.WKE_DEPLOY_DASHBOARD_ORIGIN }}
+          WORKER_SECRET: ${{ secrets.WKE_DEPLOY_WORKER_SECRET }}
+        run: |
+          test -n "$DASHBOARD_ORIGIN"
+          test -n "$WORKER_SECRET"
+          curl --fail-with-body --silent --show-error \
+            --retry 2 \
+            --max-time 60 \
+            --request POST \
+            --header "Authorization: Bearer $WORKER_SECRET" \
+            "${DASHBOARD_ORIGIN%/}/api/control/jobs/process"

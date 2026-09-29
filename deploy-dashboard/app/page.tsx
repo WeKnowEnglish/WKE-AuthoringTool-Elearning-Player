@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 
 import { probeDeployment, type DeploymentStatus } from "../lib/deployment-status.mjs";
+import { isAdminAuthenticated } from "../lib/dashboard-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,7 @@ export default async function DashboardPage() {
     probeDeployment({ name: "Production", origin: productionOrigin }),
     probeDeployment({ name: "Preview", origin: previewOrigin }),
   ]);
+  const authenticated = await isAdminAuthenticated();
   const promotionSafe = production.releaseReady && preview.releaseReady;
 
   return (
@@ -91,7 +93,12 @@ export default async function DashboardPage() {
             <small>Release control center</small>
           </span>
         </a>
-        <a className="refresh-button" href="/">Refresh status</a>
+        <nav className="topbar-actions">
+          <a className="refresh-button" href="/">Refresh status</a>
+          <a className="primary-nav-button" href={authenticated ? "/deployments" : "/login"}>
+            {authenticated ? "Manage deployments" : "Administrator sign in"}
+          </a>
+        </nav>
       </header>
 
       <section className="hero">
@@ -135,7 +142,7 @@ export default async function DashboardPage() {
       </section>
 
       <footer>
-        <span>Read-only milestone · No deployment credentials are exposed</span>
+        <span>Public status · Deployment credentials remain server-side</span>
         <a href="/api/health">Dashboard health</a>
       </footer>
     </main>

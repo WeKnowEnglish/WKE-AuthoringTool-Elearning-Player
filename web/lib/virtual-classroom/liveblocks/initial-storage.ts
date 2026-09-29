@@ -79,7 +79,7 @@ export type VirtualClassroomRuntimeFields = {
   /** Learn class board: when false, only the teacher can draw. */
   learnStudentPensEnabled: boolean;
   activeActivity: {
-    kind: "whiteboard" | "document" | "word_cards" | null;
+    kind: "whiteboard" | "document" | "word_cards" | "secret_roles" | null;
     joinCode: string | null;
     label: string | null;
     roundId?: string | null;

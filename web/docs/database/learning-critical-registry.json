@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "reviewedThroughMigration": "154",
+  "reviewedThroughMigration": "155",
   "scope": "Learning-critical public objects plus storage and realtime policy surfaces for the first 100 active students.",
   "objects": [
     {
@@ -648,6 +648,110 @@
       "callSites": [
         "lib/virtual-classroom/server/runtime-snapshot.ts",
         "app/api/virtual-classroom/[sessionId]/runtime/route.ts"
+      ]
+    },
+    {
+      "name": "public.secret_role_rounds",
+      "kind": "table",
+      "journeys": [
+        "classroom-recovery",
+        "learning-progress"
+      ],
+      "owner": "Secret Roles live activity",
+      "sensitivity": "classroom activity prompts and lifecycle",
+      "authority": "session host through server routes",
+      "migration": "supabase/migrations/155_secret_role_rounds.sql",
+      "relationships": [
+        "session_id -> class_sessions.id"
+      ],
+      "access": "service role only; authorized routes provide projections",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/secret-roles/server/persistence.ts",
+        "app/api/secret-roles/[roundId]/host/route.ts"
+      ]
+    },
+    {
+      "name": "public.secret_role_cards",
+      "kind": "table",
+      "journeys": [
+        "classroom-recovery",
+        "learning-progress"
+      ],
+      "owner": "Secret Roles private content",
+      "sensitivity": "private student role information",
+      "authority": "session host; one-card student projection before reveal",
+      "migration": "supabase/migrations/155_secret_role_rounds.sql",
+      "relationships": [
+        "round_id -> secret_role_rounds.id"
+      ],
+      "access": "service role only; never shared in classroom realtime state",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/secret-roles/server/persistence.ts",
+        "app/api/secret-roles/[roundId]/me/route.ts"
+      ]
+    },
+    {
+      "name": "public.secret_role_assignments",
+      "kind": "table",
+      "journeys": [
+        "classroom-recovery",
+        "learning-progress"
+      ],
+      "owner": "Secret Roles assignment boundary",
+      "sensitivity": "student identity to private role mapping",
+      "authority": "atomic launch RPC and explicit late-join assignment",
+      "migration": "supabase/migrations/155_secret_role_rounds.sql",
+      "relationships": [
+        "round_id -> secret_role_rounds.id",
+        "(round_id, card_id) -> secret_role_cards(round_id, id)"
+      ],
+      "access": "service role only; student route selects by signed participant id",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/secret-roles/server/persistence.ts",
+        "lib/secret-roles/server/access.ts"
+      ]
+    },
+    {
+      "name": "public.secret_role_responses",
+      "kind": "table",
+      "journeys": [
+        "learning-progress"
+      ],
+      "owner": "Secret Roles student decision",
+      "sensitivity": "student educational response",
+      "authority": "signed classroom member during Decision phase",
+      "migration": "supabase/migrations/155_secret_role_rounds.sql",
+      "relationships": [
+        "round_id -> secret_role_rounds.id"
+      ],
+      "access": "service role only; teacher receives round-scoped overview",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/secret-roles/server/persistence.ts",
+        "app/api/secret-roles/[roundId]/response/route.ts"
+      ]
+    },
+    {
+      "name": "public.create_secret_role_round",
+      "kind": "function",
+      "journeys": [
+        "classroom-recovery",
+        "learning-progress"
+      ],
+      "owner": "Atomic Secret Roles launch",
+      "sensitivity": "private role content and assignment mapping",
+      "authority": "service-role launch route",
+      "migration": "supabase/migrations/155_secret_role_rounds.sql",
+      "relationships": [
+        "atomically writes round, cards, and assignments"
+      ],
+      "access": "service role only",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/secret-roles/server/persistence.ts"
       ]
     },
     {

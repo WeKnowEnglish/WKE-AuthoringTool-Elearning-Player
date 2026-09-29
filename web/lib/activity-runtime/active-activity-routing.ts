@@ -41,5 +41,8 @@ export function studentEntryPathForActivity(activity: ActiveActivityRef): string
   if (activity.kind === "word_cards") {
     return `/word-cards/${activity.joinCode}`;
   }
+  if (activity.kind === "secret_roles") {
+    return `/secret-roles/${activity.roundId ?? activity.joinCode}`;
+  }
   return null;
 }

@@ -27,15 +27,17 @@ import { encodeVcMemberToken } from "@/lib/virtual-classroom/session-cookie";
 import { getRoomProduct } from "@/lib/liveblocks/room-prefix";
 
 describe("activity-runtime registry", () => {
-  it("registers whiteboard, document, and word_cards", () => {
+  it("registers the live activity kinds", () => {
     const kinds = listEnabledVcActivities().map((a) => a.kind);
     expect(kinds).toContain("whiteboard");
     expect(kinds).toContain("document");
     expect(kinds).toContain("word_cards");
+    expect(kinds).toContain("secret_roles");
     expect(isRegisteredVcActivity("document")).toBe(true);
     expect(isRegisteredVcActivity("word_cards")).toBe(true);
     expect(getVcActivity("document")?.interaction.participationMode).toBe("individual");
     expect(getVcActivity("word_cards")?.interaction.pushToStudent).toBe(true);
+    expect(getVcActivity("secret_roles")?.interaction.rewardsEnabled).toBe(false);
     expect(isDocumentActivityRegistered()).toBe(true);
   });
 });
@@ -126,6 +128,14 @@ describe("activity-runtime review + routing", () => {
         roundId: "docr_1",
       }),
     ).toBe("/document/docr_1");
+    expect(
+      studentEntryPathForActivity({
+        kind: "secret_roles",
+        joinCode: "srr_1",
+        label: "The missing bag",
+        roundId: "srr_1",
+      }),
+    ).toBe("/secret-roles/srr_1");
   });
 });
 

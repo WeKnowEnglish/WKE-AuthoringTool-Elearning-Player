@@ -71,3 +71,20 @@ export const WORD_CARDS_INTERACTION_CONFIG: ActivityInteractionConfig = {
   timerEnabled: true,
   rewardsEnabled: true,
 };
+
+export const SECRET_ROLES_INTERACTION_CONFIG: ActivityInteractionConfig = {
+  participationMode: "individual",
+  studentStates: {
+    waiting: true,
+    active: true,
+    submitted: true,
+    review: true,
+    revision: false,
+  },
+  reviewModes: ["model_answer"],
+  pushToStudent: true,
+  allowRevision: false,
+  anonymousReview: false,
+  timerEnabled: true,
+  rewardsEnabled: false,
+};

@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { VirtualClassroomActivityEmbed } from "@/components/virtual-classroom/VirtualClassroomActivityEmbed";
 import { VirtualClassroomWhiteboardEmbed } from "@/components/virtual-classroom/VirtualClassroomWhiteboardEmbed";
 import { VirtualClassroomPresentationStage } from "@/components/virtual-classroom/VirtualClassroomPresentationStage";
+import { SecretRolesLaunchPanel } from "@/components/secret-roles/SecretRolesLaunchPanel";
+import { SecretRolesSessionView } from "@/components/secret-roles/SecretRolesSessionView";
+import type { ActiveActivityRef } from "@/lib/activity-runtime/active-activity-routing";
 import type { ClassLesson } from "@/lib/class-lessons/types";
 import { playPathForStudioActivity } from "@/lib/studio-activities/paths";
 import type { StudioActivityFormat } from "@/lib/studio-activities/types";
@@ -42,6 +45,8 @@ type Props = {
   onToggleStudentPens: (enabled: boolean) => void;
   pensBusy?: boolean;
   isolatedWhiteboardProvider?: boolean;
+  members: Array<{ id: string; name: string; role: string }>;
+  activeActivity: ActiveActivityRef | null;
 };
 
 export function VirtualClassroomLearnStage({
@@ -65,6 +70,8 @@ export function VirtualClassroomLearnStage({
   onToggleStudentPens,
   pensBusy = false,
   isolatedWhiteboardProvider = false,
+  members,
+  activeActivity,
 }: Props) {
   const isHost = role === "host";
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -72,6 +79,15 @@ export function VirtualClassroomLearnStage({
   const [bank, setBank] = useState<BankItem[]>([]);
   const [bankLoading, setBankLoading] = useState(false);
   const [bankError, setBankError] = useState<string | null>(null);
+  const [secretRolesLaunchOpen, setSecretRolesLaunchOpen] = useState(false);
+  const [launchedSecretRoundId, setLaunchedSecretRoundId] = useState<string | null>(null);
+  const secretRolesRoundId =
+    activeActivity?.kind === "secret_roles"
+      ? activeActivity.roundId ?? activeActivity.joinCode
+      : launchedSecretRoundId;
+  const secretRoleStudents = members
+    .filter((member) => member.role !== "host")
+    .map((member) => ({ id: member.id, displayName: member.name }));
 
   useEffect(() => {
     if (!isHost || !classId) return;
@@ -113,8 +129,6 @@ export function VirtualClassroomLearnStage({
   useEffect(() => {
     if (!isHost || !pickerOpen) return;
     let cancelled = false;
-    setBankLoading(true);
-    setBankError(null);
     void fetch("/api/studio/activities?limit=40", { credentials: "include" })
       .then(async (res) => {
         const payload = (await res.json()) as {
@@ -138,8 +152,16 @@ export function VirtualClassroomLearnStage({
     };
   }, [isHost, pickerOpen]);
 
+  const openPicker = () => {
+    setBankLoading(true);
+    setBankError(null);
+    setPickerOpen(true);
+  };
+
   const selectActivity = (activity: VirtualClassroomLearnActivity) => {
     onSetActivity(activity);
+    setSecretRolesLaunchOpen(false);
+    setLaunchedSecretRoundId(null);
     setPickerOpen(false);
   };
 
@@ -186,10 +208,23 @@ export function VirtualClassroomLearnStage({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => setPickerOpen((v) => !v)}
+              onClick={() => {
+                if (pickerOpen) setPickerOpen(false);
+                else openPicker();
+              }}
               className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50"
             >
               {pickerOpen ? "Close picker" : learnActivity ? "Change activity" : "Pick activity"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPickerOpen(false);
+                setSecretRolesLaunchOpen((value) => !value);
+              }}
+              className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-900 hover:bg-violet-100"
+            >
+              {secretRolesLaunchOpen ? "Close Secret Roles" : "Start Secret Roles"}
             </button>
             <a
               href="/teacher/activity-builder/tracks"
@@ -276,7 +311,24 @@ export function VirtualClassroomLearnStage({
       ) : null}
 
       <div className="min-h-0 flex-1">
-        {learnStage === "whiteboard" ? (
+        {learnStage === "activity" && secretRolesRoundId ? (
+          <SecretRolesSessionView
+            roundId={secretRolesRoundId}
+            role={role}
+            liveStudents={secretRoleStudents}
+          />
+        ) : learnStage === "activity" && isHost && secretRolesLaunchOpen ? (
+          <div className="h-full overflow-y-auto">
+            <SecretRolesLaunchPanel
+              sessionId={sessionId}
+              students={secretRoleStudents}
+              onLaunched={(roundId) => {
+                setLaunchedSecretRoundId(roundId);
+                setSecretRolesLaunchOpen(false);
+              }}
+            />
+          </div>
+        ) : learnStage === "whiteboard" ? (
           <VirtualClassroomWhiteboardEmbed
             sessionId={sessionId}
             role={role}
@@ -317,7 +369,7 @@ export function VirtualClassroomLearnStage({
             {isHost ? (
               <button
                 type="button"
-                onClick={() => setPickerOpen(true)}
+                onClick={openPicker}
                 className="rounded-lg bg-violet-800 px-4 py-2 text-sm font-bold text-white hover:bg-violet-700"
               >
                 Pick activity

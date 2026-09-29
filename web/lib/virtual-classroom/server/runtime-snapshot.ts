@@ -234,7 +234,10 @@ export function mergeLiveblocksRuntimeIntoSnapshot(input: {
     announcement: typeof input.runtime.announcement === "string" ? input.runtime.announcement : null,
     activeActivity: {
       kind:
-        activity?.kind === "whiteboard" || activity?.kind === "document" || activity?.kind === "word_cards"
+        activity?.kind === "whiteboard" ||
+        activity?.kind === "document" ||
+        activity?.kind === "word_cards" ||
+        activity?.kind === "secret_roles"
           ? activity.kind
           : null,
       joinCode: typeof activity?.joinCode === "string" ? activity.joinCode : null,

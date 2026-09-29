@@ -138,7 +138,7 @@ export function VirtualClassroomSessionView({
   );
   const liveblocksActiveActivity = useStorage((root) =>
     readRuntimeField<{
-      kind: "whiteboard" | "document" | "word_cards" | null;
+      kind: "whiteboard" | "document" | "word_cards" | "secret_roles" | null;
       joinCode: string | null;
       label: string | null;
       roundId?: string | null;
@@ -577,6 +577,8 @@ export function VirtualClassroomSessionView({
             studentPensEnabled={learnStudentPensEnabled}
             onToggleStudentPens={setLearnStudentPens}
             pensBusy={busy === "tools"}
+            members={presenceAttendanceMembers?.length ? presenceAttendanceMembers : memberEntries}
+            activeActivity={activeActivity ?? null}
           />
 
           {role === "member" && (

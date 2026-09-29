@@ -8,10 +8,26 @@ export const DEFAULT_TEACHER_TEMP_PASSWORD = "00000000";
 
 export type ProvisionTeacherInput = {
   email: string;
+  fullName?: string;
   password?: string;
   tier: TeacherTier;
   mustChangePassword?: boolean;
 };
+
+async function syncTeacherProfile(
+  service: SupabaseClient,
+  userId: string,
+  email: string,
+  fullName?: string,
+) {
+  const displayName = (fullName?.trim() || email.split("@")[0] || "Teacher").slice(0, 80);
+  const { error } = await service.from("teacher_profiles").upsert(
+    { user_id: userId, display_name: displayName },
+    { onConflict: "user_id", ignoreDuplicates: true },
+  );
+  // Migration 153 may not have been applied yet. Account provisioning must keep working.
+  if (error && !/teacher_profiles|relation|schema cache/i.test(error.message)) throw error;
+}
 
 export type ProvisionTeacherResult =
   | {
@@ -69,6 +85,17 @@ export async function provisionTeacherAccount(
   });
 
   if (!error && data.user?.id) {
+    try {
+      await syncTeacherProfile(service, data.user.id, data.user.email ?? email, input.fullName);
+    } catch (profileError) {
+      return {
+        ok: false,
+        error:
+          profileError instanceof Error
+            ? `Teacher was created, but the messaging profile failed: ${profileError.message}`
+            : "Teacher was created, but the messaging profile failed.",
+      };
+    }
     return {
       ok: true,
       userId: data.user.id,
@@ -115,6 +142,23 @@ export async function provisionTeacherAccount(
   });
   if (upErr) {
     return { ok: false, error: upErr.message };
+  }
+
+  try {
+    await syncTeacherProfile(
+      service,
+      updated.user?.id ?? existing.id,
+      updated.user?.email ?? existing.email ?? email,
+      input.fullName,
+    );
+  } catch (profileError) {
+    return {
+      ok: false,
+      error:
+        profileError instanceof Error
+          ? `Teacher was updated, but the messaging profile failed: ${profileError.message}`
+          : "Teacher was updated, but the messaging profile failed.",
+    };
   }
 
   return {

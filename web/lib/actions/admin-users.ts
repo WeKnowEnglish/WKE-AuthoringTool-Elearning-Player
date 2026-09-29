@@ -90,6 +90,7 @@ export async function approveTeacherAccessRequest(input: {
 
   const provisioned = await provisionTeacherAccount(gate.ctx.service, {
     email: String(row.email),
+    fullName: String(row.full_name ?? ""),
     tier: input.tier,
     password: DEFAULT_TEACHER_TEMP_PASSWORD,
     mustChangePassword: true,
@@ -187,6 +188,7 @@ export async function resendTeacherWelcomeEmail(input: {
 
   const provisioned = await provisionTeacherAccount(gate.ctx.service, {
     email,
+    fullName: String(row.full_name ?? ""),
     tier,
     password: DEFAULT_TEACHER_TEMP_PASSWORD,
     mustChangePassword: true,

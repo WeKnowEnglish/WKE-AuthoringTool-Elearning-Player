@@ -32,6 +32,7 @@ export function TeacherPrimaryTabs({ teacherTier = "plus", isAdmin = false }: Pr
     pathname.startsWith("/teacher/virtual-classroom") ||
     pathname.startsWith("/live-game");
   const onAdmin = pathname.startsWith("/teacher/admin");
+  const onMessages = pathname.startsWith("/teacher/messages");
 
   return (
     <nav
@@ -154,6 +155,14 @@ export function TeacherPrimaryTabs({ teacherTier = "plus", isAdmin = false }: Pr
           </TeacherNavMenuLink>
         </TeacherNavDropdown>
       ) : null}
+
+      <Link
+        href="/teacher/messages"
+        className="teacher-tab rounded-full border px-2 py-1 text-xs font-semibold sm:px-2.5 sm:py-1.5 sm:text-sm"
+        data-active={onMessages ? "true" : "false"}
+      >
+        Inbox
+      </Link>
 
       {isAdmin ? (
         <Link

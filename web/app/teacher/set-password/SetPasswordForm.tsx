@@ -34,7 +34,7 @@ function PasswordField({
           type={visible ? "text" : "password"}
           required
           autoComplete={autoComplete}
-          minLength={8}
+          minLength={12}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="w-full rounded border border-neutral-300 px-3 py-2"
@@ -105,7 +105,7 @@ export function SetPasswordForm() {
         onToggleVisible={() => setShowConfirm((v) => !v)}
         autoComplete="new-password"
       />
-      <p className="text-xs text-neutral-500">Use at least 8 characters. Do not reuse the temporary password.</p>
+      <p className="text-xs text-neutral-500">Use at least 12 characters. A memorable passphrase works well.</p>
       {message ? (
         <p className="text-sm text-red-600" role="alert">
           {message}

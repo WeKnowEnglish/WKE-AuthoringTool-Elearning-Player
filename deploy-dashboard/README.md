@@ -27,13 +27,14 @@ Open `http://localhost:3000`.
 | `WKE_DASHBOARD_GIT_COMMIT_SHA` | Optional fallback commit when Git metadata is unavailable | `development` |
 | `WKE_DASHBOARD_ADMIN_PASSWORD` | Single administrator password; minimum 12 characters | — |
 | `WKE_DASHBOARD_SESSION_SECRET` | HMAC session key; minimum 32 random characters | — |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Optional shared failed-login limiter; recommended for production | in-memory fallback |
 | `HOSTINGER_API_TOKEN` | Server-only token created in the Hostinger Account page | — |
 | `WKE_HOSTINGER_USERNAME` | Hosting account username | — |
 | `WKE_HOSTINGER_GIT_INSTALLATION_UUID` | Hostinger Git connection identifier | — |
 | `GITHUB_DEPLOY_TOKEN` | Fine-grained token with Contents read/write on this repository | — |
 | `WKE_GITHUB_OWNER` / `WKE_GITHUB_REPOSITORY` | Repository coordinates | — |
 
-All control credentials remain server-side. The dashboard never returns token values to the browser. Login uses a signed, HTTP-only, secure, same-site cookie; mutating form requests must originate from the dashboard itself; and failed logins are rate-limited per process.
+All control credentials remain server-side. The dashboard never returns token values to the browser. Login uses a signed, HTTP-only, secure, same-site cookie; mutating form requests must originate from the dashboard itself; and failed logins use shared Upstash throttling when configured, with an in-memory fallback for local development.
 
 ## Hostinger deployment
 

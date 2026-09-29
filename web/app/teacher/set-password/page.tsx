@@ -31,9 +31,8 @@ export default async function TeacherSetPasswordPage() {
       <div className="rounded-lg border border-neutral-300 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-bold">Choose your password</h1>
         <p className="mt-2 text-sm text-neutral-600">
-          Your account was set up with a temporary password. Pick a new one before using the
-          teacher portal. Enter it twice to confirm, and use Show if you want to check what you
-          typed.
+          Your invitation has been verified. Choose a password before using the teacher portal.
+          Enter it twice to confirm, and use Show if you want to check what you typed.
         </p>
         <SetPasswordForm />
       </div>

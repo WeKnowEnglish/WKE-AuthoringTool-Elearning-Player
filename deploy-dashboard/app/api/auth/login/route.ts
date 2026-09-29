@@ -8,8 +8,8 @@ import {
   verifyPassword,
 } from "../../../../lib/auth.mjs";
 import { readAdminConfig } from "../../../../lib/control-config.mjs";
+import { consumeLoginAttempt } from "../../../../lib/login-rate-limit.mjs";
 
-const attempts = new Map<string, { count: number; resetAt: number }>();
 const WINDOW_MS = 15 * 60 * 1_000;
 const MAX_ATTEMPTS = 5;
 
@@ -36,27 +36,21 @@ export async function POST(request: Request) {
     return new Response("Administrator login is not configured.", { status: 503 });
   }
 
-  const now = Date.now();
-  const key = clientKey(request);
-  const existing = attempts.get(key);
-  const current = !existing || existing.resetAt <= now ? { count: 0, resetAt: now + WINDOW_MS } : existing;
-  if (current.count >= MAX_ATTEMPTS) {
-    return new Response("Too many login attempts. Try again later.", {
-      status: 429,
-      headers: { "Retry-After": String(Math.ceil((current.resetAt - now) / 1000)) },
-    });
-  }
-
   const form = await request.formData();
   if (!verifyPassword(form.get("password"), admin.config.password)) {
-    attempts.set(key, { ...current, count: current.count + 1 });
+    const limit = await consumeLoginAttempt(clientKey(request), MAX_ATTEMPTS, WINDOW_MS);
+    if (!limit.allowed) {
+      return new Response("Too many login attempts. Try again later.", {
+        status: 429,
+        headers: { "Retry-After": String(limit.retryAfter) },
+      });
+    }
     const url = new URL("/login", requestOrigin);
     url.searchParams.set("error", "invalid");
     url.searchParams.set("next", safeNext(form.get("next")));
     return NextResponse.redirect(url, 303);
   }
 
-  attempts.delete(key);
   const response = NextResponse.redirect(new URL(safeNext(form.get("next")), requestOrigin), 303);
   response.cookies.set({
     name: SESSION_COOKIE_NAME,

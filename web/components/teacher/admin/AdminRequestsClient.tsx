@@ -30,7 +30,6 @@ export function AdminRequestsClient({
   const [error, setError] = useState<string | null>(null);
   const [credential, setCredential] = useState<{
     email: string;
-    tempPassword: string;
     tier: string;
     created: boolean;
     welcomeEmailSent: boolean;
@@ -59,7 +58,6 @@ export function AdminRequestsClient({
       }
       setCredential({
         email: result.email,
-        tempPassword: result.tempPassword,
         tier: result.tier,
         created: result.created,
         welcomeEmailSent: result.welcomeEmailSent,
@@ -95,7 +93,6 @@ export function AdminRequestsClient({
       }
       setCredential({
         email: result.email,
-        tempPassword: result.tempPassword,
         tier: "resent",
         created: false,
         welcomeEmailSent: true,
@@ -140,20 +137,16 @@ export function AdminRequestsClient({
           <p className="mt-1">
             Email: <span className="font-mono font-semibold">{credential.email}</span>
           </p>
-          <p className="mt-1">
-            Temp password:{" "}
-            <span className="font-mono font-semibold">{credential.tempPassword}</span>
-          </p>
           {credential.welcomeEmailSent ? (
             <p className="mt-2 text-xs opacity-80">
-              A welcome email with sign-in instructions was sent. They must change the temporary
-              password on first login.
+              A secure, one-time welcome link was sent. The teacher will choose their password
+              after verifying the invitation.
             </p>
           ) : (
             <p className="mt-2 text-xs opacity-80">
               Account is ready, but the welcome email did not send
               {credential.welcomeEmailError ? ` (${credential.welcomeEmailError})` : ""}. Copy the
-              credentials above or use Resend welcome after fixing Resend env on the server.
+              invitation after fixing the Resend environment on the server.
             </p>
           )}
           <button
@@ -261,7 +254,7 @@ export function AdminRequestsClient({
                     Resend welcome email
                   </button>
                   <p className="mt-1 text-xs text-neutral-500">
-                    Resets the temporary password to 00000000 and emails sign-in instructions again.
+                    Sends a fresh one-time setup link without changing or exposing a password.
                   </p>
                 </div>
               ) : null}

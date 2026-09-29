@@ -3,7 +3,7 @@
 import {
   isTeacher,
   mustChangePassword,
-  TEACHER_TEMP_PASSWORDS,
+  BLOCKED_TEACHER_PASSWORDS,
 } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
@@ -16,14 +16,14 @@ function validateNewPassword(
   password: string,
   passwordConfirm: string,
 ): { ok: true } | { ok: false; error: string } {
-  if (password.length < 8) {
-    return { ok: false, error: "Use at least 8 characters." };
+  if (password.length < 12) {
+    return { ok: false, error: "Use at least 12 characters." };
   }
   if (password !== passwordConfirm) {
     return { ok: false, error: "Passwords do not match." };
   }
-  if (TEACHER_TEMP_PASSWORDS.has(password)) {
-    return { ok: false, error: "Choose a new password — do not reuse the temporary one." };
+  if (BLOCKED_TEACHER_PASSWORDS.has(password)) {
+    return { ok: false, error: "Choose a different password; that value is not permitted." };
   }
   return { ok: true };
 }

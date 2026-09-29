@@ -1,13 +1,13 @@
 import "server-only";
 
 import type { TeacherTier } from "@/lib/auth/roles";
-import { resolveAppOrigin, sendResendEmail, type SendEmailResult } from "@/lib/email/resend";
+import { sendResendEmail, type SendEmailResult } from "@/lib/email/resend";
 
 export type TeacherWelcomeEmailInput = {
   fullName: string;
   email: string;
   tier: TeacherTier;
-  tempPassword: string;
+  invitationUrl: string;
 };
 
 function tierBlurb(tier: TeacherTier): { title: string; lines: string[] } {
@@ -38,8 +38,6 @@ export function buildTeacherWelcomeEmail(input: TeacherWelcomeEmailInput): {
   subject: string;
   text: string;
 } {
-  const origin = resolveAppOrigin();
-  const loginUrl = `${origin}/login?portal=teacher`;
   const membership = tierBlurb(input.tier);
   const name = input.fullName.trim() || "there";
 
@@ -54,14 +52,13 @@ export function buildTeacherWelcomeEmail(input: TeacherWelcomeEmailInput): {
       "",
       ...membership.lines,
       "",
-      "Sign in here:",
-      loginUrl,
+      "Accept your secure invitation and choose your password:",
+      input.invitationUrl,
       "",
       `Email: ${input.email}`,
-      `Temporary password: ${input.tempPassword}`,
       "",
-      "On your first sign-in you will be asked to choose a new password.",
-      "Do not keep using the temporary password after you set a new one.",
+      "This link is personal, expires automatically, and can only be used once.",
+      "If it expires, ask us to send a new invitation.",
       "",
       "If you have any trouble signing in, reply to this email and I will help you out.",
       "",

@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
-  forceTeacherPasswordInduction,
   resendTeacherInvitationByUserId,
   setTeacherTier,
 } from "@/lib/actions/admin-users";
@@ -29,22 +28,6 @@ export function AdminTeachersClient({ teachers }: { teachers: AdminTeacherSummar
     });
   };
 
-  const forceInduction = (userId: string) => {
-    setError(null);
-    setMessage(null);
-    startTransition(async () => {
-      const result = await forceTeacherPasswordInduction({ userId });
-      if (!result.ok) {
-        setError(result.error);
-        return;
-      }
-      setMessage(
-        `Induction reset for ${result.email}. Temp password: ${result.tempPassword}`,
-      );
-      router.refresh();
-    });
-  };
-
   const resendInvitation = (userId: string) => {
     setError(null);
     setMessage(null);
@@ -54,9 +37,7 @@ export function AdminTeachersClient({ teachers }: { teachers: AdminTeacherSummar
         setError(result.error);
         return;
       }
-      setMessage(
-        `Invitation resent to ${result.email}. Temp password: ${result.tempPassword}`,
-      );
+      setMessage(`Secure invitation resent to ${result.email}.`);
       router.refresh();
     });
   };
@@ -127,14 +108,6 @@ export function AdminTeachersClient({ teachers }: { teachers: AdminTeacherSummar
                           Resend invitation
                         </button>
                       ) : null}
-                      <button
-                        type="button"
-                        disabled={pending}
-                        onClick={() => forceInduction(teacher.id)}
-                        className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-950 disabled:opacity-40"
-                      >
-                        Reset temp password
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -145,8 +118,8 @@ export function AdminTeachersClient({ teachers }: { teachers: AdminTeacherSummar
       )}
       <p className="text-xs text-neutral-500">
         <span className="font-semibold">Resend invitation</span> appears when the teacher still has
-        “must change password.” It resets the temp password to 00000000 and emails your welcome
-        template again.
+        “must change password.” It sends a fresh, single-use account setup link without resetting
+        or displaying a password.
       </p>
     </div>
   );

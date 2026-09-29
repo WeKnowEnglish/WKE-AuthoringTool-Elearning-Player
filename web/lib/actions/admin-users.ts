@@ -6,10 +6,8 @@ import {
   listAuthUsersPaginated,
   requireAdminContext,
 } from "@/lib/admin/admin-context";
-import {
-  DEFAULT_TEACHER_TEMP_PASSWORD,
-  provisionTeacherAccount,
-} from "@/lib/admin/provision-teacher";
+import { prepareTeacherInvitation } from "@/lib/admin/teacher-invitation";
+import { recordAdminAuditEvent } from "@/lib/admin/audit-log";
 import type { AdminTeacherSummary } from "@/lib/data/admin-users";
 import {
   listAdminStudents as listAdminStudentsData,
@@ -54,7 +52,6 @@ export type AdminActionResult =
 export type ApproveAccessRequestResult =
   | {
       ok: true;
-      tempPassword: string;
       email: string;
       tier: TeacherTier;
       created: boolean;
@@ -88,20 +85,19 @@ export async function approveTeacherAccessRequest(input: {
     return { ok: false, error: `Request is already ${row.status}.` };
   }
 
-  const provisioned = await provisionTeacherAccount(gate.ctx.service, {
+  const invitation = await prepareTeacherInvitation(gate.ctx.service, {
     email: String(row.email),
+    fullName: String(row.full_name ?? ""),
     tier: input.tier,
-    password: DEFAULT_TEACHER_TEMP_PASSWORD,
-    mustChangePassword: true,
   });
-  if (!provisioned.ok) return provisioned;
+  if (!invitation.ok) return invitation;
 
   const reviewPatch = {
     status: "approved" as const,
     reviewed_at: new Date().toISOString(),
     reviewed_by: gate.ctx.userId,
     review_note: input.note?.trim() || null,
-    provisioned_user_id: provisioned.userId,
+    provisioned_user_id: invitation.userId,
   };
 
   let { error: updateError } = await gate.ctx.service
@@ -130,20 +126,32 @@ export async function approveTeacherAccessRequest(input: {
 
   const welcome = await sendTeacherWelcomeEmail({
     fullName: String(row.full_name ?? ""),
-    email: provisioned.email,
-    tier: provisioned.tier,
-    tempPassword: provisioned.tempPassword,
+    email: invitation.email,
+    tier: invitation.tier,
+    invitationUrl: invitation.invitationUrl,
   });
   await patchWelcomeEmailStatus(gate.ctx.service, input.requestId, welcome.ok);
+  await recordAdminAuditEvent(gate.ctx.service, {
+    actorUserId: gate.ctx.userId,
+    action: "teacher_access.approved",
+    targetType: "teacher_access_request",
+    targetId: input.requestId,
+    targetEmail: invitation.email,
+    metadata: {
+      teacher_user_id: invitation.userId,
+      tier: invitation.tier,
+      account_created: invitation.created,
+      welcome_email_sent: welcome.ok,
+    },
+  });
 
   revalidateAdmin();
   return {
     ok: true,
-    tempPassword: provisioned.tempPassword,
-    email: provisioned.email,
-    tier: provisioned.tier,
-    created: provisioned.created,
-    userId: provisioned.userId,
+    email: invitation.email,
+    tier: invitation.tier,
+    created: invitation.created,
+    userId: invitation.userId,
     welcomeEmailSent: welcome.ok,
     welcomeEmailError: welcome.ok ? undefined : welcome.error,
   };
@@ -152,7 +160,7 @@ export async function approveTeacherAccessRequest(input: {
 export async function resendTeacherWelcomeEmail(input: {
   requestId: string;
 }): Promise<
-  | { ok: true; email: string; tempPassword: string }
+  | { ok: true; email: string }
   | { ok: false; error: string }
 > {
   const gate = await requireAdminContext();
@@ -173,7 +181,7 @@ export async function resendTeacherWelcomeEmail(input: {
   const email = String(row.email ?? "").trim().toLowerCase();
   if (!email) return { ok: false, error: "Request has no email." };
 
-  // Reset temp password + induction so the emailed credentials always work.
+  // Create a new single-use setup link without changing or disclosing a password.
   let tier: TeacherTier = "light";
   if (row.provisioned_user_id) {
     const existing = await gate.ctx.service.auth.admin.getUserById(String(row.provisioned_user_id));
@@ -185,19 +193,18 @@ export async function resendTeacherWelcomeEmail(input: {
     if (raw === "plus" || raw === "light") tier = raw;
   }
 
-  const provisioned = await provisionTeacherAccount(gate.ctx.service, {
+  const invitation = await prepareTeacherInvitation(gate.ctx.service, {
     email,
+    fullName: String(row.full_name ?? ""),
     tier,
-    password: DEFAULT_TEACHER_TEMP_PASSWORD,
-    mustChangePassword: true,
   });
-  if (!provisioned.ok) return provisioned;
+  if (!invitation.ok) return invitation;
 
   const welcome = await sendTeacherWelcomeEmail({
     fullName: String(row.full_name ?? ""),
-    email: provisioned.email,
-    tier: provisioned.tier,
-    tempPassword: provisioned.tempPassword,
+    email: invitation.email,
+    tier: invitation.tier,
+    invitationUrl: invitation.invitationUrl,
   });
   await patchWelcomeEmailStatus(gate.ctx.service, input.requestId, welcome.ok);
 
@@ -205,11 +212,19 @@ export async function resendTeacherWelcomeEmail(input: {
     return { ok: false, error: welcome.error };
   }
 
+  await recordAdminAuditEvent(gate.ctx.service, {
+    actorUserId: gate.ctx.userId,
+    action: "teacher_access.invitation_resent",
+    targetType: "teacher_access_request",
+    targetId: input.requestId,
+    targetEmail: invitation.email,
+    metadata: { tier: invitation.tier },
+  });
+
   revalidateAdmin();
   return {
     ok: true,
-    email: provisioned.email,
-    tempPassword: provisioned.tempPassword,
+    email: invitation.email,
   };
 }
 
@@ -256,6 +271,12 @@ export async function declineTeacherAccessRequest(input: {
   }
 
   if (error) return { ok: false, error: error.message };
+  await recordAdminAuditEvent(gate.ctx.service, {
+    actorUserId: gate.ctx.userId,
+    action: "teacher_access.declined",
+    targetType: "teacher_access_request",
+    targetId: input.requestId,
+  });
   revalidateAdmin();
   return { ok: true };
 }
@@ -328,53 +349,26 @@ export async function setTeacherTier(input: {
     },
   });
   if (error) return { ok: false, error: error.message };
+  await recordAdminAuditEvent(gate.ctx.service, {
+    actorUserId: gate.ctx.userId,
+    action: "teacher.tier_changed",
+    targetType: "teacher",
+    targetId: input.userId,
+    targetEmail: data.user.email,
+    metadata: { tier: input.tier },
+  });
   revalidateAdmin();
   return { ok: true };
 }
 
-export async function forceTeacherPasswordInduction(input: {
-  userId: string;
-}): Promise<
-  | { ok: true; tempPassword: string; email: string }
-  | { ok: false; error: string }
-> {
-  const gate = await requireAdminContext();
-  if (!gate.ok) return gate;
-
-  const { data, error: getError } = await gate.ctx.service.auth.admin.getUserById(input.userId);
-  if (getError || !data.user) {
-    return { ok: false, error: getError?.message ?? "Teacher not found." };
-  }
-  if (data.user.app_metadata?.role !== "teacher") {
-    return { ok: false, error: "That account is not a teacher." };
-  }
-
-  const tempPassword = DEFAULT_TEACHER_TEMP_PASSWORD;
-  const { error } = await gate.ctx.service.auth.admin.updateUserById(input.userId, {
-    password: tempPassword,
-    app_metadata: {
-      ...data.user.app_metadata,
-      role: "teacher",
-      must_change_password: true,
-    },
-  });
-  if (error) return { ok: false, error: error.message };
-  revalidateAdmin();
-  return {
-    ok: true,
-    tempPassword,
-    email: data.user.email ?? "",
-  };
-}
-
 /**
  * Resend welcome/invitation email for a teacher who has not finished password induction.
- * Resets the temporary password so the emailed credentials always match.
+ * Generates a fresh one-time recovery link without changing their password.
  */
 export async function resendTeacherInvitationByUserId(input: {
   userId: string;
 }): Promise<
-  | { ok: true; email: string; tempPassword: string }
+  | { ok: true; email: string }
   | { ok: false; error: string }
 > {
   const gate = await requireAdminContext();
@@ -395,8 +389,7 @@ export async function resendTeacherInvitationByUserId(input: {
   if (!mustChange) {
     return {
       ok: false,
-      error:
-        "This teacher already set a password. Use “Reset temp password” first if you need to re-invite them.",
+      error: "This teacher already completed account setup. Use the normal password-recovery flow.",
     };
   }
 
@@ -405,18 +398,6 @@ export async function resendTeacherInvitationByUserId(input: {
 
   const tierRaw = data.user.app_metadata?.teacher_tier;
   const tier: TeacherTier = tierRaw === "plus" ? "plus" : "light";
-  const tempPassword = DEFAULT_TEACHER_TEMP_PASSWORD;
-
-  const { error: updateError } = await gate.ctx.service.auth.admin.updateUserById(input.userId, {
-    password: tempPassword,
-    app_metadata: {
-      ...data.user.app_metadata,
-      role: "teacher",
-      teacher_tier: tier,
-      must_change_password: true,
-    },
-  });
-  if (updateError) return { ok: false, error: updateError.message };
 
   let fullName = email.split("@")[0] || "there";
   const { data: requestRow } = await gate.ctx.service
@@ -430,11 +411,18 @@ export async function resendTeacherInvitationByUserId(input: {
     fullName = String(requestRow.full_name);
   }
 
+  const invitation = await prepareTeacherInvitation(gate.ctx.service, {
+    email,
+    fullName,
+    tier,
+  });
+  if (!invitation.ok) return invitation;
+
   const welcome = await sendTeacherWelcomeEmail({
     fullName,
-    email,
-    tier,
-    tempPassword,
+    email: invitation.email,
+    tier: invitation.tier,
+    invitationUrl: invitation.invitationUrl,
   });
 
   if (requestRow?.id) {
@@ -445,8 +433,17 @@ export async function resendTeacherInvitationByUserId(input: {
     return { ok: false, error: welcome.error };
   }
 
+  await recordAdminAuditEvent(gate.ctx.service, {
+    actorUserId: gate.ctx.userId,
+    action: "teacher.invitation_resent",
+    targetType: "teacher",
+    targetId: input.userId,
+    targetEmail: invitation.email,
+    metadata: { tier: invitation.tier },
+  });
+
   revalidateAdmin();
-  return { ok: true, email, tempPassword };
+  return { ok: true, email: invitation.email };
 }
 
 export async function listStudentsForAdmin(): Promise<
@@ -491,6 +488,12 @@ export async function resetStudentPin(input: {
     password: input.pin.trim(),
   });
   if (error) return { ok: false, error: error.message };
+  await recordAdminAuditEvent(gate.ctx.service, {
+    actorUserId: gate.ctx.userId,
+    action: "student.pin_reset",
+    targetType: "student",
+    targetId: input.userId,
+  });
   revalidateAdmin();
   return { ok: true };
 }
@@ -526,6 +529,14 @@ export async function setStudentLearningBandAdmin(input: {
     })
     .eq("user_id", input.userId);
   if (profileError) return { ok: false, error: profileError.message };
+
+  await recordAdminAuditEvent(gate.ctx.service, {
+    actorUserId: gate.ctx.userId,
+    action: "student.learning_band_changed",
+    targetType: "student",
+    targetId: input.userId,
+    metadata: { learning_band: input.learningBand },
+  });
 
   revalidateAdmin();
   return { ok: true };

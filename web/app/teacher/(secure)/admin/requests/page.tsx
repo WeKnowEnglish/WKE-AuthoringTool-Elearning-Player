@@ -31,8 +31,8 @@ export default async function TeacherAdminRequestsPage({ searchParams }: Props) 
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">Access requests</h1>
         <p className="mt-1 text-sm text-neutral-600">
-          Approve as Teacher Light or Plus (sends a welcome email with temp password), or decline.
-          Use Resend welcome on approved rows if needed.
+          Approve as Teacher Light or Plus (sends a secure one-time setup link), or decline. Use
+          Resend welcome on approved rows if needed.
         </p>
       </div>
 

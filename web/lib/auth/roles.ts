@@ -15,8 +15,8 @@ export const TEACHER_SET_PASSWORD_PATH = "/teacher/set-password";
 export const STUDENT_DEFAULT_PATH = "/primary";
 export const LOGIN_PATH = "/login";
 
-/** Temporary provision passwords that induction must reject as the new password. */
-export const TEACHER_TEMP_PASSWORDS = new Set(["00000000", "000000"]);
+/** Legacy compromised provision passwords that must never be accepted again. */
+export const BLOCKED_TEACHER_PASSWORDS = new Set(["00000000", "000000"]);
 
 /**
  * Bootstrap developer / platform-admin emails.

@@ -1,7 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { rateLimitAllow } from "@/lib/rate-limit/memory";
+import { rateLimitAllow } from "@/lib/rate-limit";
 import { sendTeacherAccessAdminNotification } from "@/lib/email/teacher-welcome";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 import {
@@ -28,10 +28,10 @@ export async function requestTeacherAccess(
   const requestHeaders = await headers();
   const forwardedFor = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim();
   const clientKey = forwardedFor || requestHeaders.get("x-real-ip") || "unknown";
-  if (!rateLimitAllow(`teacher-access:${clientKey}`, 3, 60 * 60 * 1000)) {
+  if (!(await rateLimitAllow(`teacher-access:${clientKey}`, 3, 60 * 60 * 1000))) {
     return { ok: false, error: "Too many requests. Please try again later." };
   }
-  if (!rateLimitAllow(`teacher-access-email:${validated.value.email}`, 2, 24 * 60 * 60 * 1000)) {
+  if (!(await rateLimitAllow(`teacher-access-email:${validated.value.email}`, 2, 24 * 60 * 60 * 1000))) {
     return { ok: false, error: "A request for this email was already received recently." };
   }
 

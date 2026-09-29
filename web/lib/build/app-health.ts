@@ -10,6 +10,10 @@ export type AppHealthEnvironment = AppReleaseEnvironment & {
   NODE_ENV?: string;
 };
 
+// next.config.ts defines this value at build time. Keeping the direct access at
+// module scope lets Next replace it in the server bundle.
+const builtCommit = process.env.WKE_BUILD_COMMIT_SHA;
+
 function nonEmpty(value: string | undefined): string | undefined {
   const normalized = value?.trim();
   return normalized || undefined;
@@ -17,6 +21,7 @@ function nonEmpty(value: string | undefined): string | undefined {
 
 export function createAppHealthPayload(
   environment: AppHealthEnvironment = process.env,
+  buildCommit: string | undefined = builtCommit,
 ) {
   return {
     status: "ok" as const,
@@ -26,6 +31,7 @@ export function createAppHealthPayload(
       nonEmpty(environment.npm_package_version) ??
       "development",
     commit:
+      nonEmpty(buildCommit) ??
       nonEmpty(environment.WKE_GIT_COMMIT_SHA) ??
       resolveAppReleaseVersion(environment),
     environment: nonEmpty(environment.NODE_ENV) ?? "development",

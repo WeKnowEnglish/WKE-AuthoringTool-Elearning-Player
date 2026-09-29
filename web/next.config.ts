@@ -45,6 +45,15 @@ function supabaseStoragePattern():
 }
 
 const nextConfig: NextConfig = {
+  // Embed the exact build commit in server bundles. Hostinger does not expose
+  // the checked-out Git SHA to the running process after a native Next.js
+  // deployment, so runtime-only environment lookup would report development.
+  env: {
+    WKE_BUILD_COMMIT_SHA:
+      process.env.WKE_GIT_COMMIT_SHA?.trim() ||
+      process.env.NEXT_PUBLIC_GIT_COMMIT_SHA?.trim() ||
+      "development",
+  },
   // Next 16.3's Vercel adapter does not emit next-server.js.nft.json, while
   // standalone finalization still reads it. Vercel builds its own deployment
   // artifacts, so keep standalone output only for Docker/self-hosted builds.

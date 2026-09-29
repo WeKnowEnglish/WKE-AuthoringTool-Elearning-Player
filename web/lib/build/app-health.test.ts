@@ -19,6 +19,22 @@ describe("app health payload", () => {
     });
   });
 
+  it("prefers the exact build commit over stale runtime metadata", () => {
+    expect(
+      createAppHealthPayload(
+        {
+          WKE_GIT_COMMIT_SHA: "7c2fd586e970b79d3cf84c515da8dad6279a714d",
+          NEXT_PUBLIC_GIT_COMMIT_SHA: "7c2fd586e970b79d3cf84c515da8dad6279a714d",
+          NODE_ENV: "production",
+        },
+        "72cff398c01f23dfdc7dba60c8ba3e5178205ae0",
+      ),
+    ).toMatchObject({
+      commit: "72cff398c01f23dfdc7dba60c8ba3e5178205ae0",
+      environment: "production",
+    });
+  });
+
   it("uses the existing release fallback outside Docker", () => {
     expect(
       createAppHealthPayload({

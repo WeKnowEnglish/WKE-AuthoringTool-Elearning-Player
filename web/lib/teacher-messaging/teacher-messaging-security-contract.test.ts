@@ -31,8 +31,8 @@ describe("teacher communications security contract", () => {
     expect(migration).toContain(
       "if v_current_user_id is null or not public.is_teacher_communication_user()",
     );
-    expect(migration).toContain(
-      "public.is_teacher_communication_user()\n    and sender_id = auth.uid()",
+    expect(migration).toMatch(
+      /public\.is_teacher_communication_user\(\)\s+and sender_id = auth\.uid\(\)/,
     );
   });
 });

@@ -9,13 +9,22 @@ export type SendEmailInput = {
 };
 
 export type SendEmailResult =
-  | { ok: true }
+  | { ok: true; providerMessageId: string | null }
   | { ok: false; error: string };
 
 function resendFromAddress(): string {
   return (
+    process.env.COMMUNICATIONS_FROM_EMAIL?.trim() ||
     process.env.TEACHER_ACCESS_FROM_EMAIL?.trim() ||
     "We Know English <onboarding@resend.dev>"
+  );
+}
+
+function defaultReplyToAddress(): string | undefined {
+  return (
+    process.env.COMMUNICATIONS_REPLY_TO?.trim() ||
+    process.env.TEACHER_ACCESS_NOTIFICATION_EMAIL?.trim() ||
+    undefined
   );
 }
 
@@ -46,7 +55,7 @@ export async function sendResendEmail(input: SendEmailInput): Promise<SendEmailR
       body: JSON.stringify({
         from: input.from?.trim() || resendFromAddress(),
         to,
-        reply_to: input.replyTo?.trim() || undefined,
+        reply_to: input.replyTo?.trim() || defaultReplyToAddress(),
         subject: input.subject,
         text: input.text,
       }),
@@ -62,7 +71,14 @@ export async function sendResendEmail(input: SendEmailInput): Promise<SendEmailR
       }
       return { ok: false, error: detail };
     }
-    return { ok: true };
+    let providerMessageId: string | null = null;
+    try {
+      const body = (await response.json()) as { id?: string };
+      providerMessageId = typeof body.id === "string" ? body.id : null;
+    } catch {
+      // A successful send without a parseable id is still a successful send.
+    }
+    return { ok: true, providerMessageId };
   } catch (error) {
     return {
       ok: false,

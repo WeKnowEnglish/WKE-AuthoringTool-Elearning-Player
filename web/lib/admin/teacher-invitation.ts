@@ -16,6 +16,21 @@ export type TeacherInvitationResult =
     }
   | { ok: false; error: string };
 
+async function syncTeacherMessagingProfile(
+  service: SupabaseClient,
+  userId: string,
+  email: string,
+  fullName: string,
+) {
+  const displayName = (fullName.trim() || email.split("@")[0] || "Teacher").slice(0, 80);
+  const { error } = await service.from("teacher_profiles").upsert(
+    { user_id: userId, display_name: displayName },
+    { onConflict: "user_id", ignoreDuplicates: true },
+  );
+  // Account invitations must remain available during a staged schema rollout.
+  if (error && !/teacher_profiles|relation|schema cache/i.test(error.message)) throw error;
+}
+
 export function buildTeacherConfirmationUrl(input: {
   origin: string;
   tokenHash: string;
@@ -102,6 +117,19 @@ export async function prepareTeacherInvitation(
     // user when metadata cannot be secured, while preserving existing users.
     if (!existing) await service.auth.admin.deleteUser(user.id, true).catch(() => undefined);
     return { ok: false, error: updated.error.message };
+  }
+
+  try {
+    await syncTeacherMessagingProfile(service, user.id, user.email ?? email, input.fullName);
+  } catch (profileError) {
+    if (!existing) await service.auth.admin.deleteUser(user.id, true).catch(() => undefined);
+    return {
+      ok: false,
+      error:
+        profileError instanceof Error
+          ? `Teacher invitation was prepared, but the messaging profile failed: ${profileError.message}`
+          : "Teacher invitation was prepared, but the messaging profile failed.",
+    };
   }
 
   return {

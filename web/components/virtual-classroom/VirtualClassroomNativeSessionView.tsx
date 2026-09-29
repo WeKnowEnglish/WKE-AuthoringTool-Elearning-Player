@@ -523,6 +523,8 @@ export function VirtualClassroomNativeSessionView(props: Props) {
               onToggleStudentPens={setLearnStudentPens}
               pensBusy={busy === "tools"}
               isolatedWhiteboardProvider
+              members={members}
+              activeActivity={runtime.activeActivity}
             />
 
             {role === "member" ? (

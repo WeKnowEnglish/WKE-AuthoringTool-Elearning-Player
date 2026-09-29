@@ -77,6 +77,35 @@ describe("initial classroom runtime snapshot", () => {
     expect(next.tools).not.toHaveProperty("members");
   });
 
+  it("preserves the Secret Roles activity reference without private role data", () => {
+    const current = createInitialClassroomRuntimeSnapshot({
+      sessionId: "session-1",
+      actorUserId: "teacher-1",
+    });
+    const next = mergeLiveblocksRuntimeIntoSnapshot({
+      current,
+      actorUserId: "teacher-1",
+      runtime: {
+        activeActivity: {
+          kind: "secret_roles",
+          joinCode: "srr_1",
+          roundId: "srr_1",
+          label: "The missing bag",
+          privateInformation: "must not be projected",
+        },
+      },
+    });
+
+    expect(next.activeActivity).toEqual({
+      kind: "secret_roles",
+      joinCode: "srr_1",
+      roundId: "srr_1",
+      label: "The missing bag",
+      roomId: null,
+    });
+    expect(JSON.stringify(next.activeActivity)).not.toContain("must not be projected");
+  });
+
   it("detects only durable control-plane drift", () => {
     const snapshot = createInitialClassroomRuntimeSnapshot({
       sessionId: "session-1",

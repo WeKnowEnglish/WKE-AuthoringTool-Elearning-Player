@@ -1,6 +1,10 @@
 /** VirtualClassroom activity kinds and round identity. */
 
-export type VirtualClassroomActivityKind = "whiteboard" | "document" | "word_cards";
+export type VirtualClassroomActivityKind =
+  | "whiteboard"
+  | "document"
+  | "word_cards"
+  | "secret_roles";
 
 export type ActivityParticipationMode =
   | "individual"
@@ -73,6 +77,11 @@ export const VC_ACTIVITY_KIND_META: Record<
     kind: "word_cards",
     label: "Word cards",
     description: "Create vocabulary cards, moderate a class deck, then play",
+  },
+  secret_roles: {
+    kind: "secret_roles",
+    label: "Secret Roles",
+    description: "Give every student private information for a live speaking mystery",
   },
 };
 

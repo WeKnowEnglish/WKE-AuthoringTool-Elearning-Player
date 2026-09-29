@@ -4,6 +4,7 @@ import {
 } from "@/lib/activity-runtime/activity-types";
 import {
   DOCUMENT_INTERACTION_CONFIG,
+  SECRET_ROLES_INTERACTION_CONFIG,
   WHITEBOARD_INTERACTION_CONFIG,
   WORD_CARDS_INTERACTION_CONFIG,
   type ActivityInteractionConfig,
@@ -51,6 +52,15 @@ const REGISTRY: RegisteredVcActivity[] = [
       "Paste a word list and launch Word cards from the Virtual Classroom activity panel",
     studentJoinHint: "Enter word cards when the teacher launches them",
   },
+  {
+    kind: "secret_roles",
+    label: VC_ACTIVITY_KIND_META.secret_roles.label,
+    description: VC_ACTIVITY_KIND_META.secret_roles.description,
+    enabled: true,
+    interaction: SECRET_ROLES_INTERACTION_CONFIG,
+    teacherLaunchHint: "Create private role cards and assign them to the live roster",
+    studentJoinHint: "Open your private role when the teacher launches it",
+  },
 ];
 
 export function listVcActivities(): RegisteredVcActivity[] {
@@ -70,5 +80,10 @@ export function getVcActivity(
 export function isRegisteredVcActivity(
   kind: string,
 ): kind is VirtualClassroomActivityKind {
-  return kind === "whiteboard" || kind === "document" || kind === "word_cards";
+  return (
+    kind === "whiteboard" ||
+    kind === "document" ||
+    kind === "word_cards" ||
+    kind === "secret_roles"
+  );
 }

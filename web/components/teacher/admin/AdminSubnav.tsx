@@ -8,6 +8,7 @@ export function AdminSubnav({
     | "requests"
     | "traffic"
     | "teachers"
+    | "communications"
     | "students"
     | "guardians"
     | "packages"
@@ -19,6 +20,11 @@ export function AdminSubnav({
     { id: "requests" as const, href: "/teacher/admin/requests", label: "Requests" },
     { id: "traffic" as const, href: "/teacher/admin/traffic", label: "Traffic" },
     { id: "teachers" as const, href: "/teacher/admin/teachers", label: "Teachers" },
+    {
+      id: "communications" as const,
+      href: "/teacher/admin/communications",
+      label: "Communications",
+    },
     { id: "students" as const, href: "/teacher/admin/students", label: "Students" },
     { id: "guardians" as const, href: "/teacher/admin/guardians", label: "Guardians" },
     { id: "packages" as const, href: "/teacher/admin/packages", label: "Packages" },

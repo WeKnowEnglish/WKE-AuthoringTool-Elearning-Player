@@ -34,6 +34,13 @@ describe("authEmailRedirectOrigin", () => {
     ).toBe("https://staging.example.com");
   });
 
+  it("replaces a managed host's internal listener with APP_ORIGIN", () => {
+    vi.stubEnv("APP_ORIGIN", "https://preview.weknowenglish.online/");
+    expect(authEmailRedirectOrigin("http://0.0.0.0:3000")).toBe(
+      "https://preview.weknowenglish.online",
+    );
+  });
+
   it("builds callback URLs with next path", () => {
     expect(authCallbackRedirectUrl("/parent", "https://preview.vercel.app")).toBe(
       `${SITE_URL}/auth/callback?next=${encodeURIComponent("/parent")}`,

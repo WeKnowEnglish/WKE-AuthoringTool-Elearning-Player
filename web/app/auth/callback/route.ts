@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { authEmailRedirectOrigin } from "@/lib/auth/auth-email-redirect";
 import { getSupabaseServerEnv } from "@/lib/env/supabase-server";
 
 /**
@@ -17,13 +18,16 @@ function safeInternalPath(next: string | null): string {
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  // Managed hosts can expose their internal listener through request.url.
+  // Browser redirects must always use the configured public application origin.
+  const publicOrigin = authEmailRedirectOrigin(url.origin);
   const code = url.searchParams.get("code");
   const err = url.searchParams.get("error");
   const errDesc = url.searchParams.get("error_description");
   const nextRaw = url.searchParams.get("next");
   const nextPath = safeInternalPath(nextRaw);
 
-  const loginErr = new URL("/login", url.origin);
+  const loginErr = new URL("/login", publicOrigin);
   if (nextPath.startsWith("/parent")) {
     loginErr.pathname = "/parent/login";
     loginErr.searchParams.set("next", nextPath);
@@ -52,7 +56,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(loginErr);
   }
 
-  const response = NextResponse.redirect(new URL(nextPath, url.origin));
+  const response = NextResponse.redirect(new URL(nextPath, publicOrigin));
 
   const cookieStore = await cookies();
   const supabase = createServerClient(supabaseUrl, anonKey, {

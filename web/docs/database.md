@@ -1,9 +1,9 @@
 # WeKnow English Database Architecture
 
-Last verified: 2026-09-15
-Registry review boundary: migration 152
+Last verified: 2026-09-29
+Registry review boundary: migration 153
 
-Migrations 150, 151, and 152 sit outside the eight learning-critical journeys. 150 records first-touch marketing attribution. 151 adds an opt-in public preview of open trial times on a published Classroom Wall. 152 records each lesson-plan file download and whether the file was sent.
+Migrations 150, 151, 152, and 153 sit outside the eight learning-critical journeys. 150 records first-touch marketing attribution. 151 adds an opt-in public preview of open trial times on a published Classroom Wall. 152 records each lesson-plan file download and whether the file was sent. 153 adds service-only administrator email logging plus private teacher-to-teacher conversations, safe directory profiles, membership-scoped messages, and Realtime publication for new messages.
 Scope: learning-critical public data plus storage and realtime policy surfaces
 
 ## Purpose
@@ -20,7 +20,7 @@ It is intentionally not a dump of student data and not permission to clean up sc
 | scripts/database-architecture-snapshot.sql | Metadata-only linked-schema inventory |
 | scripts/database-architecture-audit-core.mjs | Deterministic security, integrity, index, and registry rules |
 | scripts/audit-database-architecture.mjs | Offline registry and linked-project command |
-| docs/database/linked-audit-2026-09-15.json | Privacy-safe linked inventory counts and findings |
+| docs/database/linked-audit-2026-09-29.json | Privacy-safe linked inventory counts and findings through migration 153 |
 | scripts/database-architecture-audit-core.test.mjs | Fixture coverage for blocking and advisory behavior |
 
 The JSON registry is the machine source for learning-critical ownership. This document explains the journeys and decisions in human terms. Migrations remain the source of truth for schema history.
@@ -31,14 +31,14 @@ The catalog-only audit returned:
 
 | Object class | Count |
 |---|---:|
-| Public tables and views | 111 |
-| Public functions | 70 |
-| Public triggers | 3 |
-| Public foreign keys | 197 |
-| Public indexes | 368 |
-| Public, storage, and realtime policies | 260 |
-| Browser-role table grants inspected | 1,176 |
-| Browser-role function grants inspected | 123 |
+| Public tables and views | 118 |
+| Public functions | 76 |
+| Public triggers | 4 |
+| Public foreign keys | 204 |
+| Public indexes | 385 |
+| Public, storage, and realtime policies | 267 |
+| Browser-role table grants inspected | 1,232 |
+| Browser-role function grants inspected | 132 |
 
 The registry contains 53 learning-critical objects across all eight required journeys. Every registered table, function, policy surface, migration, and call-site path was present during verification.
 
@@ -54,6 +54,54 @@ The registry contains 53 learning-critical objects across all eight required jou
 | Parent visibility | Active guardian relationship and published/curated RPCs | Parent stream, reports, notifications | Parents never receive another family’s raw learning data |
 | Diagnostics | platform_usage_events with retention | Admin timeline and future health grouping | Operational metadata is not an educational record |
 | Classroom control | class_sessions and versioned runtime snapshot | Private Broadcast/Presence and compatibility shell | Snapshot recovers durable state; presence remains ephemeral |
+
+## Reviewed Supporting System: Teacher Communications
+
+Migration 153 adds communication infrastructure for administrators and authenticated teachers. It
+does not store student learning evidence and therefore does not add objects to the machine registry's
+eight learning-critical journeys, but it remains part of the database review boundary because it
+contains teacher identity and private correspondence.
+
+Administrator email path:
+
+admin-only communications action
+→ service-role insert into admin_email_sends
+→ Resend API request
+→ service-role status/provider-id update
+
+Teacher direct-message path:
+
+authenticated teacher
+→ safe teacher_profiles directory entry
+→ get_or_create_teacher_direct_conversation validates the recipient
+→ teacher_conversations plus teacher_conversation_members establish membership
+→ teacher_messages stores durable content
+→ Supabase Realtime publishes inserts only to clients allowed to select the row through RLS
+
+Important boundaries:
+
+- Browser roles have no grants on `admin_email_sends`.
+- Auth records and teacher email addresses are not exposed as the teacher directory.
+- Conversation and message reads require current membership.
+- Message inserts require `sender_id = auth.uid()` and current membership.
+- Browser roles cannot insert conversations or mutate membership rows directly.
+- Students and parents are excluded from this first messaging release.
+- Email status `sent` currently means the provider accepted the API request; delivery and bounce
+  webhooks are not yet authoritative.
+
+Primary application boundaries:
+
+- `lib/actions/admin-communications.ts`
+- `lib/data/admin-communications.ts`
+- `lib/actions/teacher-messaging.ts`
+- `lib/data/teacher-messaging.ts`
+- `components/teacher/messages/TeacherMessagesClient.tsx`
+- `supabase/migrations/153_teacher_communications.sql`
+
+The linked audit reports three new advisory-only foreign-key index candidates from migration 153:
+`admin_email_sends.sent_by`, `teacher_conversations.created_by`, and `teacher_messages.sender_id`.
+They are recorded for measured follow-up rather than automatically creating indexes without query
+or delete-path evidence.
 
 ## Learning-Critical Data Chains
 
@@ -205,7 +253,7 @@ Advisory P3:
 
 The audit exits unsuccessfully only for confirmed blocking findings. Advisory findings are retained for review and cannot authorize deletion or migration by themselves.
 
-## 2026-09-15 Findings Register
+## 2026-09-29 Findings Register
 
 | Severity | Finding | Scope | Disposition |
 |---|---|---:|---|
@@ -213,7 +261,7 @@ The audit exits unsuccessfully only for confirmed blocking findings. Advisory fi
 | P1 blocking | Client-executable SECURITY DEFINER without fixed search_path | 0 | Pass |
 | P1 blocking | Missing/stale registry object or required journey | 0 | Pass |
 | P1 advisory | Unvalidated foreign key | 0 | Pass |
-| P2 advisory | Foreign key without a valid leading-column index | 74 total; 29 on registry tables | Measure query/delete impact before adding indexes |
+| P2 advisory | Foreign key without a valid leading-column index | 77 total; 29 on registry tables | Measure query/delete impact before adding indexes |
 | P2 advisory | Learning-critical grant without matching command policy | 58 role/table groups across 30 tables | Safe deny-by-default; review grants for least privilege in a separate goal |
 | P3 advisory | Usage unknown | 1 table | Verify student_lesson_progress before any cleanup |
 

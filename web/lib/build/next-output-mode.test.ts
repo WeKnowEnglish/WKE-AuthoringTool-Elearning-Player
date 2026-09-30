@@ -25,7 +25,7 @@ describe("Next deployment output mode", () => {
       "utf8",
     );
 
-    expect(rootPackage.scripts.start).toContain("web/.next/standalone/server.js");
+    expect(rootPackage.scripts.start).toContain("node web/dist/server.js");
     expect(packagingScript).toContain('process.env.HOSTNAME = "0.0.0.0"');
     expect(packagingScript).toContain('require("./web/server.js")');
     expect(webPackage.scripts["build:managed"]).toBe(

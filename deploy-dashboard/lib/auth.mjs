@@ -61,7 +61,7 @@ export function verifySessionToken(token, secret, now = Date.now()) {
   }
 }
 
-export function getRequestOrigin(request) {
+export function getRequestOrigin(request, environment = process.env) {
   const requestUrl = new URL(request.url);
   const forwardedProtocol = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
   const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
@@ -69,6 +69,22 @@ export function getRequestOrigin(request) {
   const protocol = forwardedProtocol || requestUrl.protocol.replace(":", "");
   if (!/^(https?|HTTPS?)$/.test(protocol)) {
     throw new Error("The request protocol is invalid.");
+  }
+  const configuredOrigin = environment.WKE_DASHBOARD_ORIGIN?.trim();
+  if (configuredOrigin) {
+    const configured = new URL(configuredOrigin);
+    const localHttp =
+      configured.protocol === "http:" &&
+      (configured.hostname === "localhost" || configured.hostname === "127.0.0.1");
+    if (
+      configured.origin !== configuredOrigin ||
+      (configured.protocol !== "https:" && !localHttp) ||
+      configured.host.toLowerCase() !== host.toLowerCase() ||
+      configured.protocol.slice(0, -1) !== protocol.toLowerCase()
+    ) {
+      throw new Error("The request origin does not match WKE_DASHBOARD_ORIGIN.");
+    }
+    return configured.origin;
   }
   const expected = new URL(`${protocol.toLowerCase()}://${host}`).origin;
   if (new URL(expected).host !== host.toLowerCase()) {

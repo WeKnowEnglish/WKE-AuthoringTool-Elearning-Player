@@ -1,9 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { connection } from "next/server";
 
 import { ConfirmSubmitButton } from "../components/confirm-submit-button";
-import { requireAdmin } from "../../lib/dashboard-auth";
+import { requireAdmin, roleAllows } from "../../lib/dashboard-auth";
 import { readControlPlaneConfig } from "../../lib/control-config.mjs";
-import { getControlPlane } from "../../lib/control-plane";
+import { getAuthorizedProjectContext, getControlPlane } from "../../lib/control-plane";
 import { probeDeployment } from "../../lib/deployment-status.mjs";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,13 @@ type Build = {
 };
 
 type DeploymentRow = Build & { environment: "preview" | "production" };
+type PendingJob = {
+  id: string;
+  action: "promote" | "rollback";
+  commit_sha: string;
+  requested_by: string | null;
+  created_at: string;
+};
 
 function shortCommit(value: string | undefined) {
   return value?.slice(0, 12) || "Unavailable";
@@ -51,7 +59,7 @@ export default async function DeploymentsPage({
   searchParams: Promise<{ notice?: string; error?: string }>;
 }) {
   await connection();
-  await requireAdmin("/deployments");
+  const principal = await requireAdmin("/deployments");
   const query = await searchParams;
   const readiness = readControlPlaneConfig();
 
@@ -59,6 +67,7 @@ export default async function DeploymentsPage({
   let loadError: string | null = null;
   let previewCommit: string | undefined;
   let productionCommit: string | undefined;
+  let pendingJobs: PendingJob[] = [];
 
   if (readiness.configured) {
     try {
@@ -75,6 +84,13 @@ export default async function DeploymentsPage({
         ...(previewBuilds?.data || []).map((build: Build) => ({ ...build, environment: "preview" as const })),
         ...(productionBuilds?.data || []).map((build: Build) => ({ ...build, environment: "production" as const })),
       ].sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at));
+      if (principal.authMethod === "github") {
+        const context = await getAuthorizedProjectContext(principal, "viewer");
+        pendingJobs = await context.store.listPendingDeploymentJobs({
+          organizationId: context.organizationId,
+          projectId: context.projectId,
+        }) as PendingJob[];
+      }
     } catch (error) {
       loadError = error instanceof Error ? error.message : String(error);
     }
@@ -88,6 +104,7 @@ export default async function DeploymentsPage({
           <span><strong>WKE Deploy</strong><small>Release control center</small></span>
         </a>
         <nav className="topbar-actions">
+          <span className="identity-chip">{principal.displayName} · {principal.role}</span>
           <a className="refresh-button" href="/deployments">Refresh</a>
           <form action="/api/auth/logout" method="post"><button className="link-button" type="submit">Sign out</button></form>
         </nav>
@@ -99,8 +116,9 @@ export default async function DeploymentsPage({
           <h1>Deployments</h1>
           <p className="hero-copy">Build previews, inspect logs, promote the verified commit, and return to a prior production release.</p>
         </div>
-        {readiness.configured ? (
+        {readiness.configured && roleAllows(principal.role, "developer") ? (
           <form className="deploy-form" action="/api/control/preview" method="post">
+            <input type="hidden" name="requestId" value={randomUUID()} />
             <label>
               Branch to preview
               <input name="branch" defaultValue={readiness.config.previewBranch} required />
@@ -127,6 +145,42 @@ export default async function DeploymentsPage({
         <div><span>Builds shown</span><strong>{rows.length}</strong></div>
       </section>
 
+      {pendingJobs.length ? (
+        <section className="table-card approval-card" aria-label="Production approvals">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Protected production changes</p>
+              <h2>Awaiting approval</h2>
+            </div>
+            <span className="status-badge status-pending">{pendingJobs.length} pending</span>
+          </div>
+          <div className="table-scroll">
+            <table className="deployment-table">
+              <thead><tr><th>Action</th><th>Commit</th><th>Requested</th><th>Control</th></tr></thead>
+              <tbody>{pendingJobs.map((job) => (
+                <tr key={job.id}>
+                  <td>{job.action}</td>
+                  <td><code>{shortCommit(job.commit_sha)}</code></td>
+                  <td title={job.created_at}>{relativeTime(job.created_at)}</td>
+                  <td>
+                    {roleAllows(principal.role, "administrator") && principal.id !== job.requested_by ? (
+                      <form action={`/api/control/jobs/${job.id}/approve`} method="post">
+                        <ConfirmSubmitButton
+                          confirmation={`Approve production ${job.action} of ${shortCommit(job.commit_sha)}?`}
+                          className="table-action-button"
+                        >
+                          Approve and deploy
+                        </ConfirmSubmitButton>
+                      </form>
+                    ) : <small>{principal.id === job.requested_by ? "A different administrator must approve." : "Administrator approval required."}</small>}
+                  </td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
       <section className="table-card">
         <div className="table-scroll">
           <table className="deployment-table">
@@ -148,8 +202,9 @@ export default async function DeploymentsPage({
                     <td>
                       <div className="row-actions">
                         <a href={`/deployments/${build.environment}/${build.uuid}`}>Details</a>
-                        {build.environment === "preview" && build.state === "completed" && current && commit ? (
+                        {roleAllows(principal.role, "administrator") && build.environment === "preview" && build.state === "completed" && current && commit ? (
                           <form action="/api/control/release" method="post">
+                            <input type="hidden" name="requestId" value={randomUUID()} />
                             <input type="hidden" name="action" value="promote" />
                             <input type="hidden" name="commit" value={commit} />
                             <input type="hidden" name="buildUuid" value={build.uuid} />
@@ -158,8 +213,9 @@ export default async function DeploymentsPage({
                             </ConfirmSubmitButton>
                           </form>
                         ) : null}
-                        {build.environment === "production" && build.state === "completed" && !current && commit ? (
+                        {roleAllows(principal.role, "administrator") && build.environment === "production" && build.state === "completed" && !current && commit ? (
                           <form action="/api/control/release" method="post">
+                            <input type="hidden" name="requestId" value={randomUUID()} />
                             <input type="hidden" name="action" value="rollback" />
                             <input type="hidden" name="commit" value={commit} />
                             <input type="hidden" name="buildUuid" value={build.uuid} />

@@ -73,6 +73,7 @@ main {
 .refresh-button:hover { border-color: rgba(112,224,193,0.62); background: rgba(112,224,193,0.08); }
 .topbar-actions { display: flex; align-items: center; gap: 10px; }
 .primary-nav-button,
+.oauth-button,
 .auth-form button,
 .deploy-form button {
   border: 0;
@@ -87,6 +88,7 @@ main {
   text-decoration: none;
 }
 .primary-nav-button:hover,
+.oauth-button:hover,
 .auth-form button:hover,
 .deploy-form button:hover { filter: brightness(1.08); }
 .link-button {
@@ -227,6 +229,17 @@ footer a { text-decoration: none; color: var(--muted); }
 .auth-form button { justify-self: start; }
 .form-error { margin: -8px 0 0; color: var(--danger); font-size: 13px; }
 .back-link { color: var(--muted); font-size: 13px; text-decoration: none; }
+.oauth-button { display: inline-flex; justify-content: center; align-items: center; }
+.security-note { margin: -8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.identity-chip {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: capitalize;
+}
 
 .notice {
   margin: 18px 0;
@@ -278,6 +291,9 @@ footer a { text-decoration: none; color: var(--muted); }
 .deployment-table code { color: var(--blue); font-family: "SFMono-Regular", Consolas, monospace; }
 
 .table-card { overflow: hidden; border: 1px solid var(--line); border-radius: 22px; background: rgba(9,20,34,0.72); }
+.approval-card { margin-bottom: 24px; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 20px 22px; border-bottom: 1px solid var(--line); }
+.section-heading h2 { margin: 3px 0 0; font-size: 20px; }
 .table-scroll { overflow-x: auto; }
 .deployment-table { width: 100%; min-width: 940px; border-collapse: collapse; font-size: 13px; }
 .deployment-table th { color: var(--muted); font-size: 10px; letter-spacing: 0.08em; text-align: left; text-transform: uppercase; }

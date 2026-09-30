@@ -30,6 +30,14 @@ test("password comparison and same-origin enforcement fail closed", () => {
     },
   });
   assert.equal(getRequestOrigin(proxiedRequest), "https://deploy.weknowenglish.online");
+  assert.equal(
+    getRequestOrigin(proxiedRequest, { WKE_DASHBOARD_ORIGIN: "https://deploy.weknowenglish.online" }),
+    "https://deploy.weknowenglish.online",
+  );
+  assert.throws(
+    () => getRequestOrigin(proxiedRequest, { WKE_DASHBOARD_ORIGIN: "https://attacker.example" }),
+    /does not match/,
+  );
   assert.doesNotThrow(() => assertSameOrigin(proxiedRequest));
   assert.throws(
     () =>

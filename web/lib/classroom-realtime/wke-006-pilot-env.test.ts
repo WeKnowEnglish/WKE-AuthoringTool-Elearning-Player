@@ -84,4 +84,10 @@ describe("WKE-006 preview pilot preflight", () => {
     await expect(assertWke006PreviewReachable(full, protectedPreviewFetch))
       .rejects.toThrow("WKE_006_VERCEL_COOKIE_FILE");
   });
+
+  it("fails before fixture creation when managed hosting blocks Preview", async () => {
+    const blockedPreviewFetch = async () => new Response(null, { status: 403 });
+    await expect(assertWke006PreviewReachable(full, blockedPreviewFetch))
+      .rejects.toThrow("managed-hosting domain mapping");
+  });
 });

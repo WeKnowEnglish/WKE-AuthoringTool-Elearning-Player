@@ -126,6 +126,11 @@ export async function assertWke006PreviewReachable(
       );
     }
   }
+  if (response.status === 401 || response.status === 403) {
+    throw new Error(
+      `WKE-006 Preview reachability check returned HTTP ${response.status}. Verify the preview hostname, managed-hosting domain mapping, and application access rules before creating fixtures.`,
+    );
+  }
   if (response.status >= 500) {
     throw new Error(`WKE-006 Preview reachability check returned HTTP ${response.status}.`);
   }

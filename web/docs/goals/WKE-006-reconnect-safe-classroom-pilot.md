@@ -3,7 +3,7 @@
 Status: In Progress
 Priority: P1
 Cadence: One-time pilot, then ongoing regression coverage
-Last updated: 2026-09-16
+Last updated: 2026-10-02
 
 ## Primary Stakeholder
 
@@ -203,10 +203,20 @@ Completed:
 - Preview rollback was rehearsed by overriding only `feat/activity-builder` with `NEXT_PUBLIC_CLASSROOM_REALTIME_NATIVE_SHELL_PILOT=false`. Deployment `wke-authoring-tool-elearning-player-ccbf4sxqf-we-know-english.vercel.app` passed the compatibility-shell journey, including teacher state, first join, late join, teacher refresh, wrong-class denial, ended-session denial, and cleanup.
 - The Preview-only native-shell flag was restored to `true`. Deployment `wke-authoring-tool-elearning-player-kcuis2vwu-we-know-english.vercel.app` then passed all 53 contracts and one complete native browser journey. Production configuration was not changed during the drill.
 - Brady is the recorded rollback owner for the pilot.
+- On 2026-10-02, the linked Supabase project reported local and remote
+  migrations synchronized through migration 155, including required migrations
+  127–131. The Realtime policy view showed both authenticated classroom
+  policies, and the project setting reported a 200-client concurrent limit.
 
 Remaining:
 
-- Confirm the actual Supabase and Liveblocks account-plan connection limits in their authenticated dashboards. The automated gate used conservative published lower-plan values (Supabase 200 and Liveblocks 10) only to prove roster headroom; those values are not a substitute for the required account check.
+- Re-run the three-pass reconnect gate against the Hostinger Preview after the
+  documented flags are enabled progressively there. The earlier Vercel evidence
+  remains historical validation, not proof of the current hosting path.
+- Disable Supabase Realtime public channel access after the two private
+  classroom policies are verified, before enabling Preview shadow mode.
+- Confirm the actual Liveblocks account-plan connection limit. Supabase's
+  authenticated Realtime settings now confirm a 200-client concurrent limit.
 - Choose the pilot teacher and small class, approve the production flag window, and perform the supervised production pilot with recorded recovery P50/P95, connection headroom, message/write rates, and stop-condition review.
 - Review the resulting reconnect events in Platform Health as an administrator and attach that human-view evidence to the production pilot record.
 

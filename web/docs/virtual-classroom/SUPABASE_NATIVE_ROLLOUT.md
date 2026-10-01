@@ -80,7 +80,7 @@ secret.
 ## 3. Classroom rollout variables
 
 For the complete native class shell, set every value below to `true` in the
-same Vercel environment:
+same Hostinger Preview application environment:
 
 ```dotenv
 NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE=true
@@ -109,8 +109,8 @@ snapshot before removing the outer Liveblocks room. If readiness is incomplete,
 the class automatically stays on the compatibility shell.
 
 `NEXT_PUBLIC_*` values are compiled into the browser bundle. Changing any of
-them requires a new Vercel deployment; restarting an existing deployment is
-not sufficient.
+them requires a new Hostinger build/deployment; restarting an existing process
+is not sufficient.
 
 ## 4. Recommended rollout order
 
@@ -138,7 +138,8 @@ full write-path rollback is needed.
 
 The gate creates disposable teacher, class, two enrolled students, and a student
 enrolled in a different class. It deletes these fixtures after every run. The
-public production hostname is refused; use a Vercel Preview URL only.
+public production hostname is refused; use the dedicated Hostinger Preview URL
+(`https://preview.weknowenglish.online`).
 
 Add these values to the local operator environment. Capacity values are the
 current plan limits verified in the provider dashboards, not estimates:
@@ -150,11 +151,10 @@ WKE_006_SUPABASE_CONNECTION_CAPACITY=...
 WKE_006_LIVEBLOCKS_CONNECTION_CAPACITY=...
 WKE_006_ROLLBACK_OWNER=...
 NEXT_PUBLIC_APP_DIAGNOSTICS_ENABLED=true
-VERCEL_AUTOMATION_BYPASS_SECRET=...
-WKE_006_VERCEL_COOKIE_FILE=.vercel/wke006-cookies.txt
 ```
 
-When Vercel Deployment Protection intercepts the Preview, use either
+No protection-bypass credential is required for the public Hostinger Preview.
+For a legacy Vercel Preview protected by Vercel Deployment Protection, use either
 `VERCEL_AUTOMATION_BYPASS_SECRET` or `WKE_006_VERCEL_COOKIE_FILE`. The cookie
 jar can be created by authenticated Vercel CLI without exposing the bypass
 secret. Keep either credential only in ignored local or CI secret storage. The

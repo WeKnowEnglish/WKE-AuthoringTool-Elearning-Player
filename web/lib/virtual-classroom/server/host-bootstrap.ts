@@ -10,6 +10,7 @@ import {
   classroomRealtimeNativeShellPilotEnabled,
 } from "@/lib/classroom-realtime/shadow-mode";
 import { createVirtualClassroomInitialStorage } from "@/lib/virtual-classroom/liveblocks/initial-storage";
+import { resolveVirtualClassroomHostTransport } from "@/lib/virtual-classroom/host-transport-policy";
 import {
   classSessionIdFromJoinCode,
   toVirtualClassroomRoomId,
@@ -102,14 +103,17 @@ export async function bootstrapVirtualClassroomHost(input: {
   /** When true, do not end other active sessions for the class (reuse path handles that). */
   skipEndOthers?: boolean;
 }): Promise<HostVirtualClassroomResult> {
-  const nativeSupabaseShellRequested =
-    Boolean(input.classId) &&
-    classroomRealtimeNativeShellPilotEnabled() &&
-    classroomRealtimeNativeShellAuthorityReady();
-  // Liveblocks remains the recovery transport when the native runtime cannot
-  // be seeded. Validate it before persisting the session so a configuration
-  // error cannot leave an active classroom with no usable room.
-  assertLiveblocksSecret();
+  const transport = resolveVirtualClassroomHostTransport({
+    classId: input.classId,
+    nativeShellPilotEnabled: classroomRealtimeNativeShellPilotEnabled(),
+    nativeShellAuthorityReady: classroomRealtimeNativeShellAuthorityReady(),
+  });
+  const nativeSupabaseShellRequested = transport.nativeSupabaseShellRequested;
+  // One-off and compatibility sessions still fail fast before persistence.
+  // A class-linked native shell deliberately skips this preflight; if its
+  // snapshot seed fails, the fallback room provision below validates
+  // Liveblocks and ends the just-created session on failure.
+  if (transport.requiresLiveblocksPreflight) assertLiveblocksSecret();
   const joinCode = generateJoinCode();
   const sessionId = classSessionIdFromJoinCode(joinCode);
   const roomId = toVirtualClassroomRoomId(joinCode);

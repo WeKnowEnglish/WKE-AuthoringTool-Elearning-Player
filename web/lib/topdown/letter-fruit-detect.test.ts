@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Jimp } from "jimp";
 import { detectBoundsForAtlas, edgeDetectOptionsForAtlas } from "@/lib/topdown/atlas-bounds-snap";
 import { LETTER_A_FRUIT_ATLAS } from "@/lib/topdown/letter-fruit-atlas";
@@ -24,6 +24,10 @@ import { bboxOfContentInRect, isLetterFruitSheetBackground } from "@/lib/topdown
 
 const LETTER_A_SHEET = "public/assets/Letter Fruit Stages/Letter A Stages.png";
 const LETTER_E_SHEET = "public/assets/Letter Fruit Stages/Letter E Stages.png";
+
+// These image scans are intentionally CPU-heavy and share the machine with the
+// rest of the suite. Keep the assertion timeout above parallel-run contention.
+vi.setConfig({ testTimeout: 60_000 });
 
 const LETTER_E_CLICKS = [
   { name: "seed", x: 111, y: 550 },

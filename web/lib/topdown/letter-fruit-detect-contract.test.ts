@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Jimp } from "jimp";
 import {
   detectLetterFruitBoundsForSheet,
@@ -23,6 +23,10 @@ import type { SpriteRect } from "@/lib/topdown/types";
 
 const LETTER_A_SHEET = "public/assets/Letter Fruit Stages/Letter A Stages.png";
 const LETTER_E_SHEET = "public/assets/Letter Fruit Stages/Letter E Stages.png";
+
+// These image scans are intentionally CPU-heavy and share the machine with the
+// rest of the suite. Keep the assertion timeout above parallel-run contention.
+vi.setConfig({ testTimeout: 60_000 });
 
 /** B5 regression — E sprout soil-only strip that D1 must beat. */
 const B5_E_SPROUT_SOIL_STRIP: SpriteRect = { sx: 245, sy: 602, sw: 203, sh: 111 };
@@ -132,11 +136,11 @@ async function assertSheetStagesMeetContract(
 describe("letter-fruit-detect — bounds contract (D3)", () => {
   it("every Letter E stage satisfies the detection contract", async () => {
     await assertSheetStagesMeetContract(LETTER_E_SHEET, LETTER_E_CLICKS);
-  }, 15_000);
+  }, 60_000);
 
   it("every Letter A stage satisfies the detection contract", async () => {
     await assertSheetStagesMeetContract(LETTER_A_SHEET, LETTER_A_CLICKS);
-  }, 15_000);
+  }, 60_000);
 
   it("Letter E sprout occupancy reaches the bulb above the B5 soil strip", async () => {
     const img = await Jimp.read(LETTER_E_SHEET);

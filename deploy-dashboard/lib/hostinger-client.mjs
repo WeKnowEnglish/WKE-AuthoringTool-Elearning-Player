@@ -63,6 +63,10 @@ export function createHostingerClient({ token, username, fetchImplementation = f
   }
 
   return {
+    async listEnvironmentVariables(domain) {
+      return request(buildPath(domain, "/settings/env"));
+    },
+
     async listBuilds(domain, { page = 1, perPage = 25, states = [] } = {}) {
       const query = new URLSearchParams({ page: String(page), per_page: String(perPage) });
       for (const state of states) query.append("states[]", state);

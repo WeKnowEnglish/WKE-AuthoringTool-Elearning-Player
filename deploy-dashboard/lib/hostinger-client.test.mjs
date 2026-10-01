@@ -41,3 +41,29 @@ test("Hostinger client keeps credentials server-side and builds the expected pre
   assert.equal(body.source_options.branch, "feature/teacher-dashboard");
   assert.equal(body.output_directory, "web/.next");
 });
+
+test("Hostinger client reads masked environment metadata without requesting secret values", async () => {
+  const calls = [];
+  const client = createHostingerClient({
+    token: "secret-token",
+    username: "u389919369",
+    fetchImplementation: async (url, options) => {
+      calls.push({ url, options });
+      return new Response(JSON.stringify([{ key: "CRON_SECRET", value: "********" }]), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    },
+  });
+
+  const variables = await client.listEnvironmentVariables("weknowenglish.online");
+
+  assert.deepEqual(variables, [{ key: "CRON_SECRET", value: "********" }]);
+  assert.equal(calls.length, 1);
+  assert.equal(
+    calls[0].url,
+    "https://developers.hostinger.com/api/hosting/v1/accounts/u389919369/websites/weknowenglish.online/nodejs/builds/settings/env",
+  );
+  assert.equal(calls[0].options.method, undefined);
+  assert.equal(calls[0].options.headers.authorization, "Bearer secret-token");
+});

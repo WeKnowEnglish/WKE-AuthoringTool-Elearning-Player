@@ -1,4 +1,5 @@
 import { getControlPlane } from "./control-plane";
+import { requireProductionEnvironmentReady } from "./environment-readiness.mjs";
 import { normalizeCommit } from "./github-client.mjs";
 
 function commitsMatch(left: string, right: string) {
@@ -52,7 +53,14 @@ export async function dispatchProductionDeployment(job: Record<string, any>, sto
   try {
     const { config, hostinger, github } = getControlPlane();
     if (job.action === "promote") {
-      await requireHealthyPreview(`https://${config.previewDomain}`, job.commit_sha);
+      await Promise.all([
+        requireHealthyPreview(`https://${config.previewDomain}`, job.commit_sha),
+        requireProductionEnvironmentReady({
+          hostinger,
+          previewDomain: config.previewDomain,
+          productionDomain: config.productionDomain,
+        }),
+      ]);
     } else if (job.action === "rollback") {
       const sourceBuildUuid = String(job.metadata?.sourceBuildUuid || "");
       if (!sourceBuildUuid) throw new Error("The rollback source build is missing.");

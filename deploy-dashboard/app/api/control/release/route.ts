@@ -9,6 +9,7 @@ import {
   normalizeRequestId,
   productionApprovalPolicy,
 } from "../../../../lib/deployment-policy.mjs";
+import { requireProductionEnvironmentReady } from "../../../../lib/environment-readiness.mjs";
 import { normalizeCommit } from "../../../../lib/github-client.mjs";
 
 function commitsMatch(left: string, right: string) {
@@ -112,7 +113,14 @@ export async function POST(request: Request) {
       { principal, outcome: "authorized", request },
     );
     if (action === "promote") {
-      await requireHealthyPreview(`https://${config.previewDomain}`, requestedCommit);
+      await Promise.all([
+        requireHealthyPreview(`https://${config.previewDomain}`, requestedCommit),
+        requireProductionEnvironmentReady({
+          hostinger,
+          previewDomain: config.previewDomain,
+          productionDomain: config.productionDomain,
+        }),
+      ]);
     } else {
       const previous = await hostinger.getBuild(config.productionDomain, buildUuid);
       const previousCommit = normalizeCommit(previous?.options?.source_options?.commit?.hash);

@@ -71,6 +71,8 @@ Set the variables above in the Hostinger dashboard application. The dashboard he
 
 ## Safety boundary
 
-Promotion is accepted only when the public preview health endpoint reports the requested production-mode commit. The controller creates a commit-specific `wke-release/<sha>` Git branch and asks Hostinger to build production from that immutable ref. Rollback verifies the selected historical Hostinger build before creating the same kind of release ref. Every requested action emits a structured event to runtime logs and, in GitHub identity mode, to the append-only control database.
+Promotion is accepted only when the public preview health endpoint reports the requested production-mode commit. Before dispatching that build, the controller also reads masked Hostinger environment metadata and verifies that production has the required baseline keys plus every recognized feature key enabled in preview. Only key names are compared; secret values are never retrieved, logged, or shown. A failed preflight leaves production unchanged. Rollback deliberately remains available even when preview or its environment is unhealthy.
+
+The controller creates a commit-specific `wke-release/<sha>` Git branch and asks Hostinger to build production from that immutable ref. Rollback verifies the selected historical Hostinger build before creating the same kind of release ref. Every requested action emits a structured event to runtime logs and, in GitHub identity mode, to the append-only control database.
 
 The managed-hosting API token has the same account permissions as its owner. Keep it in Hostinger environment variables, restrict dashboard access to HTTPS, and rotate it if it is ever exposed.

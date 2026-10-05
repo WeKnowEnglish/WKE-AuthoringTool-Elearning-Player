@@ -12,7 +12,9 @@ const nextConfig = {
       headers: [
         { key: "X-Content-Type-Options", value: "nosniff" },
         { key: "X-DNS-Prefetch-Control", value: "off" },
-        { key: "Referrer-Policy", value: "no-referrer" },
+        // Native POST forms need their Origin header for assertSameOrigin.
+        // no-referrer makes browsers send Origin: null, even on this site.
+        { key: "Referrer-Policy", value: "same-origin" },
         { key: "X-Frame-Options", value: "DENY" },
         { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         { key: "Cross-Origin-Opener-Policy", value: "same-origin" },

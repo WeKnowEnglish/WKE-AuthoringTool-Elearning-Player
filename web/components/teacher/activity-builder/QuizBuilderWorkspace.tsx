@@ -734,7 +734,7 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
           </button>
         ) : null}
 
-        <div className="relative flex flex-1 flex-col items-center overflow-y-auto px-4 py-8 sm:px-6 sm:py-10">
+        <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-4 py-8 sm:px-6 sm:py-10 [&>*]:shrink-0">
           {busy ? (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-stone-50/70 backdrop-blur-[1px]">
               <p className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-600 shadow-sm">
@@ -755,7 +755,7 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
               <h2 className="mt-3 text-xl font-semibold text-stone-900">
                 Quizzes in Activity Bank
               </h2>
-              <ul className="mt-4 max-h-96 space-y-2 overflow-y-auto">
+              <ul className="mt-4 space-y-2">
                 {bankBusy ? (
                   <li className="text-sm text-stone-500">Loading quizzes…</li>
                 ) : bankQuizzes.length === 0 ? (

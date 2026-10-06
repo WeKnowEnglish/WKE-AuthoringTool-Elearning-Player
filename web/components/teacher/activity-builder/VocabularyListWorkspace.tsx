@@ -816,142 +816,149 @@ export function VocabularyListWorkspace({
 
   if (screen === "picker") {
     return (
-      <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-4 overflow-y-auto px-3 py-4 sm:px-4 sm:py-5 [&>*]:shrink-0">
-        <header className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <Link
-              href="/teacher/activity-builder"
-              className="text-xs font-medium text-sky-800 hover:underline"
-            >
-              ← Activity Builder
-            </Link>
-            <h1 className="mt-1 text-xl font-semibold text-stone-900 sm:text-2xl">
-              Vocabulary lists
-            </h1>
-            <p className="mt-1 text-sm text-stone-600">
-              Build shared word lists, then compile multiple choice, letter
-              scramble, and flashcards into Activity Bank.
-            </p>
-          </div>
-          <button
-            type="button"
-            className="rounded-full border border-stone-300 bg-white px-3 py-1.5 text-xs font-semibold text-stone-800 hover:bg-stone-50 sm:text-sm"
-            onClick={() => void openSavedList()}
-          >
-            Import file
-          </button>
-          {openFileInput}
-        </header>
-
-        {notice ? (
-          <button
-            type="button"
-            className="fixed bottom-4 left-1/2 z-[60] max-w-sm -translate-x-1/2 rounded-full border border-stone-700/40 bg-stone-900/90 px-4 py-2 text-center text-xs font-medium text-white shadow-lg backdrop-blur-sm"
-            onClick={() => setNotice(null)}
-          >
-            {notice}
-          </button>
-        ) : null}
-
-        <section>
-          <h2 className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">
-            Activity Bank
-          </h2>
-          <p className="mt-1 text-sm text-stone-500">
-            Saved on the server for your teacher account. Lists autosave while you
-            edit, survive browser clears, and are available to the Learning Track
-            Compiler on this same site.
-          </p>
-          {libraryEntries.length === 0 ? (
-            <p className="mt-3 rounded-xl border border-dashed border-stone-300 px-4 py-6 text-sm text-stone-500">
-              No vocabulary lists saved yet. Start one below or import a
-              .wkevocab.json file — edits autosave to the Activity Bank.
-            </p>
-          ) : (
-            <ul className="mt-3 space-y-2">
-              {libraryEntries.map((entry) => (
-                <li
-                  key={entry.id}
-                  className="flex flex-wrap items-center gap-2 rounded-xl border border-stone-200 bg-white/80 px-3 py-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-stone-900">{entry.name}</p>
-                    <p className="text-xs text-stone-500">
-                      Updated {new Date(entry.updatedAt).toLocaleString()}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="rounded-lg bg-stone-900 px-3 py-1.5 text-xs font-medium text-white"
-                    onClick={() => {
-                      void (async () => {
-                        try {
-                          const loaded = await getStudioVocabularyList(entry.id);
-                          loadDocument(
-                            loaded.document,
-                            `Opened “${entry.name}” from Activity Bank.`,
-                            { libraryId: loaded.id },
-                          );
-                        } catch (error) {
-                          setNotice(
-                            error instanceof Error
-                              ? error.message
-                              : "Could not open vocabulary list.",
-                          );
-                        }
-                      })();
-                    }}
-                  >
-                    Open
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-800"
-                    onClick={() => {
-                      void (async () => {
-                        try {
-                          await deleteStudioVocabularyList(entry.id);
-                          if (libraryId === entry.id) setLibraryId(null);
-                          await refreshLibrary();
-                          setNotice(`Deleted “${entry.name}”.`);
-                        } catch (error) {
-                          setNotice(
-                            error instanceof Error ? error.message : "Could not delete.",
-                          );
-                        }
-                      })();
-                    }}
-                  >
-                    Delete
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section>
-          <h2 className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">
-            Start a list
-          </h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {STARTERS.map((starter) => (
-              <button
-                key={starter.id}
-                type="button"
-                onClick={() =>
-                  loadDocument(starter.create(), `Loaded ${starter.title}.`, {
-                    libraryId: null,
-                  })
-                }
-                className="rounded-xl border border-stone-200 bg-white/80 p-4 text-left transition hover:border-stone-400 hover:bg-white"
+      <div
+        className="h-0 min-h-0 w-full flex-1 overflow-y-auto"
+        role="region"
+        aria-label="Saved vocabulary lists"
+        tabIndex={0}
+      >
+        <div className="mx-auto w-full max-w-3xl space-y-4 px-3 py-4 sm:px-4 sm:py-5">
+          <header className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <Link
+                href="/teacher/activity-builder"
+                className="text-xs font-medium text-sky-800 hover:underline"
               >
-                <h3 className="font-semibold text-stone-900">{starter.title}</h3>
-                <p className="mt-1 text-sm text-stone-600">{starter.description}</p>
-              </button>
-            ))}
-          </div>
-        </section>
+                ← Activity Builder
+              </Link>
+              <h1 className="mt-1 text-xl font-semibold text-stone-900 sm:text-2xl">
+                Vocabulary lists
+              </h1>
+              <p className="mt-1 text-sm text-stone-600">
+                Build shared word lists, then compile multiple choice, letter
+                scramble, and flashcards into Activity Bank.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="rounded-full border border-stone-300 bg-white px-3 py-1.5 text-xs font-semibold text-stone-800 hover:bg-stone-50 sm:text-sm"
+              onClick={() => void openSavedList()}
+            >
+              Import file
+            </button>
+            {openFileInput}
+          </header>
+
+          {notice ? (
+            <button
+              type="button"
+              className="fixed bottom-4 left-1/2 z-[60] max-w-sm -translate-x-1/2 rounded-full border border-stone-700/40 bg-stone-900/90 px-4 py-2 text-center text-xs font-medium text-white shadow-lg backdrop-blur-sm"
+              onClick={() => setNotice(null)}
+            >
+              {notice}
+            </button>
+          ) : null}
+
+          <section>
+            <h2 className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">
+              Activity Bank
+            </h2>
+            <p className="mt-1 text-sm text-stone-500">
+              Saved on the server for your teacher account. Lists autosave while you
+              edit, survive browser clears, and are available to the Learning Track
+              Compiler on this same site.
+            </p>
+            {libraryEntries.length === 0 ? (
+              <p className="mt-3 rounded-xl border border-dashed border-stone-300 px-4 py-6 text-sm text-stone-500">
+                No vocabulary lists saved yet. Start one below or import a
+                .wkevocab.json file — edits autosave to the Activity Bank.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {libraryEntries.map((entry) => (
+                  <li
+                    key={entry.id}
+                    className="flex flex-wrap items-center gap-2 rounded-xl border border-stone-200 bg-white/80 px-3 py-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-stone-900">{entry.name}</p>
+                      <p className="text-xs text-stone-500">
+                        Updated {new Date(entry.updatedAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-lg bg-stone-900 px-3 py-1.5 text-xs font-medium text-white"
+                      onClick={() => {
+                        void (async () => {
+                          try {
+                            const loaded = await getStudioVocabularyList(entry.id);
+                            loadDocument(
+                              loaded.document,
+                              `Opened “${entry.name}” from Activity Bank.`,
+                              { libraryId: loaded.id },
+                            );
+                          } catch (error) {
+                            setNotice(
+                              error instanceof Error
+                                ? error.message
+                                : "Could not open vocabulary list.",
+                            );
+                          }
+                        })();
+                      }}
+                    >
+                      Open
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-800"
+                      onClick={() => {
+                        void (async () => {
+                          try {
+                            await deleteStudioVocabularyList(entry.id);
+                            if (libraryId === entry.id) setLibraryId(null);
+                            await refreshLibrary();
+                            setNotice(`Deleted “${entry.name}”.`);
+                          } catch (error) {
+                            setNotice(
+                              error instanceof Error ? error.message : "Could not delete.",
+                            );
+                          }
+                        })();
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section>
+            <h2 className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">
+              Start a list
+            </h2>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {STARTERS.map((starter) => (
+                <button
+                  key={starter.id}
+                  type="button"
+                  onClick={() =>
+                    loadDocument(starter.create(), `Loaded ${starter.title}.`, {
+                      libraryId: null,
+                    })
+                  }
+                  className="rounded-xl border border-stone-200 bg-white/80 p-4 text-left transition hover:border-stone-400 hover:bg-white"
+                >
+                  <h3 className="font-semibold text-stone-900">{starter.title}</h3>
+                  <p className="mt-1 text-sm text-stone-600">{starter.description}</p>
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
       </div>
     );
   }

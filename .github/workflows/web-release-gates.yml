@@ -44,9 +44,10 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
+        working-directory: .
         run: npm ci
 
       - name: Audit production dependencies
@@ -73,5 +74,6 @@ jobs:
       - name: Browser safety checks
         run: npm run test:e2e
 
-      - name: Build
+      - name: Build Hostinger standalone package
+        working-directory: .
         run: npm run build

@@ -1,9 +1,13 @@
 import type { NextConfig } from "next";
 import bundleAnalyzer from "@next/bundle-analyzer";
 import path from "node:path";
-import { resolveNextOutputMode } from "./lib/build/next-output-mode";
 
 const withBundleAnalyzer = bundleAnalyzer({ enabled: process.env.ANALYZE === "true" });
+// Hostinger's SWC/WASM config loader cannot resolve extensionless TypeScript
+// imports. Keep this small build-time decision in the config itself.
+const nextOutputMode: "standalone" | undefined = process.env.VERCEL?.trim()
+  ? undefined
+  : "standalone";
 
 const repositoryRoot = path.resolve(process.cwd(), "..");
 const exploreHotspotsPlayEntry = path.join(
@@ -55,9 +59,9 @@ const nextConfig: NextConfig = {
   // Next 16.3's Vercel adapter does not emit next-server.js.nft.json, while
   // standalone finalization still reads it. Vercel builds its own deployment
   // artifacts, so keep standalone output only for Docker/self-hosted builds.
-  output: resolveNextOutputMode({ vercel: process.env.VERCEL }),
+  output: nextOutputMode,
   // Include the local @wke packages beside web/ in the standalone runtime.
-  outputFileTracingRoot: resolveNextOutputMode({ vercel: process.env.VERCEL })
+  outputFileTracingRoot: nextOutputMode
     ? repositoryRoot
     : undefined,
   serverExternalPackages: ["stripe"],

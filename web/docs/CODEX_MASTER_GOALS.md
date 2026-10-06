@@ -67,7 +67,7 @@ Current major technologies include:
 - Supabase Realtime
 - Daily for live video
 - Liveblocks in some existing classroom systems
-- Vercel for current deployment
+- Hostinger managed Node.js for production, preview, and deployment management
 
 Codex should inspect the repository before assuming these systems are implemented exactly as described here.
 
@@ -1271,7 +1271,7 @@ Do not expose sensitive user information unnecessarily.
 
 Reduce unnecessary dependence on any single hosting provider.
 
-Vercel is currently used, but the application should not become impossible to deploy elsewhere.
+Hostinger managed Node.js is currently used. Keep builds and runtime portable to other Node.js hosts.
 
 ## Required Work
 

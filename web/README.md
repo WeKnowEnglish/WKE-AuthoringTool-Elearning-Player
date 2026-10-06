@@ -73,12 +73,13 @@ For Cursor lesson-building work, use [docs/CURSOR_LESSON_CREATION_HANDOFF.md](./
 
 ## Hostinger deployment
 
-Keep `weknowenglish.online` on Vercel until a Hostinger test URL works.
+Production, preview, and the deployment dashboard run on Hostinger managed Node.js.
+See [the retirement checklist](./docs/hosting/VERCEL_RETIREMENT.md) for migration status.
 
 - **VPS + Docker (deployment-platform path):** [docs/hosting/HOSTINGER_VPS_DOCKER.md](./docs/hosting/HOSTINGER_VPS_DOCKER.md)
 - **hPanel managed Node.js wizard:** [docs/hosting/HOSTINGER.md](./docs/hosting/HOSTINGER.md)
 
-Both paths use Node.js 24 and preserve the full clone because `web/` depends on the local `packages/` workspace. Non-Vercel builds emit Next.js standalone output.
+Both paths use Node.js 24 and preserve the full clone because `web/` depends on the local `packages/` workspace. Builds emit Next.js standalone output.
 
 ## Project layout
 

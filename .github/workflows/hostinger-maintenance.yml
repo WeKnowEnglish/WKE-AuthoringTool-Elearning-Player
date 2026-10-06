@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: "17 3 * * *"
     - cron: "7,37 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
     inputs:
       job:
@@ -14,6 +15,8 @@ on:
         options:
           - daily-cleanup
           - diagnostics-retention
+          - class-clock
+          - email-delivery
           - all
 
 permissions:
@@ -24,6 +27,44 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  class-clock:
+    if: >-
+      github.event.schedule == '*/5 * * * *' ||
+      (github.event_name == 'workflow_dispatch' &&
+      (inputs.job == 'class-clock' || inputs.job == 'all'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Advance scheduled classroom sessions
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          test -n "$CRON_SECRET" || { echo "CRON_SECRET repository secret is missing"; exit 1; }
+          curl --fail-with-body --silent --show-error --max-time 60 \
+            -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            https://weknowenglish.online/api/cron/class-clock
+
+  email-delivery:
+    # Activate only after the email outbox release and its database migration.
+    if: >-
+      vars.WKE_EMAIL_DELIVERY_ENABLED == 'true' &&
+      (github.event.schedule == '*/5 * * * *' ||
+      (github.event_name == 'workflow_dispatch' &&
+      (inputs.job == 'email-delivery' || inputs.job == 'all')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Deliver queued communications
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          test -n "$CRON_SECRET" || { echo "CRON_SECRET repository secret is missing"; exit 1; }
+          curl --fail-with-body --silent --show-error --max-time 60 \
+            -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            https://weknowenglish.online/api/cron/email-delivery
+
   diagnostics-retention:
     if: >-
       github.event.schedule == '17 3 * * *' ||

@@ -3,13 +3,10 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("Next deployment output mode", () => {
-  it("keeps Vercel on adapter output and self-hosted targets on standalone", () => {
+  it("packages every deployment as a standalone Node.js server", () => {
     const config = readFileSync(resolve(process.cwd(), "next.config.ts"), "utf8");
-    expect(config).toContain("process.env.VERCEL?.trim()");
-    expect(config).toContain(
-      'const nextOutputMode: "standalone" | undefined = vercelRuntime ? undefined : "standalone"',
-    );
-    expect(config).toContain('nextOutputMode === "standalone" ? repositoryRoot : undefined');
+    expect(config).toContain('output: "standalone"');
+    expect(config).toContain('outputFileTracingRoot: repositoryRoot');
   });
 
   it("packages and starts the managed-hosting standalone server", () => {

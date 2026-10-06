@@ -102,7 +102,7 @@ check when the gate moves from advisory to mandatory.
 
 ## Retention and rollback
 
-`vercel.json` schedules `/api/cron/diagnostics-retention` daily. Migration 147 indexes
+`.github/workflows/hostinger-maintenance.yml` schedules `/api/cron/diagnostics-retention` daily. Migration 147 indexes
 `received_at` and provides the service-only function that deletes raw events older than 60 days.
 No longer-lived aggregate is modified.
 

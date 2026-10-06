@@ -142,7 +142,7 @@ export async function listPublicTrialTimes(handle: string): Promise<PublicTrialT
   }
 
   return (data ?? [])
-    .map((row) => {
+    .map((row: unknown): PublicTrialTime | null => {
       const record = row as {
         starts_at?: string;
         duration_minutes?: number;
@@ -159,7 +159,7 @@ export async function listPublicTrialTimes(handle: string): Promise<PublicTrialT
         timezone: record.timezone,
       };
     })
-    .filter((time): time is PublicTrialTime => Boolean(time));
+    .filter((time: PublicTrialTime | null): time is PublicTrialTime => time !== null);
 }
 
 export async function listOpenAvailabilityForTeacher(

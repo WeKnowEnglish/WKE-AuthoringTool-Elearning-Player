@@ -69,7 +69,11 @@
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:reset": "supabase db reset",
-    "supabase:new": "supabase migration new"
+    "supabase:new": "supabase migration new",
+    "prebuild:managed": "npm run prebuild",
+    "build:managed": "node ./scripts/run-managed-build.mjs",
+    "postbuild:managed": "node ./scripts/prepare-managed-standalone.mjs",
+    "test:hostinger:release-metadata": "node --test scripts/managed-release-metadata.test.mjs"
   },
   "dependencies": {
     "@daily-co/daily-js": "^0.91.0",
@@ -98,18 +102,18 @@
     "jszip": "^3.10.1",
     "lucide-react": "^1.24.0",
     "motion": "^12.38.0",
-    "next": "16.3.4",
+    "next": "16.3.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "sharp": "0.35.4",
+    "sharp": "0.35.5",
     "stripe": "^22.6.1",
     "three": "^0.186.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@next/bundle-analyzer": "16.3.4",
+    "@next/bundle-analyzer": "16.3.6",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/jsdom": "^28.0.3",

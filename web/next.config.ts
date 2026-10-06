@@ -44,10 +44,22 @@ function supabaseStoragePattern():
 }
 
 const nextConfig: NextConfig = {
+  // Hostinger's running process has no Git checkout. Embed the release SHA
+  // supplied by the managed build so the portal can verify the exact preview.
+  env: {
+    WKE_BUILD_COMMIT_SHA:
+      process.env.WKE_GIT_COMMIT_SHA?.trim() ||
+      process.env.NEXT_PUBLIC_GIT_COMMIT_SHA?.trim() ||
+      "development",
+  },
   // Next 16.3's Vercel adapter does not emit next-server.js.nft.json, while
   // standalone finalization still reads it. Vercel builds its own deployment
   // artifacts, so keep standalone output only for Docker/self-hosted builds.
   output: resolveNextOutputMode({ vercel: process.env.VERCEL }),
+  // Include the local @wke packages beside web/ in the standalone runtime.
+  outputFileTracingRoot: resolveNextOutputMode({ vercel: process.env.VERCEL })
+    ? repositoryRoot
+    : undefined,
   serverExternalPackages: ["stripe"],
   outputFileTracingExcludes: {
     "/api/dev/apply-letter-fruit-picks": devSourceWriterTraceExcludes,

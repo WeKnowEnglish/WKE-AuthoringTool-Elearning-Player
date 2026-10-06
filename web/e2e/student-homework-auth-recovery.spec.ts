@@ -44,6 +44,7 @@ test.describe("student homework sign-in recovery", () => {
     await expect(page).toHaveURL(/\/login\?.*portal=student/);
     const signIn = page.getByRole("button", { name: /sign in/i });
     await expect(signIn).toBeVisible();
+    await expect(signIn).toBeEnabled({ timeout: 30_000 });
     await signIn.focus();
     await expect(signIn).toBeFocused();
 

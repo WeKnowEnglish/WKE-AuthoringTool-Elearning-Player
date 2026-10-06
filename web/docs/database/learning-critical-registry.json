@@ -1,8 +1,94 @@
 {
   "version": 1,
-  "reviewedThroughMigration": "155",
+  "reviewedThroughMigration": "161",
   "scope": "Learning-critical public objects plus storage and realtime policy surfaces for the first 100 active students.",
   "objects": [
+    {
+      "name": "public.document_rounds",
+      "kind": "table",
+      "journeys": [
+        "classroom-recovery"
+      ],
+      "owner": "Document activity lifecycle",
+      "sensitivity": "private classroom activity configuration",
+      "authority": "server-authenticated classroom host",
+      "migration": "supabase/migrations/052_document_rounds.sql",
+      "relationships": [
+        "session_id -> class_sessions.id",
+        "application updates match recorded round, session, room and creator; only launch inserts"
+      ],
+      "access": "service role only; current classroom access gates entry and commands; completed recovery is current-host only",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/document-activity/server/persistence.ts",
+        "lib/document-activity/server/launch.ts",
+        "app/api/document/[roundId]/commands/route.ts"
+      ]
+    },
+    {
+      "name": "public.document_submissions",
+      "kind": "table",
+      "journeys": [
+        "classroom-recovery"
+      ],
+      "owner": "Document learning evidence",
+      "sensitivity": "student writing and contributor credit",
+      "authority": "current classroom command; initial contributor authority still needs SQL binding",
+      "migration": "supabase/migrations/053_document_submissions.sql",
+      "relationships": [
+        "round_id -> document_rounds.id",
+        "round/document/revision unique; application retries preserve recorded revisions"
+      ],
+      "access": "service role only; encrypted retry snapshots do not establish initial ownership from editable provider records",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/document-activity/server/submissions.ts",
+        "lib/document-activity/server/commands.ts"
+      ]
+    },
+    {
+      "name": "public.word_card_rounds",
+      "kind": "table",
+      "journeys": [
+        "classroom-recovery"
+      ],
+      "owner": "Vocabulary activity lifecycle",
+      "sensitivity": "private classroom activity configuration",
+      "authority": "server-authenticated classroom host",
+      "migration": "supabase/migrations/054_word_card_rounds.sql",
+      "relationships": [
+        "session_id -> class_sessions.id",
+        "application updates match recorded round, session, room, join code and creator; only launch inserts"
+      ],
+      "access": "service role only; current classroom access gates entry and commands; completed recovery is current-host only",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/word-cards/server/persistence.ts",
+        "lib/word-cards/server/launch.ts",
+        "app/api/word-cards/[joinCode]/commands/route.ts"
+      ]
+    },
+    {
+      "name": "public.word_card_submissions",
+      "kind": "table",
+      "journeys": [
+        "classroom-recovery"
+      ],
+      "owner": "Vocabulary learning evidence",
+      "sensitivity": "student definitions, examples, drawings and ownership",
+      "authority": "current classroom command; initial item authority still needs SQL binding",
+      "migration": "supabase/migrations/055_word_card_submissions.sql",
+      "relationships": [
+        "round_id -> word_card_rounds.id",
+        "round/card/revision unique; application retries preserve recorded revisions"
+      ],
+      "access": "service role only; encrypted retry snapshots do not establish initial ownership from editable provider records",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/word-cards/server/persistence.ts",
+        "lib/word-cards/server/commands.ts"
+      ]
+    },
     {
       "name": "public.student_profiles",
       "kind": "table",
@@ -33,12 +119,13 @@
       ],
       "owner": "Teacher class management",
       "sensitivity": "class metadata",
-      "authority": "owning teacher",
+      "authority": "current approved owning teacher",
       "migration": "supabase/migrations/026_teacher_classes.sql",
       "relationships": [
-        "teacher_id -> auth.users.id"
+        "teacher_id -> auth.users.id",
+        "migration 161 requires current teacher approval for owner policies and intersects class write policies"
       ],
-      "access": "teacher-owned; enrolled-student scoped reads",
+      "access": "approved teacher ownership; student membership is exposed through caller-scoped projections",
       "usage": "confirmed",
       "callSites": [
         "lib/actions/teacher-classes.ts",
@@ -55,18 +142,93 @@
       ],
       "owner": "Class membership",
       "sensitivity": "student-class relationship",
-      "authority": "teacher and guarded student join",
+      "authority": "current approved owning teacher and guarded current-student join",
       "migration": "supabase/migrations/026_teacher_classes.sql",
       "relationships": [
         "class_id -> teacher_classes.id",
         "student_id -> auth.users.id"
       ],
-      "access": "teacher class scope; student reads own membership",
+      "access": "approved teacher class scope; student reads own membership including historical enrollment; join RPC checks the current class owner",
       "usage": "confirmed",
       "callSites": [
         "lib/whiteboard/product/access.ts",
         "lib/actions/student-classes.ts"
       ]
+    },
+    {
+      "name": "public.class_lesson_releases",
+      "kind": "table",
+      "journeys": [
+        "classroom-recovery",
+        "homework-finalization"
+      ],
+      "owner": "Teacher reviewed lesson delivery",
+      "sensitivity": "private teaching cues, source provenance, and answer keys",
+      "authority": "owning teacher; guarded release transaction",
+      "migration": "supabase/migrations/158_lesson_reviewed_delivery.sql",
+      "relationships": [
+        "lesson_id -> class_lessons.id",
+        "class_id -> teacher_classes.id",
+        "class_sessions.lesson_release_id pins the reviewed revision",
+        "class_homework.lesson_release_id preserves assignment provenance"
+      ],
+      "access": "teacher read only; authenticated release RPC creates snapshots; students receive only the safe outline and frozen homework payload",
+      "usage": "confirmed",
+      "callSites": [
+        "app/api/virtual-classroom/[sessionId]/lesson/route.ts"
+      ],
+      "pendingCallSites": [
+        "lib/data/lesson-releases.ts",
+        "lib/actions/lesson-delivery.ts"
+      ],
+      "rollout": "Application consumers retained in the preserved onboarding/feature checkout; not deployed by this maintenance branch."
+    },
+    {
+      "name": "public.release_class_lesson_plan",
+      "kind": "function",
+      "journeys": [
+        "classroom-recovery",
+        "homework-finalization"
+      ],
+      "owner": "Reviewed lesson release",
+      "sensitivity": "private lesson and material snapshots",
+      "authority": "authenticated owning teacher",
+      "migration": "supabase/migrations/158_lesson_reviewed_delivery.sql",
+      "relationships": [
+        "locks the current plan and its Bank materials; inserts an immutable class_lesson_releases revision"
+      ],
+      "access": "authenticated teacher with an owned active class and the reviewed revisions",
+      "usage": "confirmed",
+      "callSites": [
+        "supabase/migrations/158_lesson_reviewed_delivery.sql"
+      ],
+      "pendingCallSites": [
+        "lib/actions/lesson-delivery.ts"
+      ],
+      "rollout": "Application consumers retained in the preserved onboarding/feature checkout; not deployed by this maintenance branch."
+    },
+    {
+      "name": "public.assign_released_lesson_homework",
+      "kind": "function",
+      "journeys": [
+        "homework-finalization"
+      ],
+      "owner": "Reviewed lesson homework assignment",
+      "sensitivity": "frozen learner-facing content and assignment metadata",
+      "authority": "authenticated owning teacher",
+      "migration": "supabase/migrations/158_lesson_reviewed_delivery.sql",
+      "relationships": [
+        "reads the released step; atomically creates/reuses class_homework for the release and step"
+      ],
+      "access": "authenticated teacher with an owned active class; students use existing assignment access",
+      "usage": "confirmed",
+      "callSites": [
+        "supabase/migrations/158_lesson_reviewed_delivery.sql"
+      ],
+      "pendingCallSites": [
+        "lib/actions/lesson-delivery.ts"
+      ],
+      "rollout": "Application consumers retained in the preserved onboarding/feature checkout; not deployed by this maintenance branch."
     },
     {
       "name": "public.class_homework",
@@ -763,12 +925,12 @@
       ],
       "owner": "Student class joining",
       "sensitivity": "join credential and membership",
-      "authority": "authenticated student RPC",
-      "migration": "supabase/migrations/026_teacher_classes.sql",
+      "authority": "current authenticated student RPC",
+      "migration": "supabase/migrations/161_teacher_class_approval_boundary.sql",
       "relationships": [
-        "validates teacher_classes then writes class_enrollments"
+        "locks the current student account and active class with an approved teacher owner before writing class_enrollments"
       ],
-      "access": "authenticated students",
+      "access": "authenticated current students; unavailable class codes return a generic invalid-code result; anonymous execution denied",
       "usage": "confirmed",
       "callSites": [
         "lib/actions/student-classes.ts"
@@ -1197,6 +1359,505 @@
       "usage": "confirmed",
       "callSites": [
         "lib/billing/fulfill-checkout.ts"
+      ]
+    },
+    {
+      "name": "public.teacher_access_requests",
+      "kind": "table",
+      "journeys": [
+        "identity",
+        "parent-access",
+        "communications"
+      ],
+      "owner": "Administrator teacher onboarding",
+      "sensitivity": "teacher application contact details",
+      "authority": "service role with authenticated administrator gates",
+      "migration": "supabase/migrations/156_teacher_access_delivery.sql",
+      "relationships": [
+        "duplicate_of -> public.teacher_access_requests.id"
+      ],
+      "access": "service role only; browser roles revoked and row-level security enabled",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/teacher-access.ts",
+        "lib/data/admin-users.ts"
+      ]
+    },
+    {
+      "name": "public.admin_email_sends",
+      "kind": "table",
+      "journeys": [
+        "identity",
+        "parent-access",
+        "communications"
+      ],
+      "owner": "Administrator communications and delivery worker",
+      "sensitivity": "adult email correspondence and expiring setup links",
+      "authority": "service role with authenticated administrator gates",
+      "migration": "supabase/migrations/156_teacher_access_delivery.sql",
+      "relationships": [
+        "access_request_id -> public.teacher_access_requests.id",
+        "sent_by -> auth.users.id"
+      ],
+      "access": "service role only; browser roles revoked and row-level security enabled",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/admin-communications.ts"
+      ],
+      "pendingCallSites": [
+        "lib/email/outbox.ts"
+      ],
+      "rollout": "Application consumers retained in the preserved onboarding/feature checkout; not deployed by this maintenance branch."
+    },
+    {
+      "name": "public.email_delivery_events",
+      "kind": "table",
+      "journeys": [
+        "identity",
+        "parent-access",
+        "communications"
+      ],
+      "owner": "Email delivery reconciliation",
+      "sensitivity": "provider message identifiers",
+      "authority": "service role with authenticated administrator gates",
+      "migration": "supabase/migrations/156_teacher_access_delivery.sql",
+      "relationships": [],
+      "access": "service role only; browser roles revoked and row-level security enabled",
+      "usage": "confirmed",
+      "callSites": [
+        "supabase/migrations/156_teacher_access_delivery.sql"
+      ],
+      "pendingCallSites": [
+        "app/api/webhooks/resend/route.ts"
+      ],
+      "rollout": "Application consumers retained in the preserved onboarding/feature checkout; not deployed by this maintenance branch."
+    },
+    {
+      "name": "public.whiteboard_rounds",
+      "kind": "table",
+      "journeys": [
+        "classroom-recovery",
+        "learning-progress"
+      ],
+      "owner": "Whiteboard learning evidence",
+      "sensitivity": "student work and participant identity",
+      "authority": "canonical round owner, current enrollment and server-established board membership",
+      "migration": "supabase/migrations/047_whiteboard_p1.sql",
+      "relationships": [
+        "host_user_id -> auth.users.id (logical)",
+        "class_id -> teacher_classes.id"
+      ],
+      "access": "teacher-owned and enrolled student reads; trusted server controls",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/whiteboard/server/commands.ts",
+        "lib/whiteboard/server/persistence.ts"
+      ],
+      "pendingCallSites": [
+        "lib/whiteboard/server/submission-authority.ts"
+      ],
+      "rollout": "Application consumers retained in the preserved onboarding/feature checkout; not deployed by this maintenance branch."
+    },
+    {
+      "name": "public.whiteboard_submissions",
+      "kind": "table",
+      "journeys": [
+        "classroom-recovery",
+        "learning-progress"
+      ],
+      "owner": "Whiteboard learning evidence",
+      "sensitivity": "student work and participant identity",
+      "authority": "canonical round owner, current enrollment and server-established board membership",
+      "migration": "supabase/migrations/047_whiteboard_p1.sql",
+      "relationships": [
+        "round_id -> whiteboard_rounds.id"
+      ],
+      "access": "teacher-owned and student own/contributor reads; trusted server saves",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/whiteboard/server/commands.ts",
+        "lib/whiteboard/server/persistence.ts"
+      ],
+      "pendingCallSites": [
+        "lib/whiteboard/server/submission-authority.ts"
+      ],
+      "rollout": "Application consumers retained in the preserved onboarding/feature checkout; not deployed by this maintenance branch."
+    },
+    {
+      "name": "public.whiteboard_round_participants",
+      "kind": "table",
+      "journeys": [
+        "classroom-recovery",
+        "learning-progress"
+      ],
+      "owner": "Whiteboard learning evidence",
+      "sensitivity": "student work and participant identity",
+      "authority": "canonical round owner, current enrollment and server-established board membership",
+      "migration": "supabase/migrations/160_whiteboard_submission_provenance.sql",
+      "relationships": [
+        "round_id -> whiteboard_rounds.id"
+      ],
+      "access": "service-only; no browser table grants",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/whiteboard/server/commands.ts",
+        "lib/whiteboard/server/persistence.ts"
+      ],
+      "pendingCallSites": [
+        "lib/whiteboard/server/submission-authority.ts"
+      ],
+      "rollout": "Application consumers retained in the preserved onboarding/feature checkout; not deployed by this maintenance branch."
+    },
+    {
+      "name": "public.whiteboard_board_authority",
+      "kind": "table",
+      "journeys": [
+        "classroom-recovery",
+        "learning-progress"
+      ],
+      "owner": "Whiteboard learning evidence",
+      "sensitivity": "student work and participant identity",
+      "authority": "canonical round owner, current enrollment and server-established board membership",
+      "migration": "supabase/migrations/160_whiteboard_submission_provenance.sql",
+      "relationships": [
+        "round_id -> whiteboard_rounds.id"
+      ],
+      "access": "service-only; no browser table grants",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/whiteboard/server/commands.ts",
+        "lib/whiteboard/server/persistence.ts"
+      ],
+      "pendingCallSites": [
+        "lib/whiteboard/server/submission-authority.ts"
+      ],
+      "rollout": "Application consumers retained in the preserved onboarding/feature checkout; not deployed by this maintenance branch."
+    },
+    {
+      "name": "public.whiteboard_current_actor_role",
+      "kind": "function",
+      "journeys": [
+        "classroom-recovery",
+        "learning-progress"
+      ],
+      "owner": "Whiteboard learning evidence",
+      "sensitivity": "student work and participant identity",
+      "authority": "current Auth identity, immutable round binding and enrolled/joined contributors",
+      "migration": "supabase/migrations/160_whiteboard_submission_provenance.sql",
+      "relationships": [
+        "whiteboard_rounds",
+        "whiteboard_round_participants",
+        "whiteboard_board_authority",
+        "whiteboard_submissions"
+      ],
+      "access": "service-only SECURITY DEFINER with pinned search_path; current account and ownership rechecked",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/whiteboard/server/persistence.ts"
+      ],
+      "pendingCallSites": [
+        "lib/whiteboard/server/submission-authority.ts"
+      ],
+      "rollout": "Application consumers retained in the preserved onboarding/feature checkout; not deployed by this maintenance branch."
+    },
+    {
+      "name": "public.register_whiteboard_participant",
+      "kind": "function",
+      "journeys": [
+        "classroom-recovery",
+        "learning-progress"
+      ],
+      "owner": "Whiteboard learning evidence",
+      "sensitivity": "student work and participant identity",
+      "authority": "current Auth identity, immutable round binding and enrolled/joined contributors",
+      "migration": "supabase/migrations/160_whiteboard_submission_provenance.sql",
+      "relationships": [
+        "whiteboard_rounds",
+        "whiteboard_round_participants",
+        "whiteboard_board_authority",
+        "whiteboard_submissions"
+      ],
+      "access": "service-only SECURITY DEFINER with pinned search_path; current account and ownership rechecked",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/whiteboard/server/persistence.ts"
+      ],
+      "pendingCallSites": [
+        "lib/whiteboard/server/submission-authority.ts"
+      ],
+      "rollout": "Application consumers retained in the preserved onboarding/feature checkout; not deployed by this maintenance branch."
+    },
+    {
+      "name": "public.register_whiteboard_groups",
+      "kind": "function",
+      "journeys": [
+        "classroom-recovery",
+        "learning-progress"
+      ],
+      "owner": "Whiteboard learning evidence",
+      "sensitivity": "student work and participant identity",
+      "authority": "current Auth identity, immutable round binding and enrolled/joined contributors",
+      "migration": "supabase/migrations/160_whiteboard_submission_provenance.sql",
+      "relationships": [
+        "whiteboard_rounds",
+        "whiteboard_round_participants",
+        "whiteboard_board_authority",
+        "whiteboard_submissions"
+      ],
+      "access": "service-only SECURITY DEFINER with pinned search_path; current account and ownership rechecked",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/whiteboard/server/persistence.ts"
+      ],
+      "pendingCallSites": [
+        "lib/whiteboard/server/submission-authority.ts"
+      ],
+      "rollout": "Application consumers retained in the preserved onboarding/feature checkout; not deployed by this maintenance branch."
+    },
+    {
+      "name": "public.confirm_whiteboard_groups",
+      "kind": "function",
+      "journeys": [
+        "classroom-recovery",
+        "learning-progress"
+      ],
+      "owner": "Whiteboard learning evidence",
+      "sensitivity": "student work and participant identity",
+      "authority": "current Auth identity, immutable round binding and enrolled/joined contributors",
+      "migration": "supabase/migrations/160_whiteboard_submission_provenance.sql",
+      "relationships": [
+        "whiteboard_rounds",
+        "whiteboard_round_participants",
+        "whiteboard_board_authority",
+        "whiteboard_submissions"
+      ],
+      "access": "service-only SECURITY DEFINER with pinned search_path; current account and ownership rechecked",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/whiteboard/server/persistence.ts"
+      ],
+      "pendingCallSites": [
+        "lib/whiteboard/server/submission-authority.ts"
+      ],
+      "rollout": "Application consumers retained in the preserved onboarding/feature checkout; not deployed by this maintenance branch."
+    },
+    {
+      "name": "public.whiteboard_submission_context",
+      "kind": "function",
+      "journeys": [
+        "classroom-recovery",
+        "learning-progress"
+      ],
+      "owner": "Whiteboard learning evidence",
+      "sensitivity": "student work and participant identity",
+      "authority": "current Auth identity, immutable round binding and enrolled/joined contributors",
+      "migration": "supabase/migrations/160_whiteboard_submission_provenance.sql",
+      "relationships": [
+        "whiteboard_rounds",
+        "whiteboard_round_participants",
+        "whiteboard_board_authority",
+        "whiteboard_submissions"
+      ],
+      "access": "service-only SECURITY DEFINER with pinned search_path; current account and ownership rechecked",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/whiteboard/server/persistence.ts"
+      ],
+      "pendingCallSites": [
+        "lib/whiteboard/server/submission-authority.ts"
+      ],
+      "rollout": "Application consumers retained in the preserved onboarding/feature checkout; not deployed by this maintenance branch."
+    },
+    {
+      "name": "public.persist_whiteboard_submission",
+      "kind": "function",
+      "journeys": [
+        "classroom-recovery",
+        "learning-progress"
+      ],
+      "owner": "Whiteboard learning evidence",
+      "sensitivity": "student work and participant identity",
+      "authority": "current Auth identity, immutable round binding and enrolled/joined contributors",
+      "migration": "supabase/migrations/160_whiteboard_submission_provenance.sql",
+      "relationships": [
+        "whiteboard_rounds",
+        "whiteboard_round_participants",
+        "whiteboard_board_authority",
+        "whiteboard_submissions"
+      ],
+      "access": "service-only SECURITY DEFINER with pinned search_path; current account and ownership rechecked",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/whiteboard/server/persistence.ts"
+      ],
+      "pendingCallSites": [
+        "lib/whiteboard/server/submission-authority.ts"
+      ],
+      "rollout": "Application consumers retained in the preserved onboarding/feature checkout; not deployed by this maintenance branch."
+    },
+    {
+      "name": "public.validate_class_lesson_vocabulary_sources",
+      "kind": "function",
+      "journeys": [
+        "learning-progress",
+        "homework-finalization"
+      ],
+      "owner": "Lesson vocabulary validation",
+      "sensitivity": "account or teacher planning metadata",
+      "authority": "owning approved teacher",
+      "migration": "supabase/migrations/157_lesson_vocabulary_generation.sql",
+      "relationships": [
+        "word_packs references"
+      ],
+      "access": "authenticated teacher; ownership validated",
+      "usage": "schema-reviewed; feature rollout pending",
+      "callSites": [
+        "supabase/migrations/157_lesson_vocabulary_generation.sql"
+      ]
+    },
+    {
+      "name": "public.save_class_lesson_plan_with_vocabulary",
+      "kind": "function",
+      "journeys": [
+        "learning-progress",
+        "homework-finalization"
+      ],
+      "owner": "Lesson vocabulary planning",
+      "sensitivity": "account or teacher planning metadata",
+      "authority": "owning approved teacher",
+      "migration": "supabase/migrations/157_lesson_vocabulary_generation.sql",
+      "relationships": [
+        "class_lessons",
+        "class_lesson_steps"
+      ],
+      "access": "authenticated teacher; ownership validated",
+      "usage": "schema-reviewed; feature rollout pending",
+      "callSites": [
+        "supabase/migrations/157_lesson_vocabulary_generation.sql"
+      ]
+    },
+    {
+      "name": "public.create_class_lesson_plan_with_vocabulary",
+      "kind": "function",
+      "journeys": [
+        "learning-progress",
+        "homework-finalization"
+      ],
+      "owner": "Lesson vocabulary planning",
+      "sensitivity": "account or teacher planning metadata",
+      "authority": "owning approved teacher",
+      "migration": "supabase/migrations/157_lesson_vocabulary_generation.sql",
+      "relationships": [
+        "class_lessons",
+        "class_lesson_steps"
+      ],
+      "access": "authenticated teacher; ownership validated",
+      "usage": "schema-reviewed; feature rollout pending",
+      "callSites": [
+        "supabase/migrations/157_lesson_vocabulary_generation.sql"
+      ]
+    },
+    {
+      "name": "public.add_class_lesson_vocabulary_activity",
+      "kind": "function",
+      "journeys": [
+        "learning-progress",
+        "homework-finalization"
+      ],
+      "owner": "Teacher-reviewed material",
+      "sensitivity": "account or teacher planning metadata",
+      "authority": "owning approved teacher",
+      "migration": "supabase/migrations/157_lesson_vocabulary_generation.sql",
+      "relationships": [
+        "class_lessons",
+        "activities",
+        "word_packs"
+      ],
+      "access": "authenticated teacher; ownership validated",
+      "usage": "schema-reviewed; feature rollout pending",
+      "callSites": [
+        "supabase/migrations/157_lesson_vocabulary_generation.sql"
+      ]
+    },
+    {
+      "name": "public.is_teacher",
+      "kind": "function",
+      "journeys": [
+        "identity",
+        "class-membership"
+      ],
+      "owner": "Current teacher approval",
+      "sensitivity": "account or teacher planning metadata",
+      "authority": "current Auth account",
+      "migration": "supabase/migrations/159_teacher_account_lifecycle.sql",
+      "relationships": [
+        "auth.users authoritative role and approval"
+      ],
+      "access": "current Auth data; approved teacher required",
+      "usage": "schema-reviewed; feature rollout pending",
+      "callSites": [
+        "supabase/migrations/159_teacher_account_lifecycle.sql"
+      ]
+    },
+    {
+      "name": "public.teacher_account_access_allowed",
+      "kind": "function",
+      "journeys": [
+        "identity",
+        "class-membership"
+      ],
+      "owner": "Account suspension guard",
+      "sensitivity": "account or teacher planning metadata",
+      "authority": "current Auth identity",
+      "migration": "supabase/migrations/159_teacher_account_lifecycle.sql",
+      "relationships": [
+        "intersects existing public, storage and realtime RLS"
+      ],
+      "access": "restrictive guard grants no access",
+      "usage": "schema-reviewed; feature rollout pending",
+      "callSites": [
+        "supabase/migrations/159_teacher_account_lifecycle.sql"
+      ]
+    },
+    {
+      "name": "public.guard_teacher_access_metadata",
+      "kind": "function",
+      "journeys": [
+        "identity",
+        "class-membership"
+      ],
+      "owner": "Audited account state",
+      "sensitivity": "account or teacher planning metadata",
+      "authority": "trusted server operation",
+      "migration": "supabase/migrations/159_teacher_account_lifecycle.sql",
+      "relationships": [
+        "auth.users trigger"
+      ],
+      "access": "trigger protects stale metadata updates",
+      "usage": "schema-reviewed; feature rollout pending",
+      "callSites": [
+        "supabase/migrations/159_teacher_account_lifecycle.sql"
+      ]
+    },
+    {
+      "name": "public.set_teacher_account_access",
+      "kind": "function",
+      "journeys": [
+        "identity",
+        "class-membership"
+      ],
+      "owner": "Administrator account lifecycle",
+      "sensitivity": "account or teacher planning metadata",
+      "authority": "service-role administrator gate",
+      "migration": "supabase/migrations/159_teacher_account_lifecycle.sql",
+      "relationships": [
+        "auth.users",
+        "admin_audit_log"
+      ],
+      "access": "service role only; administrator rechecked in SQL",
+      "usage": "schema-reviewed; feature rollout pending",
+      "callSites": [
+        "supabase/migrations/159_teacher_account_lifecycle.sql"
       ]
     }
   ]

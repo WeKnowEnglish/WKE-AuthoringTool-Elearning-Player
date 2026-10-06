@@ -130,11 +130,15 @@ export function Silhouette({
   rotation?: [number, number, number];
   tone: MeshTone;
 }) {
+  // Specs are small literals; value-based keys keep ExtrudeGeometry stable.
+  const outlineKey = JSON.stringify(outline);
+  const holesKey = JSON.stringify(holes ?? []);
   const shape = useMemo(
-    () => makeShape({ outline, holes }),
-    // Specs are small literals; stringify keeps ExtrudeGeometry stable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [JSON.stringify(outline), JSON.stringify(holes ?? [])],
+    () => makeShape({
+      outline: JSON.parse(outlineKey) as Vec2[],
+      holes: JSON.parse(holesKey) as Vec2[][],
+    }),
+    [outlineKey, holesKey],
   );
   return (
     <mesh position={position} rotation={rotation}>
@@ -170,10 +174,12 @@ export function Lathe({
   rotation?: [number, number, number];
   tone: MeshTone;
 }) {
+  const profileKey = JSON.stringify(profile);
   const points = useMemo(
-    () => profile.map((point) => new Vector2(Math.max(0, point[0]), point[1])),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [JSON.stringify(profile)],
+    () => (JSON.parse(profileKey) as Vec2[]).map(
+      (point) => new Vector2(Math.max(0, point[0]), point[1]),
+    ),
+    [profileKey],
   );
   return (
     <mesh position={position} rotation={rotation} castShadow receiveShadow>

@@ -39,13 +39,13 @@ describe("app health payload", () => {
     expect(
       createAppHealthPayload({
         npm_package_version: "0.1.0",
-        NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: "vercel-sha",
+        NEXT_PUBLIC_GIT_COMMIT_SHA: "managed-sha",
       }),
     ).toEqual({
       status: "ok",
       app: "wke",
       version: "0.1.0",
-      commit: "vercel-sha",
+      commit: "managed-sha",
       environment: "development",
     });
   });

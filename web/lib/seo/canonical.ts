@@ -33,9 +33,9 @@ export function isWwwHost(hostHeader: string | null | undefined): boolean {
  */
 export function shouldSendPreviewNoindex(
   hostHeader: string | null | undefined,
-  vercelEnv: string | undefined = process.env.VERCEL_ENV,
+  deploymentEnv: string | undefined = process.env.WKE_DEPLOYMENT_ENV,
 ): boolean {
-  if (vercelEnv === "preview" || vercelEnv === "development") return true;
+  if (deploymentEnv === "preview" || deploymentEnv === "development") return true;
   if (isWwwHost(hostHeader)) return true; // before redirect; belt-and-suspenders
   return !isIndexableHost(hostHeader);
 }

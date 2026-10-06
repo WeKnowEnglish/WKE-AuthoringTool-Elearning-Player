@@ -303,8 +303,7 @@ export async function diagnosticFetch(
       });
     }
     const roundedServerMs = serverMs == null ? null : Math.round(serverMs);
-    const vercelRequestId = response.headers.get("x-vercel-id");
-    const serverRegion = vercelRequestId?.split("::")[0]?.trim() || null;
+    const serverRegion = response.headers.get("x-wke-region")?.trim() || null;
     finish({
       status: response.status,
       ok: response.ok,

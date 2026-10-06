@@ -26,7 +26,7 @@ describe("host helpers", () => {
     expect(isIndexableHost("weknowenglish.online")).toBe(true);
     expect(isIndexableHost("weknowenglish.online:443")).toBe(true);
     expect(isIndexableHost("www.weknowenglish.online")).toBe(false);
-    expect(isIndexableHost("lesson-player.vercel.app")).toBe(false);
+    expect(isIndexableHost("preview.weknowenglish.online")).toBe(false);
     expect(isIndexableHost("localhost")).toBe(false);
   });
 
@@ -37,7 +37,7 @@ describe("host helpers", () => {
 
   it("requires preview noindex outside production apex", () => {
     expect(shouldSendPreviewNoindex("weknowenglish.online", "production")).toBe(false);
-    expect(shouldSendPreviewNoindex("lesson-player.vercel.app", "preview")).toBe(true);
+    expect(shouldSendPreviewNoindex("preview.weknowenglish.online", "preview")).toBe(true);
     expect(shouldSendPreviewNoindex("localhost", undefined)).toBe(true);
     expect(shouldSendPreviewNoindex("weknowenglish.online", "preview")).toBe(true);
   });

@@ -1,168 +1,75 @@
-# Hostinger Node.js migration
+# Hostinger managed Node.js operations
 
-Keep `https://weknowenglish.online` on Vercel until a Hostinger **test URL** works. Do not change DNS, delete the Vercel project, or attach the production domain during the first deploy.
+Production has moved to Hostinger. The administrator's priority is uninterrupted
+teacher and student access; validate each exact commit in the independent preview
+application before promoting it.
 
-This app is Next.js 16 in `web/`. It is not a WordPress site and it does not use Vercel Blob, KV, or Edge Functions. Media stays in Supabase Storage. Hostinger only replaces the Node process that currently runs on Vercel.
+| Application | Origin |
+| --- | --- |
+| Production | https://weknowenglish.online |
+| Preview | https://preview.weknowenglish.online |
+| Deployment dashboard | https://deploy.weknowenglish.online |
 
-## Phase 0 — confirm the plan
+Vercel is no longer a deployment target. See [VERCEL_RETIREMENT.md](./VERCEL_RETIREMENT.md)
+for account cleanup. Supabase remains the database, authentication, and media
+provider. Daily and Liveblocks remain separate classroom services.
 
-In hPanel:
+## Build and environment
 
-1. Profile → **Billing** → **Subscriptions** — plan must be **Business** web hosting or **Cloud** (Startup / Professional / Enterprise).
-2. **Websites → Add Website** must offer **Node.js web app**.
-3. Optional: if an old WordPress install still exists on this account and you care about it, back up its files and database before creating the Node app. Skip this if production is already Next.js on Vercel.
+Use the full repository clone, including `web/` and sibling `packages/`.
+The learning application uses Node 24, repository root `/`, build command
+`npm run build`, and start command `npm run start`. The root workspace packages
+the standalone server into `web/dist/`; start runs `node web/dist/server.js`.
+Preserve the working Hostinger wizard's output/entry settings when redeploying.
+The dashboard is a separate app with root `deploy-dashboard` and its own build.
 
-## Phase 1 — Hostinger wizard (temporary domain)
+All learning-app builds use standalone output with repository-wide file tracing.
+The managed build derives its commit from Git and embeds it in `/api/health`.
+Do not configure provider-specific adapter variables.
 
-**Websites → Add Website → Node.js web app → Import Git repository.**
+Production uses `APP_ORIGIN=https://weknowenglish.online` and the same
+`NEXT_PUBLIC_APP_ORIGIN`. Preview uses `https://preview.weknowenglish.online` for
+both. Rebuild after changing `NEXT_PUBLIC_*`; browser values are compiled in.
+Preserve the existing Supabase project and feature credentials. Server-only keys
+must never appear in browser configuration. Supabase Auth must allow each app's
+callback; the production Site URL stays `https://weknowenglish.online`.
 
-| Field | Value |
-|---|---|
-| Repository | this Lesson Player repo |
-| Branch | a `hostinger-preview` branch if you do not want every `main` push to rebuild; otherwise `main` |
-| Root directory | repository root (leave the field empty or use `/`) |
-| Node.js | **24** (`package.json` `engines` and `.nvmrc`) |
-| Framework | Next.js **SSR** (not static export) |
-| Build command | `npm run build` |
-| Output directory | `web/.next` |
-| Start command | `npm run start` |
-| Entry file | leave empty |
-| Database wizard | **skip** — reuse the existing Supabase project |
+Optional `WKE_DEPLOYMENT_ENV=preview` forces noindex even if a proxy supplies the
+production Host header. Other hostnames already receive noindex.
 
-Deploy from the repository root. The root npm workspace installs `web/` together with `packages/explore-hotspots-play` and `packages/explore-hotspots-author`; selecting `web/` as the Hostinger root strips those sibling packages and causes `Module not found` errors.
+## Releases and rollback
 
-Do **not** set `VERCEL=1`. The root build/start scripts select Hostinger's managed Next.js output automatically, while Docker builds continue to use standalone output.
+Use the dashboard to build an exact commit in preview and promote that same
+commit. Production rebuilds it. Wait for `/api/health` to identify the expected
+SHA before declaring success. Rollback redeploys an earlier successful Hostinger
+commit; DNS stays on Hostinger.
 
-If the build runs out of memory, add this Hostinger environment variable and rebuild:
+Run `npm run test:hostinger:production` for public health, auth redirects, cache
+headers, protected cron routes, and webhook reachability. Authenticated learning
+journeys and signed webhook delivery need separate checks.
+See [PREVIEW_PROMOTION.md](./PREVIEW_PROMOTION.md).
 
-```text
-NODE_OPTIONS=--max-old-space-size=4096
-```
+## Maintenance
 
-`NEXT_PUBLIC_*` values are baked in at **build** time. Change them, then rebuild — restarting the process is not enough.
+`.github/workflows/hostinger-maintenance.yml` on the default branch is the single
+scheduler. Its GitHub secret `CRON_SECRET` must match Hostinger production.
+Do not duplicate these jobs in hPanel.
 
-## Phase 2 — environment
+| Job | Method | UTC schedule |
+| --- | --- | --- |
+| Diagnostics retention | GET | Daily, 03:17 |
+| Daily classroom cleanup | POST | Minutes 7 and 37 each hour |
+| Classroom clock | POST | Every five minutes |
+| Email outbox | POST | Every five minutes, after explicit activation |
 
-Copy **Vercel → Project → Settings → Environment Variables** (Production). Do not invent a second Supabase project.
+The email outbox route and migration belong to the communications release.
+Keep repository variable `WKE_EMAIL_DELIVERY_ENABLED` unset until that release
+has deployed `/api/cron/email-delivery`, its database migration, and Resend
+configuration. Verify unauthorized requests return 401 and run the worker once
+with approval for queued email delivery, then enable the variable.
 
-### Same as Vercel production
+The separate `.github/workflows/deploy-control-worker.yml` reconciles deployment
+requests. Preserve its existing dashboard origin and worker secret.
 
-- `SUPABASE_URL`, `SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (same values as the server pair)
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `NEXT_PUBLIC_STUDENT_SELF_REGISTRATION_ENABLED=false`
-- Classroom realtime flags **exactly** as production (do not flip pilots on the first Hostinger deploy)
-- `GEMINI_API_KEY`, `OPENAI_API_KEY` if production has them
-- `LIVEBLOCKS_SECRET_KEY`, `VIRTUAL_CLASSROOM_COOKIE_SECRET`
-- `DAILY_API_KEY`, `DAILY_DOMAIN`, `NEXT_PUBLIC_DAILY_DOMAIN`, `DAILY_WEBHOOK_HMAC`, `DAILY_ENABLED`
-- `CRON_SECRET`
-- `RESEND_*` / `TEACHER_ACCESS_*` if used
-- `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` if used
-- `STUDIO_ORIGIN` / `NEXT_PUBLIC_STUDIO_ORIGIN` / `STUDIO_FRAME_ANCESTORS` if Studio embeds this origin
-
-### Different on the test host
-
-| Variable | Test Hostinger URL | After DNS cutover |
-|---|---|---|
-| `APP_ORIGIN` | `https://<hostinger-test-host>` (no trailing slash) | `https://weknowenglish.online` |
-| `NEXT_PUBLIC_APP_ORIGIN` | same test URL | `https://weknowenglish.online` |
-| Stripe | omit, or **test** keys plus a test webhook | live keys; existing live webhook URL stays the production domain |
-| `NEXT_PUBLIC_GIT_COMMIT_SHA` | optional short sha for diagnostics | optional |
-
-Do **not** set `VERCEL`, `VERCEL_ENV`, or `VERCEL_URL`. Hosts other than `weknowenglish.online` already send `noindex`.
-
-### Supabase Auth
-
-**Add** (do not remove production):
-
-- `https://<hostinger-test-host>/auth/callback`
-- `https://<hostinger-test-host>/**` if the dashboard allows a wildcard
-
-Keep Site URL as `https://weknowenglish.online` until cutover.
-
-## Phase 3 — test without touching DNS
-
-Use only the Hostinger URL:
-
-1. Home, `/pilots`, teacher login, student login. After `/auth/callback` the browser must stay on the test host.
-2. Open one lesson or homework.
-3. Open a 3D world / house page if you care about memory.
-4. Skip live Stripe and Daily unless you registered **test** webhooks on this host.
-5. Wait ~15 minutes idle, then hard-refresh. Hostinger Node apps **sleep when idle**; a slow first request is a cold start, not necessarily an app bug.
-6. Hit retention cron once:
-
-```bash
-curl -sS -X GET -H "Authorization: Bearer $CRON_SECRET" \
-  "https://<hostinger-test-host>/api/cron/diagnostics-retention"
-```
-
-Expect HTTP 200. `401` / `503` means `CRON_SECRET` is missing or wrong.
-
-If login bounces to `weknowenglish.online`, `APP_ORIGIN` or Supabase redirects are still production-only.
-
-### Keep the last successful release live
-
-Current Hostinger Node.js deployments are stored under `hbuilds/versions/<build-id>/`, while
-`hbuilds/current` points at the live successful version. A failed build should leave that pointer
-on the previous version. See [INFRA-002 managed releases](./INFRA-002_MANAGED_RELEASES.md) for the
-preview-first promotion contract and the release-health waiter used by the future dashboard.
-
-If the site returns 503 for the entire build, inspect the Hostinger resource graphs and confirm the
-application uses the `hbuilds/current/nodejs` layout. That symptom usually indicates resource
-saturation or a legacy layout rather than a failed build replacing the live files.
-
-## Phase 4 — cutover (only after Phase 3)
-
-Run the repeatable public production gate before and after cutover:
-
-~~~bash
-npm run test:hostinger:production
-~~~
-
-The gate verifies HTTPS reachability, health/runtime configuration, auth redirects,
-anti-cache headers, configured cron protection, and webhook route reachability. It
-does not execute cron jobs or submit signed webhook events.
-
-1. Set `APP_ORIGIN` and `NEXT_PUBLIC_APP_ORIGIN` to `https://weknowenglish.online` and **rebuild**.
-2. Attach `weknowenglish.online` to the Node app; wait for SSL.
-3. Point DNS from Vercel to Hostinger. Lower TTL beforehand if you can.
-4. Stripe (`/api/webhooks/stripe`) and Daily (`/api/webhooks/daily`) keep the same production URLs if the domain did not change. Confirm they still return 200.
-5. Replace Vercel cron with hPanel **Advanced → Cron Jobs** (Custom). Cron does **not** inherit app env — paste the secret into the command:
-
-```bash
-curl -sS -X GET -H "Authorization: Bearer <CRON_SECRET>" https://weknowenglish.online/api/cron/diagnostics-retention
-```
-
-```bash
-curl -sS -X POST -H "Authorization: Bearer <CRON_SECRET>" https://weknowenglish.online/api/cron/daily-cleanup
-```
-
-```bash
-curl -sS -X POST -H "Authorization: Bearer <CRON_SECRET>" https://weknowenglish.online/api/cron/class-clock
-```
-
-`vercel.json` only schedules diagnostics-retention at `17 3 * * *` UTC. Schedule that daily. `daily-cleanup` should run every 15–60 minutes. Confirm whether `class-clock` is already ticked elsewhere before adding a frequent job.
-
-### Managed Node.js cron fallback
-
-Some managed Node.js dashboards do not expose the website-level Cron Jobs page. In that case, use `.github/workflows/hostinger-maintenance.yml` instead:
-
-1. Add the same `CRON_SECRET` value under GitHub repository **Settings → Secrets and variables → Actions → New repository secret**.
-2. Merge the workflow into the default branch (`main`); scheduled workflows run from the default branch.
-3. Open **Actions → Hostinger maintenance → Run workflow** and run `daily-cleanup` once.
-4. Keep the workflow enabled. It runs diagnostics retention daily at 03:17 UTC and Daily cleanup at minutes 7 and 37 of every hour.
-
-Do not configure both hPanel and GitHub schedules for the same endpoint.
-
-6. Leave the Vercel project in place for rollback. Pause production deploys after 24–48 healthy hours so the Vercel quota stops draining.
-
-## Rollback
-
-Point DNS back to Vercel. Do not delete the Hostinger app on cutover day. Webhooks follow `weknowenglish.online`.
-
-## What this repo already does
-
-- Non-Vercel builds use `output: "standalone"` (`lib/build/next-output-mode.ts`).
-- `prebuild` verifies `packages/` sits beside `web/` (`scripts/check-web-workspace.mjs`).
-- Diagnostics release id reads `NEXT_PUBLIC_GIT_COMMIT_SHA`, then the Vercel sha, then `development`.
-- Node 24 is declared in `package.json` `engines` and `.nvmrc`.
+GitHub scheduled jobs may be delayed. The classroom also advances its schedule
+on application access; this job is a backstop, not a precision lesson timer.

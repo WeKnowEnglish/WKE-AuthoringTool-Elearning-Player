@@ -17,7 +17,9 @@ const expectedClassroomShell = process.env.WKE_006_EXPECTED_SHELL === "liveblock
   ? "liveblocks-compat"
   : "supabase-native";
 
-const admin = createClient(url, serviceKey, {
+// The default safety suite discovers this spec with the live pilot disabled.
+// Its service-role client must not require live credentials during discovery.
+const admin = createClient(url || "http://127.0.0.1:54321", serviceKey || "wke-006-disabled-test-key", {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 

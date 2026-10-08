@@ -229,6 +229,6 @@ Record time to create a class plan from the map, repeated data entry, missing/br
 
 Recommended pilot is one primary course, one unit, and a few lessons; course choice remains open. Define the unit outcome, learner entry expectations, likely class time, and existing materials before filling the sequence.
 
-The next implementation task is slices 1 and 2: an editable persistent map under Libraries with a working handoff to Plan Lesson. Whole-programme content entry, advanced graph editing, automated syllabus generation, and automatic mastery/parent reporting follow the proven pilot.
+The current implementation delivers slices 1 and 2: an editable persistent map under Libraries with a working handoff to Plan Lesson. The next product task is to select a pilot course and build one small unit through this workflow. Whole-programme content entry, advanced graph editing, automated syllabus generation, and automatic mastery/parent reporting follow the proven pilot.
 
 Related planning: [Planner generation roadmap](./lesson-planner-content-generation-plan.md), [Vocabulary slice](./lesson-planner-vocabulary-slice.md), [Reviewed delivery](./lesson-planner-delivery-slice.md), and [platform goals](./CODEX_MASTER_GOALS.md).

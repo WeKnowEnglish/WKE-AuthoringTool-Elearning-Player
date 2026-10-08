@@ -40,4 +40,4 @@ $env:COURSE_MAP_SMOKE_CONFIRMATION='teacher-owned-preview-fixtures'
 node --env-file=.env.local scripts/smoke-course-map.mjs --base-url https://preview.weknowenglish.online
 ```
 
-Live build identity and final smoke results are recorded in the deployment verification note after deployment.
+Live build identity, smoke results and validation limits are recorded in the [preview verification note](./libraries-course-map-preview-verification.md).

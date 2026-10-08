@@ -5,6 +5,9 @@ import type {
 import type { WhiteboardMode } from "@/lib/whiteboard/domain";
 import type { WordCardsParticipationMode } from "@/lib/word-cards/domain";
 import type { StudioActivityFormat } from "@/lib/studio-activities/types";
+import type { LessonVocabularyGeneration, LessonVocabularySource } from "@/lib/class-lessons/vocabulary";
+import type { LessonStepPlanning } from "./planning";
+import type { CourseProvenance } from "@/lib/course-map/model";
 
 export const CLASS_LESSON_STATUSES = ["draft", "ready", "archived"] as const;
 export type ClassLessonStatus = (typeof CLASS_LESSON_STATUSES)[number];
@@ -79,6 +82,7 @@ export type StudioActivityLessonStepConfig = {
   activityTitle: string;
   format: StudioActivityFormat;
   playPath: string;
+  generation?: LessonVocabularyGeneration;
 };
 
 export type ClassLessonStepConfigByKind = {
@@ -99,7 +103,7 @@ export type ClassLessonStep = {
   durationMinutes: number;
   teacherAction: string;
   studentAction: string;
-  config: ClassLessonStepConfigByKind[ClassLessonStepKind];
+  config: ClassLessonStepConfigByKind[ClassLessonStepKind] & { planning?: LessonStepPlanning };
 };
 
 export type ClassLesson = {
@@ -119,6 +123,11 @@ export type ClassLesson = {
   createdAt: string;
   updatedAt: string;
   steps: ClassLessonStep[];
+  vocabularySources?: LessonVocabularySource[];
+  courseProvenance?: CourseProvenance | null;
+  releaseId?: string | null;
+  releasedAt?: string | null;
+  releasedUpdatedAt?: string | null;
 };
 
 export type ClassLessonSummary = {

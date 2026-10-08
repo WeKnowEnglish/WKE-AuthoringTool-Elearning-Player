@@ -24,6 +24,7 @@ export function TeacherPrimaryTabs({ teacherTier = "plus", isAdmin = false }: Pr
     pathname.startsWith("/teacher/classes") || pathname.startsWith("/teacher/availability");
   const onActivityBuilder = pathname.startsWith("/teacher/activity-builder");
   const onMedia =
+    pathname.startsWith("/teacher/libraries") ||
     pathname.startsWith("/teacher/media") ||
     pathname.startsWith("/teacher/dictionary") ||
     pathname.startsWith("/teacher/grammar");
@@ -110,7 +111,10 @@ export function TeacherPrimaryTabs({ teacherTier = "plus", isAdmin = false }: Pr
         </TeacherNavMenuLink>
       </TeacherNavDropdown>
 
-      <TeacherNavDropdown label="Media" active={onMedia}>
+      <TeacherNavDropdown label="Libraries" active={onMedia}>
+        <TeacherNavMenuLink href="/teacher/libraries/course-map" active={pathname.startsWith("/teacher/libraries/course-map")}>
+          Course map
+        </TeacherNavMenuLink>
         <TeacherNavMenuLink
           href="/teacher/media"
           active={pathname.startsWith("/teacher/media") && !onComicMedia}

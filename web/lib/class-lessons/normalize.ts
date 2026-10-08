@@ -27,6 +27,8 @@ import {
   CLASS_LESSON_STATUSES,
 } from "@/lib/class-lessons/types";
 import { STUDIO_ACTIVITY_FORMATS } from "@/lib/studio-activities/types";
+import { normalizeLessonVocabularyGeneration } from "@/lib/class-lessons/vocabulary";
+import { normalizeLessonStepPlanning } from "./planning";
 
 const TITLE_MAX = 120;
 const NOTES_MAX = 2000;
@@ -283,20 +285,25 @@ export function normalizeStudioActivityStepConfig(
   raw: unknown,
 ): StudioActivityLessonStepConfig {
   const input = asRecord(raw);
+  const generation = normalizeLessonVocabularyGeneration(input.generation);
   const format =
     typeof input.format === "string" &&
     (STUDIO_ACTIVITY_FORMATS as readonly string[]).includes(input.format)
       ? input.format
       : "multiple_choice";
+  if (generation && generation.recipe.format !== format) {
+    throw new Error("The generation recipe must match the lesson material format.");
+  }
   return {
     activityId: asString(input.activityId).trim(),
     activityTitle: normalizeClassLessonTitle(input.activityTitle, "Activity"),
     format: format as StudioActivityLessonStepConfig["format"],
     playPath: asString(input.playPath).trim(),
+    ...(generation ? { generation } : {}),
   };
 }
 
-export function normalizeStepConfig(kind: ClassLessonStepKind, raw: unknown) {
+function normalizeKindConfig(kind: ClassLessonStepKind, raw: unknown) {
   switch (kind) {
     case "custom":
       return normalizeCustomStepConfig(raw);
@@ -311,6 +318,12 @@ export function normalizeStepConfig(kind: ClassLessonStepKind, raw: unknown) {
     case "studio_activity":
       return normalizeStudioActivityStepConfig(raw);
   }
+}
+
+export function normalizeStepConfig(kind: ClassLessonStepKind, raw: unknown) {
+  const config = normalizeKindConfig(kind, raw);
+  const planning = normalizeLessonStepPlanning(asRecord(raw).planning);
+  return { ...config, ...(planning ? { planning } : {}) };
 }
 
 export function stepTitleFromConfig(kind: ClassLessonStepKind, config: unknown): string {

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ClassLessonEditor } from "@/components/teacher/class-hub/ClassLessonEditor";
 import {
   ClassVocabularyListsPanel,
@@ -134,6 +135,7 @@ export function CreateLessonTab({
           sequence in Virtual Classroom.
         </p>
         {!archived ? (
+          <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             disabled={isPending}
@@ -142,6 +144,10 @@ export function CreateLessonTab({
           >
             {showTemplates ? "Close templates" : "New lesson"}
           </button>
+          <Link href={`/teacher/libraries/course-map?classId=${classId}`} className="mt-4 rounded-lg border border-teal-300 px-4 py-2 text-sm font-bold text-teal-900">
+            From course map
+          </Link>
+          </div>
         ) : (
           <p className="mt-3 text-sm text-amber-800">Unarchive the class to create lessons.</p>
         )}

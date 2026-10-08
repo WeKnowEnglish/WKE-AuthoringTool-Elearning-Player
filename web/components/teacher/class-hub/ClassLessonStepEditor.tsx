@@ -21,6 +21,7 @@ import type {
   StudioActivityLessonStepConfig,
   StudioActivityOption,
 } from "@/lib/class-lessons/types";
+import { stepPlanning, type LessonStepPlanning } from "@/lib/class-lessons/planning";
 import {
   CLASS_LESSON_PHASE_LABELS,
   CLASS_LESSON_PHASES,
@@ -74,6 +75,7 @@ export function ClassLessonStepEditor({
   );
   const [teacherAction, setTeacherAction] = useState(step?.teacherAction ?? "");
   const [studentAction, setStudentAction] = useState(step?.studentAction ?? "");
+  const [planning, setPlanning] = useState<LessonStepPlanning>(stepPlanning(step ?? { phase: defaultPhaseForKind(kind), config: defaultConfigForKind(kind) }));
   const [materialNote, setMaterialNote] = useState(
     kind === "custom"
       ? (normalizeStepConfig("custom", initialConfig) as CustomLessonStepConfig)
@@ -96,7 +98,7 @@ export function ClassLessonStepEditor({
     durationMinutes,
     teacherAction: teacherAction.trim(),
     studentAction: studentAction.trim(),
-    config: base.config,
+    config: { ...base.config, planning },
   });
 
   const planningFields = (
@@ -111,6 +113,8 @@ export function ClassLessonStepEditor({
       onDurationChange={setDurationMinutes}
       onTeacherActionChange={setTeacherAction}
       onStudentActionChange={setStudentAction}
+      planning={planning}
+      onPlanningChange={setPlanning}
     />
   );
 
@@ -236,6 +240,9 @@ export function ClassLessonStepEditor({
             activityTitle: activity.title,
             format: activity.format,
             playPath: activity.playPath,
+            ...(step?.kind === "studio_activity" && (step.config as StudioActivityLessonStepConfig).activityId === activity.id
+              ? { generation: (step.config as StudioActivityLessonStepConfig).generation }
+              : {}),
           }) as StudioActivityLessonStepConfig;
           onSave(
             withPlanning({
@@ -282,6 +289,8 @@ function StepPlanningFields(props: {
   onDurationChange: (value: number) => void;
   onTeacherActionChange: (value: string) => void;
   onStudentActionChange: (value: string) => void;
+  planning: LessonStepPlanning;
+  onPlanningChange: (value: LessonStepPlanning) => void;
 }) {
   return (
     <div className="grid gap-3 rounded-xl border border-teal-100 bg-teal-50/50 p-3 sm:grid-cols-2">
@@ -309,7 +318,7 @@ function StepPlanningFields(props: {
         </select>
       </label>
       <label className="block text-sm font-semibold text-neutral-800">
-        Minutes
+        {props.planning.delivery === "homework" ? "Homework effort (minutes)" : "Classroom minutes"}
         <input
           type="number"
           min={1}
@@ -322,6 +331,44 @@ function StepPlanningFields(props: {
           }
           className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 font-normal"
         />
+      </label>
+      <label className="block text-sm font-semibold text-neutral-800">
+        Delivery
+        <select value={props.planning.delivery} onChange={(event) => props.onPlanningChange({ ...props.planning, delivery: event.target.value as LessonStepPlanning["delivery"] })} className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 font-normal">
+          <option value="classroom">In the classroom</option><option value="homework">Homework</option>
+        </select>
+      </label>
+      <label className="block text-sm font-semibold text-neutral-800">
+        Learner grouping
+        <select value={props.planning.grouping} onChange={(event) => props.onPlanningChange({ ...props.planning, grouping: event.target.value as LessonStepPlanning["grouping"] })} className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 font-normal">
+          <option value="individual">Individual</option><option value="pairs">Pairs</option><option value="groups">Groups</option><option value="whole_class">Whole class</option>
+        </select>
+      </label>
+      <label className="block text-sm font-semibold text-neutral-800 sm:col-span-2">
+        How does this step support the learning goal?
+        <textarea value={props.planning.purpose} onChange={(event) => props.onPlanningChange({ ...props.planning, purpose: event.target.value })} rows={2} placeholder="Retrieve the target words before using them in a conversation." className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 font-normal" />
+      </label>
+      <label className="block text-sm font-semibold text-neutral-800 sm:col-span-2">
+        Success criteria / learning check
+        <textarea value={props.planning.successCriteria} onChange={(event) => props.onPlanningChange({ ...props.planning, successCriteria: event.target.value })} rows={2} placeholder="Ask two questions and give two relevant answers without the sentence frame." className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 font-normal" />
+      </label>
+      <label className="block text-sm font-semibold text-neutral-800 sm:col-span-2">
+        Scaffolding / support (optional)
+        <textarea value={props.planning.scaffolding} onChange={(event) => props.onPlanningChange({ ...props.planning, scaffolding: event.target.value })} rows={2} placeholder="Model one exchange; offer a sentence frame, then remove it for the check." className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 font-normal" />
+        <span className="mt-1 block text-xs font-normal text-neutral-500">These are delivery instructions. Configure digital word banks and sentence starters in the material below.</span>
+      </label>
+      <label className="block text-sm font-semibold text-neutral-800 sm:col-span-2">
+        Add a support idea
+        <select defaultValue="" onChange={(event) => {
+          const suggestion = event.target.value;
+          if (suggestion) props.onPlanningChange({ ...props.planning, scaffolding: [props.planning.scaffolding.trim(), suggestion].filter(Boolean).join(" ") });
+          event.target.value = "";
+        }} className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 font-normal">
+          <option value="">Choose an editable starting point…</option>
+          <option value="Model one example, guide the first attempt, then remove the model for independent practice.">Model, practise, then fade support</option>
+          <option value="Offer a word bank and sentence frame during practice; remove them for the learning check.">Word bank and sentence frame</option>
+          <option value="After meeting the success criteria, ask for a new example and an explanation of the choice.">Extension after success</option>
+        </select>
       </label>
       <label className="block text-sm font-semibold text-neutral-800 sm:col-span-2">
         What will students do?

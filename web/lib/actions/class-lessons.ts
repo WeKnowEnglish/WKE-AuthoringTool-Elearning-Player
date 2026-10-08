@@ -16,6 +16,7 @@ import type { ClassLesson, ClassLessonStatus } from "@/lib/class-lessons/types";
 import { getClassLessonTemplate } from "@/lib/class-lessons/templates";
 import { getClassLesson } from "@/lib/data/class-lessons";
 import { createClient } from "@/lib/supabase/server";
+import { normalizeLessonVocabularySources } from "@/lib/class-lessons/vocabulary";
 
 export type ClassLessonActionResult =
   | { ok: true; lesson: ClassLesson }
@@ -102,6 +103,8 @@ export async function saveClassLesson(input: {
   targetLanguage?: string;
   successCheck?: string;
   steps: unknown;
+  vocabularySources?: unknown;
+  expectedUpdatedAt?: string;
 }): Promise<ClassLessonActionResult> {
   try {
     const teacherId = await requireTeacherUserId();
@@ -145,7 +148,8 @@ export async function saveClassLesson(input: {
       return { ok: false, error: "Add a learning goal before marking Ready." };
     }
 
-    const { error: updateError } = await supabase.rpc("save_class_lesson_plan", {
+    const withVocabulary = input.vocabularySources !== undefined;
+    const { error: updateError } = await supabase.rpc(withVocabulary ? "save_class_lesson_plan_with_vocabulary" : "save_class_lesson_plan", {
       p_lesson_id: lessonId,
       p_title: title,
       p_notes: notes,
@@ -155,6 +159,10 @@ export async function saveClassLesson(input: {
       p_target_language: targetLanguage,
       p_success_check: successCheck,
       p_steps: steps,
+      ...(withVocabulary ? {
+        p_vocabulary_sources: normalizeLessonVocabularySources(input.vocabularySources),
+        p_expected_updated_at: input.expectedUpdatedAt ?? null,
+      } : {}),
     });
 
     if (updateError) return { ok: false, error: updateError.message };
@@ -228,7 +236,7 @@ export async function duplicateClassLesson(
     }
 
     const supabase = await createClient();
-    const { data, error } = await supabase.rpc("create_class_lesson_plan", {
+    const { data, error } = await supabase.rpc("create_class_lesson_plan_with_vocabulary", {
       p_class_id: source.classId,
       p_title: normalizeClassLessonTitle(`${source.title} (copy)`),
       p_objective: source.objective,
@@ -237,7 +245,10 @@ export async function duplicateClassLesson(
       p_success_check: source.successCheck,
       p_template_key: source.templateKey ?? "blank",
       p_template_version: source.templateVersion ?? 1,
-      p_steps: source.steps,
+      // Copies need new step identities; generated recipes and activity links
+      // still describe the same prepared materials.
+      p_steps: source.steps.map((step) => ({ ...step, id: undefined })),
+      p_vocabulary_sources: source.vocabularySources ?? [],
     });
 
     const duplicatedId = typeof data === "string" ? data : null;

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition, type ComponentProps } from "react";
+import Link from "next/link";
 import {
   archiveClassLesson,
   duplicateClassLesson,
@@ -15,6 +16,7 @@ import type {
   ClassLessonStatus,
   LiveGameQuestionSetOption,
   StudioActivityOption,
+  StudioActivityLessonStepConfig,
 } from "@/lib/class-lessons/types";
 import {
   CLASS_LESSON_PHASE_LABELS,
@@ -22,6 +24,14 @@ import {
   CLASS_LESSON_STEP_KINDS,
 } from "@/lib/class-lessons/types";
 import { ClassLessonStepEditor } from "@/components/teacher/class-hub/ClassLessonStepEditor";
+import { LessonVocabularyPanel } from "@/components/teacher/class-hub/LessonVocabularyPanel";
+import { generateLessonVocabularyActivity } from "@/lib/actions/lesson-vocabulary";
+import type { LessonVocabularySource } from "@/lib/class-lessons/vocabulary";
+import { bankPathForStudioActivity } from "@/lib/studio-activities/paths";
+import { lessonReadiness, stepPlanning } from "@/lib/class-lessons/planning";
+import { reviewClassLessonDelivery, releaseClassLessonDelivery, type LessonDeliveryReview } from "@/lib/actions/lesson-delivery";
+import { LessonHomeworkPanel } from "./LessonHomeworkPanel";
+import { MAP_PATH, resourceHref } from "@/lib/course-map/model";
 
 type Props = {
   lesson: ClassLesson;
@@ -35,6 +45,15 @@ type Props = {
 };
 
 type DraftStep = Omit<ClassLessonStep, "position">;
+
+function draftStep(step: DraftStep): DraftStep {
+  return { id: step.id, kind: step.kind, title: step.title, phase: step.phase, durationMinutes: step.durationMinutes, teacherAction: step.teacherAction, studentAction: step.studentAction, config: step.config };
+}
+
+type PlanContent = Pick<ClassLesson, "title" | "objective" | "durationMinutes" | "targetLanguage" | "successCheck" | "notes" | "vocabularySources"> & { steps: DraftStep[] };
+function contentFingerprint(plan: PlanContent): string {
+  return JSON.stringify({ title: plan.title, objective: plan.objective, durationMinutes: plan.durationMinutes, targetLanguage: plan.targetLanguage, successCheck: plan.successCheck, notes: plan.notes, steps: plan.steps.map(draftStep), vocabularySources: plan.vocabularySources ?? [] });
+}
 
 export function ClassLessonEditor({
   lesson,
@@ -56,16 +75,7 @@ export function ClassLessonEditor({
     lesson.status === "archived" ? "draft" : lesson.status,
   );
   const [steps, setSteps] = useState<DraftStep[]>(
-    lesson.steps.map((step) => ({
-      id: step.id,
-      kind: step.kind,
-      title: step.title,
-      phase: step.phase,
-      durationMinutes: step.durationMinutes,
-      teacherAction: step.teacherAction,
-      studentAction: step.studentAction,
-      config: step.config,
-    })),
+    lesson.steps.map(draftStep),
   );
   const [editorKind, setEditorKind] = useState<ClassLessonStepKind | null>(null);
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
@@ -73,15 +83,34 @@ export function ClassLessonEditor({
   const [error, setError] = useState<string | null>(null);
   const [publishedAt, setPublishedAt] = useState<string | null>(lesson.publishedAt);
   const [isPending, startTransition] = useTransition();
+  const [vocabularySources, setVocabularySources] = useState<LessonVocabularySource[]>(lesson.vocabularySources ?? []);
+  const [updatedAt, setUpdatedAt] = useState(lesson.updatedAt);
+  const [materialBusy, setMaterialBusy] = useState(false);
+  const [releaseId, setReleaseId] = useState(lesson.releaseId ?? null);
+  const [releasedAt, setReleasedAt] = useState(lesson.releasedAt ?? null);
+  const [review, setReview] = useState<LessonDeliveryReview | null>(null);
+  const [reviewFingerprint, setReviewFingerprint] = useState<string | null>(null);
+  const [previewChecked, setPreviewChecked] = useState(false);
+  const generationAttemptRef = useRef<{ operationId: string; revision: string } | null>(null);
+  const busy = isPending || materialBusy;
 
-  const plannedMinutes = useMemo(
-    () => steps.reduce((total, step) => total + step.durationMinutes, 0),
-    [steps],
-  );
-  const launchableMaterials = useMemo(
-    () => steps.filter((step) => step.kind !== "custom").length,
-    [steps],
-  );
+  const usedSourceIds = steps.flatMap((step) => {
+    const config = step.config as StudioActivityLessonStepConfig;
+    return config.generation ? [config.generation.recipe.vocabListId] : [];
+  });
+  const availableActivities = useMemo(() => {
+    const options = new Map(studioActivities.map((activity) => [activity.id, activity]));
+    for (const step of steps) {
+      if (step.kind !== "studio_activity") continue;
+      const config = step.config as StudioActivityLessonStepConfig;
+      options.set(config.activityId, { id: config.activityId, title: config.activityTitle, format: config.format, playPath: config.playPath });
+    }
+    return [...options.values()];
+  }, [steps, studioActivities]);
+
+  const preparation = lessonReadiness({ objective, successCheck, durationMinutes, steps });
+  const planFingerprint = contentFingerprint({ title, objective, durationMinutes, targetLanguage, successCheck, notes, steps, vocabularySources });
+  const currentReview = reviewFingerprint === planFingerprint ? review : null;
 
   const editingStep = editingStepId
     ? (steps.find((step) => step.id === editingStepId) ?? null)
@@ -99,28 +128,85 @@ export function ClassLessonEditor({
     setMessage(null);
   };
 
+  const persistPlan = async () => {
+    setReview(null); setPreviewChecked(false);
+    const result = await saveClassLesson({
+      lessonId: lesson.id, title, notes, status, objective, durationMinutes,
+      targetLanguage, successCheck, steps, vocabularySources, expectedUpdatedAt: updatedAt,
+    });
+    if (!result.ok) throw new Error(result.error);
+    // Review the canonical saved content, including normalization, rather than
+    // leaving a longer/stale local draft on screen while releasing another body.
+    setTitle(result.lesson.title); setObjective(result.lesson.objective);
+    setDurationMinutes(result.lesson.durationMinutes); setTargetLanguage(result.lesson.targetLanguage);
+    setSuccessCheck(result.lesson.successCheck); setNotes(result.lesson.notes);
+    setSteps(result.lesson.steps.map(draftStep)); setVocabularySources(result.lesson.vocabularySources ?? []);
+    setUpdatedAt(result.lesson.updatedAt);
+    setPublishedAt(result.lesson.publishedAt);
+    onSaved(result.lesson);
+    return result.lesson;
+  };
+
+  const generateMaterial: ComponentProps<typeof LessonVocabularyPanel>["onGenerate"] = async (input) => {
+    setMaterialBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      // Reuse the operation/revision after an uncertain response instead of
+      // resaving a potentially stale local sequence before recovering the result.
+      if (generationAttemptRef.current?.operationId !== input.operationId) {
+        const saved = await persistPlan();
+        generationAttemptRef.current = { operationId: input.operationId, revision: saved.updatedAt };
+      }
+      const result = await generateLessonVocabularyActivity({ ...input, lessonId: lesson.id, expectedUpdatedAt: generationAttemptRef.current.revision });
+      if (!result.ok) throw new Error(result.error);
+      setSteps(result.lesson.steps);
+      setUpdatedAt(result.lesson.updatedAt);
+      setVocabularySources(result.lesson.vocabularySources ?? []);
+      onSaved(result.lesson);
+      generationAttemptRef.current = null;
+      setMessage("Material added and lesson saved. Preview it in the lesson sequence.");
+    } finally {
+      setMaterialBusy(false);
+    }
+  };
+
   const save = () => {
     setError(null);
     setMessage(null);
     startTransition(async () => {
-      const result = await saveClassLesson({
-        lessonId: lesson.id,
-        title,
-        notes,
-        status,
-        objective,
-        durationMinutes,
-        targetLanguage,
-        successCheck,
-        steps,
-      });
-      if (!result.ok) {
-        setError(result.error);
-        return;
-      }
-      setMessage("Lesson plan saved.");
-      setPublishedAt(result.lesson.publishedAt);
-      onSaved(result.lesson);
+      try {
+        await persistPlan();
+        setMessage("Lesson plan saved.");
+      } catch (failure) { setError(failure instanceof Error ? failure.message : "Could not save the lesson."); }
+    });
+  };
+
+  const reviewDelivery = () => {
+    setError(null); setMessage(null); setPreviewChecked(false); setReview(null);
+    startTransition(async () => {
+      try {
+        const saved = await persistPlan();
+        const result = await reviewClassLessonDelivery({ lessonId: lesson.id, expectedUpdatedAt: saved.updatedAt });
+        if (!result.ok) throw new Error(result.error);
+        setReview(result.review); setReviewFingerprint(contentFingerprint(saved));
+        setMessage(result.review.readiness.ready ? "Preparation checks passed. Preview the materials and confirm your review before releasing." : "Resolve the preparation issues, then review again.");
+      } catch (error) { setError(error instanceof Error ? error.message : "Could not review lesson."); }
+    });
+  };
+
+  const releaseDelivery = () => {
+    if (!currentReview?.readiness.ready || !previewChecked) return;
+    setError(null); setMessage(null);
+    startTransition(async () => {
+      try {
+        const result = await releaseClassLessonDelivery({ lessonId: lesson.id, expectedUpdatedAt: currentReview.lessonUpdatedAt, materialRevisions: currentReview.materialRevisions });
+        if (!result.ok) throw new Error(result.error);
+        setReleaseId(result.lesson.releaseId ?? null); setReleasedAt(result.lesson.releasedAt ?? null);
+        setStatus(result.lesson.status); setUpdatedAt(result.lesson.updatedAt);
+        onSaved(result.lesson);
+        setMessage("Reviewed lesson released for teaching. Assign homework below when you are ready.");
+      } catch (error) { setError(error instanceof Error ? error.message : "Could not release the lesson. Retry after checking the plan."); }
     });
   };
 
@@ -136,6 +222,7 @@ export function ClassLessonEditor({
         return;
       }
       setPublishedAt(result.lesson.publishedAt);
+      setUpdatedAt(result.lesson.updatedAt);
       setMessage(
         result.lesson.publishedAt
           ? "Lesson outline shared with students on the Classroom page."
@@ -177,7 +264,7 @@ export function ClassLessonEditor({
         <ClassLessonStepEditor
           step={editingStep}
           kind={editorKind}
-          studioActivities={studioActivities}
+          studioActivities={availableActivities}
           liveGameSets={liveGameSets}
           onCancel={() => {
             setEditorKind(null);
@@ -216,6 +303,7 @@ export function ClassLessonEditor({
         </div>
         <button
           type="button"
+          disabled={busy}
           onClick={onClose}
           className="rounded-lg border border-neutral-200 px-3 py-1.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
         >
@@ -223,13 +311,19 @@ export function ClassLessonEditor({
         </button>
       </div>
 
+      {lesson.courseProvenance && <div className="space-y-2 rounded-xl border border-teal-200 bg-teal-50 p-3 text-sm">
+        <p><strong>From course map:</strong> {lesson.courseProvenance.mapTitle} · revision {lesson.courseProvenance.revision}</p>
+        <p className="text-xs text-neutral-600">This class plan is independently editable. Course changes keep this plan and its reviewed materials intact.</p>
+        <Link href={`${MAP_PATH}/${lesson.courseProvenance.mapId}?lesson=${lesson.courseProvenance.plannedLessonId}&classId=${lesson.classId}`} target="_blank" className="inline-block text-xs font-semibold text-teal-900 underline">Open course lesson ↗</Link>
+        {!!lesson.courseProvenance.resources.length && <details><summary className="cursor-pointer text-xs font-semibold">Course resource references</summary><ul className="mt-2 space-y-1">{lesson.courseProvenance.resources.map(resource => <li key={resource.id} className="text-xs"><a href={resourceHref(resource)} target="_blank" rel="noopener noreferrer" className="text-teal-900 underline">{resource.title || resource.kind}</a>{resource.purpose && ` — ${resource.purpose}`}</li>)}</ul><p className="mt-2 text-xs text-neutral-500">These links open current sources. Imported vocabulary is available separately in Lesson vocabulary below.</p></details>}
+      </div>}
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_9rem]">
         <label className="block text-sm font-semibold text-neutral-800">
           Lesson title
           <input
             type="text"
             value={title}
-            disabled={archivedClass || isPending}
+            disabled={archivedClass || busy}
             onChange={(event) => {
               setTitle(event.target.value);
               setMessage(null);
@@ -244,7 +338,7 @@ export function ClassLessonEditor({
             min={5}
             max={240}
             value={durationMinutes}
-            disabled={archivedClass || isPending}
+            disabled={archivedClass || busy}
             onChange={(event) => {
               setDurationMinutes(
                 Math.min(240, Math.max(5, Number.parseInt(event.target.value, 10) || 5)),
@@ -261,7 +355,7 @@ export function ClassLessonEditor({
           Learning goal
           <textarea
             value={objective}
-            disabled={archivedClass || isPending}
+            disabled={archivedClass || busy}
             onChange={(event) => {
               setObjective(event.target.value);
               setMessage(null);
@@ -275,7 +369,7 @@ export function ClassLessonEditor({
           Target language or vocabulary
           <textarea
             value={targetLanguage}
-            disabled={archivedClass || isPending}
+            disabled={archivedClass || busy}
             onChange={(event) => {
               setTargetLanguage(event.target.value);
               setMessage(null);
@@ -289,7 +383,7 @@ export function ClassLessonEditor({
           Success check
           <textarea
             value={successCheck}
-            disabled={archivedClass || isPending}
+            disabled={archivedClass || busy}
             onChange={(event) => {
               setSuccessCheck(event.target.value);
               setMessage(null);
@@ -304,10 +398,10 @@ export function ClassLessonEditor({
       <div className="grid gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3 sm:grid-cols-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
-            Planned time
+            Classroom time
           </p>
           <p className="mt-1 text-lg font-bold text-neutral-900">
-            {plannedMinutes} / {durationMinutes} min
+            {preparation.classroomMinutes} / {durationMinutes} min
           </p>
         </div>
         <div>
@@ -318,13 +412,21 @@ export function ClassLessonEditor({
         </div>
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
-            Launchable materials
+            Homework effort
           </p>
-          <p className="mt-1 text-lg font-bold text-neutral-900">{launchableMaterials}</p>
+          <p className="mt-1 text-lg font-bold text-neutral-900">{preparation.homeworkMinutes} min</p>
         </div>
       </div>
 
       <div className="space-y-3">
+        <LessonVocabularyPanel
+          sources={vocabularySources}
+          usedSourceIds={usedSourceIds}
+          disabled={archivedClass || busy}
+          full={steps.length >= 20}
+          onSourcesChange={(sources) => { setVocabularySources(sources); setMessage(null); }}
+          onGenerate={generateMaterial}
+        />
         <div>
           <h3 className="text-base font-semibold text-neutral-900">
             Lesson sequence ({steps.length})
@@ -351,14 +453,27 @@ export function ClassLessonEditor({
                     · {CLASS_LESSON_STEP_KIND_LABELS[step.kind]}
                   </p>
                   <p className="mt-0.5 font-semibold text-neutral-900">{step.title}</p>
+                  <p className="mt-1 text-xs font-semibold text-teal-900">{stepPlanning(step).delivery === "homework" ? "Homework" : "Classroom"} · {preparation.steps[index]?.ready ? "Prepared" : "Needs preparation"}</p>
+                  {preparation.steps[index]?.issues.length ? <ul className="mt-1 list-disc pl-4 text-xs text-amber-900">{preparation.steps[index].issues.map((issue) => <li key={issue}>{issue}</li>)}</ul> : null}
                   {step.studentAction ? (
                     <p className="mt-1 text-sm text-neutral-600">Students: {step.studentAction}</p>
                   ) : null}
+                  {step.kind === "studio_activity" && (step.config as StudioActivityLessonStepConfig).generation ? (
+                    <p className="mt-1 text-xs text-teal-900">
+                      From {(step.config as StudioActivityLessonStepConfig).generation!.sourceName} · {(step.config as StudioActivityLessonStepConfig).generation!.recipe.selectedEntryIds.length} words
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
+                  {step.kind === "studio_activity" ? (
+                    <>
+                      <Link href={(step.config as StudioActivityLessonStepConfig).playPath} target="_blank" rel="noopener noreferrer" className="rounded border border-teal-300 px-2 py-1 text-xs font-semibold text-teal-900">Preview</Link>
+                      <Link href={bankPathForStudioActivity((step.config as StudioActivityLessonStepConfig).activityId)} target="_blank" rel="noopener noreferrer" className="rounded border border-neutral-300 px-2 py-1 text-xs font-semibold">Open material</Link>
+                    </>
+                  ) : null}
                   <button
                     type="button"
-                    disabled={archivedClass || isPending || index === 0}
+                    disabled={archivedClass || busy || index === 0}
                     onClick={() => moveStep(index, -1)}
                     className="rounded border border-neutral-300 px-2 py-1 text-xs font-semibold disabled:opacity-40"
                   >
@@ -366,7 +481,7 @@ export function ClassLessonEditor({
                   </button>
                   <button
                     type="button"
-                    disabled={archivedClass || isPending || index === steps.length - 1}
+                    disabled={archivedClass || busy || index === steps.length - 1}
                     onClick={() => moveStep(index, 1)}
                     className="rounded border border-neutral-300 px-2 py-1 text-xs font-semibold disabled:opacity-40"
                   >
@@ -374,7 +489,7 @@ export function ClassLessonEditor({
                   </button>
                   <button
                     type="button"
-                    disabled={archivedClass || isPending}
+                    disabled={archivedClass || busy}
                     onClick={() => {
                       setEditingStepId(step.id);
                       setEditorKind(step.kind);
@@ -385,7 +500,7 @@ export function ClassLessonEditor({
                   </button>
                   <button
                     type="button"
-                    disabled={archivedClass || isPending}
+                    disabled={archivedClass || busy}
                     onClick={() => {
                       setSteps((current) => current.filter((item) => item.id !== step.id));
                       setMessage(null);
@@ -406,7 +521,7 @@ export function ClassLessonEditor({
               <button
                 key={kind}
                 type="button"
-                disabled={isPending || steps.length >= 20}
+                disabled={busy || steps.length >= 20}
                 onClick={() => {
                   setEditingStepId(null);
                   setEditorKind(kind);
@@ -428,7 +543,7 @@ export function ClassLessonEditor({
         Private teacher notes <span className="font-normal text-neutral-500">(optional)</span>
         <textarea
           value={notes}
-          disabled={archivedClass || isPending}
+          disabled={archivedClass || busy}
           onChange={(event) => {
             setNotes(event.target.value);
             setMessage(null);
@@ -438,6 +553,25 @@ export function ClassLessonEditor({
           className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 font-normal"
         />
       </label>
+
+      <div className="space-y-3 rounded-xl border border-teal-200 p-3">
+        <h3 className="font-semibold">Review and release for teaching</h3>
+        <p className="text-sm text-neutral-600">Release preserves this sequence and its flashcard/quiz materials for classroom use and homework. Later edits become the next draft. Sharing the outline and assigning homework remain separate teacher actions.</p>
+        {releasedAt ? <p className="text-xs text-teal-900">A reviewed release is available for teaching. Active sessions retain the release they started with.</p> : null}
+        <button type="button" disabled={archivedClass || busy} onClick={reviewDelivery} className="rounded-lg border border-teal-300 px-3 py-2 text-sm font-semibold disabled:opacity-50">Save and check preparation</button>
+        {currentReview ? <>
+          <ul className="list-disc pl-5 text-sm text-amber-900">
+            {currentReview.readiness.issues.map((issue) => <li key={issue}>{issue}</li>)}
+            {currentReview.readiness.steps.filter((step) => !step.ready).map((step) => <li key={step.stepId}>{steps.find((item) => item.id === step.stepId)?.title}: {step.issues.join(" ")}</li>)}
+          </ul>
+          {currentReview.readiness.ready ? <>
+            <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={previewChecked} disabled={busy || archivedClass} onChange={(event) => setPreviewChecked(event.target.checked)} />I have previewed the materials and checked the sequence, instructions, and success criteria.</label>
+            <button type="button" disabled={archivedClass || busy || !previewChecked} onClick={releaseDelivery} className="rounded-lg bg-teal-800 px-3 py-2 text-sm font-bold text-white disabled:opacity-50">Release reviewed lesson</button>
+          </> : null}
+        </> : null}
+        {review && !currentReview ? <p className="text-xs text-amber-900">The plan changed after review. Save and check preparation again.</p> : null}
+      </div>
+      {releaseId ? <LessonHomeworkPanel key={releaseId} releaseId={releaseId} disabled={archivedClass || busy} /> : null}
 
       <fieldset className="space-y-2">
         <legend className="text-sm font-semibold text-neutral-800">Planning status</legend>
@@ -451,7 +585,7 @@ export function ClassLessonEditor({
             <button
               key={value}
               type="button"
-              disabled={archivedClass || isPending}
+              disabled={archivedClass || busy || (value === "ready" && !releaseId)}
               onClick={() => {
                 setStatus(value);
                 setMessage(null);
@@ -467,7 +601,7 @@ export function ClassLessonEditor({
           ))}
         </div>
         <p className="text-xs text-neutral-500">
-          Ready lessons can be bound when you start Virtual Classroom from the Teach tab.
+          Release a reviewed plan to mark it Ready. Ready lessons can be selected in the Teach tab.
         </p>
       </fieldset>
 
@@ -480,7 +614,7 @@ export function ClassLessonEditor({
           </p>
           <button
             type="button"
-            disabled={archivedClass || isPending}
+            disabled={archivedClass || busy}
             onClick={togglePublish}
             className={`mt-3 rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50 ${
               publishedAt
@@ -503,7 +637,7 @@ export function ClassLessonEditor({
       <div className="flex flex-wrap gap-2 border-t border-neutral-100 pt-4">
         <button
           type="button"
-          disabled={archivedClass || isPending}
+          disabled={archivedClass || busy}
           onClick={save}
           className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
         >
@@ -511,7 +645,7 @@ export function ClassLessonEditor({
         </button>
         <button
           type="button"
-          disabled={archivedClass || isPending}
+          disabled={archivedClass || busy}
           onClick={duplicate}
           className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 disabled:opacity-50"
         >
@@ -519,7 +653,7 @@ export function ClassLessonEditor({
         </button>
         <button
           type="button"
-          disabled={archivedClass || isPending}
+          disabled={archivedClass || busy}
           onClick={archive}
           className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 disabled:opacity-50"
         >

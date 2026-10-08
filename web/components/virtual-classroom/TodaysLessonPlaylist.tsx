@@ -17,6 +17,7 @@ import {
 import type { DocumentLaunchPayload } from "@/components/document-activity/DocumentLaunchPanel";
 import type { WhiteboardLaunchPayload } from "@/lib/whiteboard/launch-options";
 import type { WordCardsLaunchPayload } from "@/components/word-cards/WordCardsLaunchPanel";
+import { stepPlanning } from "@/lib/class-lessons/planning";
 
 type Props = {
   sessionId: string;
@@ -105,7 +106,7 @@ export function TodaysLessonPlaylist({
         ) : null}
       </div>
       <ol className="space-y-2">
-        {lesson.steps.map((step, index) => (
+        {lesson.steps.filter((step) => stepPlanning(step).delivery === "classroom").map((step, index) => (
           <li
             key={step.id}
             className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/80 bg-white px-3 py-2"
@@ -122,6 +123,10 @@ export function TodaysLessonPlaylist({
               {step.teacherAction ? (
                 <p className="mt-0.5 text-xs text-slate-500">Teacher: {step.teacherAction}</p>
               ) : null}
+              {stepPlanning(step).purpose ? <p className="mt-1 text-xs text-slate-600">Learning purpose: {stepPlanning(step).purpose}</p> : null}
+              {stepPlanning(step).successCriteria ? <p className="mt-1 text-xs text-slate-600">Check: {stepPlanning(step).successCriteria}</p> : null}
+              {stepPlanning(step).scaffolding ? <p className="mt-1 text-xs text-slate-600">Support: {stepPlanning(step).scaffolding}</p> : null}
+              <p className="mt-1 text-xs text-slate-600">Grouping: {stepPlanning(step).grouping.replaceAll("_", " ")}</p>
             </div>
             <LaunchStepButton
               step={step}

@@ -13,7 +13,8 @@ import { getPrimaryVocabularySearchEntries } from "@/lib/vocabulary/primary-cand
 
 export const dynamic = "force-dynamic";
 
-export default async function TeacherVocabularyListsPage() {
+export default async function TeacherVocabularyListsPage({ searchParams }: { searchParams: Promise<{ activity?: string }> }) {
+  const { activity } = await searchParams;
   const [teacherLexicon, publishedPlatform, masterOverrides, user] = await Promise.all([
     listTeacherLexiconEntries().catch(() => []),
     listPublishedPlatformSearchEntries().catch(() => []),
@@ -31,6 +32,7 @@ export default async function TeacherVocabularyListsPage() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <VocabularyListWorkspace
+        openLibraryId={activity}
         studioOrigin={studioOriginFromEnv()}
         initialPlatformEntries={platformEntries}
         initialTeacherLexicon={teacherLexicon}

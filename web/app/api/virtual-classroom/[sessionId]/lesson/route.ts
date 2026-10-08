@@ -15,6 +15,8 @@ import {
   getVirtualClassroomSessionById,
   setVirtualClassroomSessionLesson,
 } from "@/lib/virtual-classroom/server/session";
+import { getLessonRelease } from "@/lib/data/lesson-releases";
+import { releasedLessonForTeaching } from "@/lib/class-lessons/release";
 
 type RouteContext = { params: Promise<{ sessionId: string }> };
 
@@ -44,9 +46,15 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   try {
-    const lesson = await getClassLesson(session.classLessonId);
+    // Private notes and answer keys require an authenticated owning teacher,
+    // even when a member or host-cookie bearer knows this session id.
+    await requireVirtualClassroomSessionHost(session);
+    const release = session.lessonReleaseId ? await getLessonRelease(session.lessonReleaseId) : null;
+    if (session.lessonReleaseId && !release) throw new Error("Released lesson unavailable.");
+    const lesson = release ? releasedLessonForTeaching(release) : await getClassLesson(session.classLessonId);
     return NextResponse.json({
       classLessonId: session.classLessonId,
+      lessonReleaseId: session.lessonReleaseId ?? null,
       lesson,
     });
   } catch {
@@ -116,9 +124,14 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Could not update lesson." }, { status: 500 });
   }
 
-  const lesson = classLessonId ? await getClassLesson(classLessonId) : null;
+  const release = updated.lessonReleaseId ? await getLessonRelease(updated.lessonReleaseId) : null;
+  if (updated.lessonReleaseId && !release) {
+    return NextResponse.json({ error: "The pinned lesson release could not be loaded. Reopen the classroom." }, { status: 503 });
+  }
+  const lesson = release ? releasedLessonForTeaching(release) : classLessonId ? await getClassLesson(classLessonId) : null;
   return NextResponse.json({
     classLessonId: updated.classLessonId,
+    lessonReleaseId: updated.lessonReleaseId ?? null,
     lesson,
   });
 }

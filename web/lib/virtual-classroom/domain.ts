@@ -15,6 +15,8 @@ export type VirtualClassroomSessionRecord = {
   classId: string | null;
   /** Staged Create Lesson playlist bound for this live session (nullable). */
   classLessonId: string | null;
+  /** Immutable reviewed lesson pinned when this session binds a plan. */
+  lessonReleaseId?: string | null;
   joinCode: string;
   liveblocksRoomId: string;
   title: string;

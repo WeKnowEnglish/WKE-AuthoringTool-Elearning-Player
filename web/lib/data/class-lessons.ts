@@ -15,6 +15,7 @@ import type {
   StudentClassMaterial,
 } from "@/lib/class-lessons/types";
 import { createClient } from "@/lib/supabase/server";
+import { normalizeLessonVocabularySources } from "@/lib/class-lessons/vocabulary";
 
 async function requireTeacherUserId(): Promise<string> {
   const supabase = await createClient();
@@ -54,6 +55,10 @@ type LessonRow = {
   published_at: string | null;
   created_at: string;
   updated_at: string;
+  vocabulary_sources?: unknown;
+  latest_release_id?: string | null;
+  released_at?: string | null;
+  released_updated_at?: string | null;
 };
 
 type StepRow = {
@@ -93,6 +98,10 @@ function mapLesson(
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     steps,
+    vocabularySources: normalizeLessonVocabularySources(row.vocabulary_sources),
+    releaseId: row.latest_release_id ?? null,
+    releasedAt: row.released_at ?? null,
+    releasedUpdatedAt: row.released_updated_at ?? null,
   };
 }
 
@@ -260,7 +269,11 @@ export async function getClassLesson(lessonId: string): Promise<ClassLesson | nu
     .map((row) => mapDbStepRow(row))
     .filter((row): row is NonNullable<typeof row> => Boolean(row));
 
-  return mapLesson(lesson as LessonRow, mappedSteps);
+  const result = mapLesson(lesson as LessonRow, mappedSteps);
+  const provenance = await supabase.from("curriculum_lesson_imports").select("provenance").eq("class_lesson_id", lessonId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (provenance.error && !["42P01", "PGRST205"].includes(provenance.error.code ?? "")) throw provenance.error;
+  result.courseProvenance = provenance.data?.provenance ?? null;
+  return result;
 }
 
 /** Validates a Ready lesson owned by the teacher for the given class. */
@@ -318,5 +331,7 @@ export async function listClassLessonsWithStepsForClass(
     stepsByLesson.set(row.lesson_id, list);
   }
 
-  return rows.map((row) => mapLesson(row, stepsByLesson.get(row.id) ?? []));
+  const provenance = await supabase.from("curriculum_lesson_imports").select("class_lesson_id, provenance").in("class_lesson_id", lessonIds).order("created_at", { ascending: false });
+  if (provenance.error && !["42P01", "PGRST205"].includes(provenance.error.code ?? "")) throw provenance.error;
+  return rows.map((row) => ({ ...mapLesson(row, stepsByLesson.get(row.id) ?? []), courseProvenance: provenance.data?.find(p => p.class_lesson_id === row.id)?.provenance ?? null }));
 }

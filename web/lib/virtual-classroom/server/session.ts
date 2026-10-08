@@ -24,6 +24,7 @@ function mapRow(row: Record<string, unknown>): VirtualClassroomSessionRecord {
     id: row.id as string,
     classId: (row.class_id as string | null) ?? null,
     classLessonId: (row.class_lesson_id as string | null) ?? null,
+    lessonReleaseId: (row.lesson_release_id as string | null) ?? null,
     joinCode: (row.join_code as string) ?? "",
     liveblocksRoomId: (row.liveblocks_room_id as string) ?? "",
     title: row.title as string,

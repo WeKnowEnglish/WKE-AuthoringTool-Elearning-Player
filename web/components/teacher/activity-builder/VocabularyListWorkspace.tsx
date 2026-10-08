@@ -134,11 +134,13 @@ type Props = {
    * `overlay` — editor-only for Learning Track Compiler embed.
    */
   variant?: "page" | "overlay";
-  /** Edit an existing library list (overlay). */
+  /** Edit an existing library list, including a deep link from Course map. */
   openLibraryId?: string | null;
   /** Start a blank list (overlay create). */
   startBlank?: boolean;
   onClose?: () => void;
+  /** Planner embeds must flush valid edits before returning to the lesson. */
+  saveOnClose?: boolean;
   /** Fired after a successful Activity Bank save (overlay uses this to set track source). */
   onSaved?: (entry: StudioVocabularyListRef) => void;
   /** Platform + Primary search pool (SSR). Falls back to static Primary index. */
@@ -154,6 +156,7 @@ export function VocabularyListWorkspace({
   openLibraryId = null,
   startBlank = false,
   onClose,
+  saveOnClose = false,
   onSaved,
   initialPlatformEntries,
   initialTeacherLexicon = [],
@@ -301,7 +304,7 @@ export function VocabularyListWorkspace({
 
   // Overlay: boot into create (blank) or edit (library id).
   useEffect(() => {
-    if (!isOverlay) return;
+    if (!isOverlay && !openLibraryId) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -963,9 +966,13 @@ export function VocabularyListWorkspace({
           <button
             type="button"
             className="mt-0.5 shrink-0 text-xs font-medium text-sky-800 hover:underline sm:mt-0"
-            onClick={() => onClose?.()}
+            disabled={saveOnClose && (libraryBusy || saveStatus === "saving")}
+            onClick={() => {
+              if (saveOnClose && (libraryIdRef.current || dirtySeqRef.current > 0)) void saveToLibrary(true);
+              else onClose?.();
+            }}
           >
-            ← Close
+            {saveOnClose ? "← Return to lesson" : "← Close"}
           </button>
         ) : (
           <Link
@@ -1112,7 +1119,7 @@ export function VocabularyListWorkspace({
             <button
               type="button"
               className="rounded-lg bg-emerald-800 px-2.5 py-1.5 text-xs font-medium text-white disabled:opacity-40"
-              disabled={!validation.ok || libraryBusy}
+              disabled={!validation.ok || libraryBusy || saveStatus === "saving"}
               onClick={() => void saveToLibrary(true)}
             >
               Save & use

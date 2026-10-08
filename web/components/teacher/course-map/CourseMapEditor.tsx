@@ -58,6 +58,7 @@ function Field({
       {label}
       {multiline ? (
         <textarea
+          aria-label={label}
           className={inputClass}
           value={value}
           rows={3}
@@ -66,6 +67,7 @@ function Field({
         />
       ) : (
         <input
+          aria-label={label}
           className={inputClass}
           value={value}
           maxLength={maxLength}
@@ -140,6 +142,14 @@ export function CourseMapEditor({
   const selected = unit?.lessons.find((l) => l.id === selectedId);
   const goals = selected ? lessonObjectives(document, selected) : [];
   const coverage = useMemo(() => coverageRows(document), [document]);
+
+  // Reapply after a save refresh so deep links retain the selected lesson.
+  useEffect(() => {
+    if (!selectedId || busy) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("lesson", selectedId);
+    window.history.replaceState(window.history.state, "", url.toString());
+  }, [selectedId, busy, saved.revision]);
 
   useEffect(() => {
     const listener = (event: BeforeUnloadEvent) => {

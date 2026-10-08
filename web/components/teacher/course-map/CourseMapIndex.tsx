@@ -156,7 +156,7 @@ export function CourseMapIndex({
                   {map.document.targets.length} targets
                 </p>
                 <p className="mt-2 text-xs text-neutral-500">
-                  Saved {new Date(map.updatedAt).toLocaleDateString()}
+                  Saved {new Date(map.updatedAt).toLocaleDateString("en-GB", { timeZone: "Asia/Ho_Chi_Minh" })}
                 </p>
               </Link>
             );

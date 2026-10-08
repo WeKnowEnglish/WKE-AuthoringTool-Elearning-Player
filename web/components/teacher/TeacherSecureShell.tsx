@@ -53,7 +53,8 @@ function isLearningTrackCompilerPath(pathname: string): boolean {
     pathname === "/teacher/activity-builder/learning-tracks" ||
     pathname.startsWith("/teacher/activity-builder/learning-tracks/") ||
     // Practice workspace hosts LTC (auto-hide chrome like the old compiler).
-    /^\/teacher\/activity-builder\/tracks\/[^/]+$/.test(pathname)
+    (pathname !== "/teacher/activity-builder/tracks/new" &&
+      /^\/teacher\/activity-builder\/tracks\/[^/]+$/.test(pathname))
   );
 }
 

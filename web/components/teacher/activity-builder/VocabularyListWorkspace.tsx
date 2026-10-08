@@ -816,7 +816,7 @@ export function VocabularyListWorkspace({
 
   if (screen === "picker") {
     return (
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-3 py-4 sm:px-4 sm:py-5">
+      <div className="mx-auto min-h-0 w-full max-w-3xl flex-1 space-y-4 overflow-y-auto px-3 py-4 sm:px-4 sm:py-5">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <Link

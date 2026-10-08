@@ -1,0 +1,484 @@
+{
+  "generatedAt": "2026-10-06T14:30:07.834Z",
+  "base": "origin/main",
+  "baseCommit": "3d5173692055aa0d78409c88ac7baa50cb3dece9",
+  "currentBranch": "feat/activity-builder",
+  "branches": [
+    {
+      "ref": "backup/pre-unified-quiz-builder",
+      "commit": "878a29812ead81538eb6194e473712c5bdeedec0",
+      "behindMain": 251,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "codex/activity-builder-hostinger",
+      "commit": "6f9671c21a865fdfa6471d94150a8b4e76aa035d",
+      "behindMain": 51,
+      "aheadMain": 7,
+      "nonEquivalentPatches": [
+        "002a02e7a5b6480e665eef002ea02ca5d391bb7d",
+        "840314caa449fba75395a1debe79d022581918b0",
+        "9c30434ef72d1be3307886f7743881086833af81",
+        "5d21214e19a8f75db11aabdbc521335d682950f2",
+        "61be39da0d2ee39203451efa0e28b82cb450fe1b",
+        "6f9671c21a865fdfa6471d94150a8b4e76aa035d"
+      ],
+      "equivalentPatchCount": 1
+    },
+    {
+      "ref": "codex/deploy-env-guardrail",
+      "commit": "f1243e388497010a0e8d0bd1c818a2480ab84300",
+      "behindMain": 16,
+      "aheadMain": 2,
+      "nonEquivalentPatches": [
+        "f1243e388497010a0e8d0bd1c818a2480ab84300"
+      ],
+      "equivalentPatchCount": 1
+    },
+    {
+      "ref": "codex/fix-deploy-form-origin",
+      "commit": "90f53ed1065fa52f0eaa8aee0d5119ef00460bfc",
+      "behindMain": 16,
+      "aheadMain": 2,
+      "nonEquivalentPatches": [
+        "90f53ed1065fa52f0eaa8aee0d5119ef00460bfc"
+      ],
+      "equivalentPatchCount": 1
+    },
+    {
+      "ref": "codex/hostinger-main-merge",
+      "commit": "5b1da3375357aa61df9325c3ccf3e6c0091cfa5d",
+      "behindMain": 33,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "codex/hostinger-managed",
+      "commit": "50b0974877b481453631ecfc829513ae113686f2",
+      "behindMain": 42,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "codex/infra-001",
+      "commit": "b76463691d8500d36a87cb049ad3038abaa1a5a3",
+      "behindMain": 52,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "codex/infra-002-managed-release",
+      "commit": "cdb24b8493bd53c3bf51c90e7d5e1da753ef7fd8",
+      "behindMain": 16,
+      "aheadMain": 1,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 1
+    },
+    {
+      "ref": "codex/live-game-reporting-v2-current",
+      "commit": "bd57b8e872bf0f488292c2d218690edf89167cb0",
+      "behindMain": 300,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "codex/mystery-engine-phase-1",
+      "commit": "0ec5b2ae36ae18b568ecb5204d434f20125959c8",
+      "behindMain": 54,
+      "aheadMain": 1,
+      "nonEquivalentPatches": [
+        "0ec5b2ae36ae18b568ecb5204d434f20125959c8"
+      ],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "codex/quarantine-reporting-old-baseline",
+      "commit": "c2efe748a1541e390c9d8234b999f2f3dbab53fe",
+      "behindMain": 319,
+      "aheadMain": 1,
+      "nonEquivalentPatches": [
+        "c2efe748a1541e390c9d8234b999f2f3dbab53fe"
+      ],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "codex/realtime-cutover",
+      "commit": "53e1d14c1d8cabedf037e0a4fbd34d8d025b0be7",
+      "behindMain": 7,
+      "aheadMain": 1,
+      "nonEquivalentPatches": [
+        "53e1d14c1d8cabedf037e0a4fbd34d8d025b0be7"
+      ],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "codex/teacher-communications-hostinger-preview",
+      "commit": "2a5125b64966f145ea3f0808a6bd7fd5231096a6",
+      "behindMain": 7,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "codex/teacher-communications-preview",
+      "commit": "dc70344d123a88636280f6a9bc7e91727c2b0c3d",
+      "behindMain": 33,
+      "aheadMain": 3,
+      "nonEquivalentPatches": [
+        "2400d561c70a900a62ca5a56277957f6c3296b72"
+      ],
+      "equivalentPatchCount": 2
+    },
+    {
+      "ref": "codex/vercel-retirement",
+      "commit": "b73bcb1b9b536778819cacb1419233b486474fca",
+      "behindMain": 1,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "feat/activity-builder",
+      "commit": "9c30434ef72d1be3307886f7743881086833af81",
+      "behindMain": 51,
+      "aheadMain": 4,
+      "nonEquivalentPatches": [
+        "002a02e7a5b6480e665eef002ea02ca5d391bb7d",
+        "840314caa449fba75395a1debe79d022581918b0",
+        "9c30434ef72d1be3307886f7743881086833af81"
+      ],
+      "equivalentPatchCount": 1
+    },
+    {
+      "ref": "lesson-player-v2",
+      "commit": "5ec5124d50b6910336dbd6be4f20de9d25369e1f",
+      "behindMain": 283,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "main",
+      "commit": "ec86cacd804f7e2cdb395fc5feccef6c2b0f280d",
+      "behindMain": 108,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "seo/phase1-connected-homepage-backup",
+      "commit": "ea7b6a00732a6c9fc8ac260960ccbc212548ce21",
+      "behindMain": 268,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "origin/codex/deploy-env-guardrail",
+      "commit": "f1243e388497010a0e8d0bd1c818a2480ab84300",
+      "behindMain": 16,
+      "aheadMain": 2,
+      "nonEquivalentPatches": [
+        "f1243e388497010a0e8d0bd1c818a2480ab84300"
+      ],
+      "equivalentPatchCount": 1
+    },
+    {
+      "ref": "origin/codex/english-craft-stabilization",
+      "commit": "1e95c3904f536a494067a7baf9526e0376496897",
+      "behindMain": 308,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "origin/codex/fix-deploy-form-origin",
+      "commit": "90f53ed1065fa52f0eaa8aee0d5119ef00460bfc",
+      "behindMain": 16,
+      "aheadMain": 2,
+      "nonEquivalentPatches": [
+        "90f53ed1065fa52f0eaa8aee0d5119ef00460bfc"
+      ],
+      "equivalentPatchCount": 1
+    },
+    {
+      "ref": "origin/codex/hostinger-main-merge",
+      "commit": "5b1da3375357aa61df9325c3ccf3e6c0091cfa5d",
+      "behindMain": 33,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "origin/codex/hostinger-managed",
+      "commit": "50b0974877b481453631ecfc829513ae113686f2",
+      "behindMain": 42,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "origin/codex/infra-001",
+      "commit": "b76463691d8500d36a87cb049ad3038abaa1a5a3",
+      "behindMain": 52,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "origin/codex/infra-002-managed-release",
+      "commit": "cdb24b8493bd53c3bf51c90e7d5e1da753ef7fd8",
+      "behindMain": 16,
+      "aheadMain": 1,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 1
+    },
+    {
+      "ref": "origin/codex/mystery-engine-phase-1",
+      "commit": "0ec5b2ae36ae18b568ecb5204d434f20125959c8",
+      "behindMain": 54,
+      "aheadMain": 1,
+      "nonEquivalentPatches": [
+        "0ec5b2ae36ae18b568ecb5204d434f20125959c8"
+      ],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "origin/codex/realtime-cutover",
+      "commit": "53e1d14c1d8cabedf037e0a4fbd34d8d025b0be7",
+      "behindMain": 7,
+      "aheadMain": 1,
+      "nonEquivalentPatches": [
+        "53e1d14c1d8cabedf037e0a4fbd34d8d025b0be7"
+      ],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "origin/codex/teacher-communications-hostinger-preview",
+      "commit": "2a5125b64966f145ea3f0808a6bd7fd5231096a6",
+      "behindMain": 7,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "origin/codex/teacher-communications-preview",
+      "commit": "dc70344d123a88636280f6a9bc7e91727c2b0c3d",
+      "behindMain": 33,
+      "aheadMain": 3,
+      "nonEquivalentPatches": [
+        "2400d561c70a900a62ca5a56277957f6c3296b72"
+      ],
+      "equivalentPatchCount": 2
+    },
+    {
+      "ref": "origin/codex/vercel-retirement",
+      "commit": "b73bcb1b9b536778819cacb1419233b486474fca",
+      "behindMain": 1,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "origin/feat/activity-builder",
+      "commit": "6f9671c21a865fdfa6471d94150a8b4e76aa035d",
+      "behindMain": 51,
+      "aheadMain": 7,
+      "nonEquivalentPatches": [
+        "002a02e7a5b6480e665eef002ea02ca5d391bb7d",
+        "840314caa449fba75395a1debe79d022581918b0",
+        "9c30434ef72d1be3307886f7743881086833af81",
+        "5d21214e19a8f75db11aabdbc521335d682950f2",
+        "61be39da0d2ee39203451efa0e28b82cb450fe1b",
+        "6f9671c21a865fdfa6471d94150a8b4e76aa035d"
+      ],
+      "equivalentPatchCount": 1
+    },
+    {
+      "ref": "origin/feat/grammar-phase-2d-layout-engine",
+      "commit": "5429c150822006e1f3acc2b7e59744f4f5ade16d",
+      "behindMain": 339,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "origin/feat/live-game-runtime-perf",
+      "commit": "c7773d56d65190cfd811a3fc4d80e16895a1b0ec",
+      "behindMain": 288,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "origin/feature/secondary-pr-a",
+      "commit": "58eb0409c694a9f3ef5fc6b426646d7e17fb2249",
+      "behindMain": 338,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "origin/feature/secondary-pr-b",
+      "commit": "4c28650a120e6a2d34993dd6c47f88a046bfff1f",
+      "behindMain": 337,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "origin/lesson-player-v2",
+      "commit": "5ec5124d50b6910336dbd6be4f20de9d25369e1f",
+      "behindMain": 283,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "origin/main",
+      "commit": "3d5173692055aa0d78409c88ac7baa50cb3dece9",
+      "behindMain": 0,
+      "aheadMain": 0,
+      "nonEquivalentPatches": [],
+      "equivalentPatchCount": 0
+    },
+    {
+      "ref": "origin/wke-preview/61be39da0d2e",
+      "commit": "61be39da0d2ee39203451efa0e28b82cb450fe1b",
+      "behindMain": 51,
+      "aheadMain": 6,
+      "nonEquivalentPatches": [
+        "002a02e7a5b6480e665eef002ea02ca5d391bb7d",
+        "840314caa449fba75395a1debe79d022581918b0",
+        "9c30434ef72d1be3307886f7743881086833af81",
+        "5d21214e19a8f75db11aabdbc521335d682950f2",
+        "61be39da0d2ee39203451efa0e28b82cb450fe1b"
+      ],
+      "equivalentPatchCount": 1
+    },
+    {
+      "ref": "origin/wke-preview/9c30434ef72d",
+      "commit": "9c30434ef72d1be3307886f7743881086833af81",
+      "behindMain": 51,
+      "aheadMain": 4,
+      "nonEquivalentPatches": [
+        "002a02e7a5b6480e665eef002ea02ca5d391bb7d",
+        "840314caa449fba75395a1debe79d022581918b0",
+        "9c30434ef72d1be3307886f7743881086833af81"
+      ],
+      "equivalentPatchCount": 1
+    }
+  ],
+  "worktrees": [
+    {
+      "path": "C:/Education/1 We Know English Center/7. Content Creation/Lesson Player",
+      "head": "9c30434ef72d1be3307886f7743881086833af81",
+      "branch": "refs/heads/feat/activity-builder",
+      "changedFiles": 698,
+      "trackedChanges": 168,
+      "untrackedFiles": 530
+    },
+    {
+      "path": "C:/Users/brady/.codex/worktrees/activity-builder-hostinger/Lesson Player",
+      "head": "6f9671c21a865fdfa6471d94150a8b4e76aa035d",
+      "branch": "refs/heads/codex/activity-builder-hostinger",
+      "changedFiles": 1,
+      "trackedChanges": 0,
+      "untrackedFiles": 1
+    },
+    {
+      "path": "C:/Users/brady/.codex/worktrees/deploy-form-origin-fix/Lesson Player",
+      "head": "90f53ed1065fa52f0eaa8aee0d5119ef00460bfc",
+      "branch": "refs/heads/codex/fix-deploy-form-origin",
+      "changedFiles": 2,
+      "trackedChanges": 0,
+      "untrackedFiles": 2
+    },
+    {
+      "path": "C:/Users/brady/.codex/worktrees/teacher-onboarding-release/Lesson Player",
+      "head": "9c30434ef72d1be3307886f7743881086833af81",
+      "branch": null,
+      "changedFiles": 257,
+      "trackedChanges": 155,
+      "untrackedFiles": 102
+    },
+    {
+      "path": "C:/Users/brady/.codex/worktrees/vercel-retirement/Lesson Player",
+      "head": "b73bcb1b9b536778819cacb1419233b486474fca",
+      "branch": "refs/heads/codex/vercel-retirement",
+      "changedFiles": 0,
+      "trackedChanges": 0,
+      "untrackedFiles": 0
+    },
+    {
+      "path": "C:/Users/brady/Documents/Codex/2026-09-24/referenced-chatgpt-conversation-this-is-an/work/mystery-engine-worktree",
+      "head": "0ec5b2ae36ae18b568ecb5204d434f20125959c8",
+      "branch": "refs/heads/codex/mystery-engine-phase-1",
+      "changedFiles": 0,
+      "trackedChanges": 0,
+      "untrackedFiles": 0
+    },
+    {
+      "path": "C:/Users/brady/Documents/Codex/2026-09-24/referenced-chatgpt-conversation-this-is-an-2/work/hostinger-managed",
+      "head": "50b0974877b481453631ecfc829513ae113686f2",
+      "branch": "refs/heads/codex/hostinger-managed",
+      "changedFiles": 0,
+      "trackedChanges": 0,
+      "untrackedFiles": 0
+    },
+    {
+      "path": "C:/Users/brady/Documents/Codex/teacher-communications-hostinger-preview-worktree",
+      "head": "53e1d14c1d8cabedf037e0a4fbd34d8d025b0be7",
+      "branch": "refs/heads/codex/realtime-cutover",
+      "changedFiles": 0,
+      "trackedChanges": 0,
+      "untrackedFiles": 0
+    },
+    {
+      "path": "C:/Users/brady/Documents/Codex/teacher-communications-preview-worktree",
+      "head": "dc70344d123a88636280f6a9bc7e91727c2b0c3d",
+      "branch": "refs/heads/codex/teacher-communications-preview",
+      "changedFiles": 0,
+      "trackedChanges": 0,
+      "untrackedFiles": 0
+    },
+    {
+      "path": "C:/Users/brady/Documents/Codex/wke-main-merge",
+      "head": "f1243e388497010a0e8d0bd1c818a2480ab84300",
+      "branch": "refs/heads/codex/deploy-env-guardrail",
+      "changedFiles": 0,
+      "trackedChanges": 0,
+      "untrackedFiles": 0
+    }
+  ],
+  "stashes": [
+    "stash@{0}: On seo/phase1-connected-homepage-backup: seo-and-mixed-wip-recover-student-portal",
+    "stash@{1}: On feat/student-portal-classroom-spine: pr2-homepage-wip",
+    "stash@{2}: On seo/phase1-connected-homepage-backup: seo-diagnostics-wip-before-student-portal-branch",
+    "stash@{3}: On main: codex-stabilization-before-main-sync",
+    "stash@{4}: WIP on feature/secondary-pr-c: 2f59f61 checkpoint before checking out master"
+  ],
+  "linkedMigrations": {
+    "alignedRange": "001-155",
+    "missing": [
+      "156",
+      "157",
+      "158",
+      "159",
+      "160"
+    ],
+    "localUniqueVersions": 160
+  },
+  "databaseFindings": {
+    "usage_needs_verification": 1,
+    "registered_object_missing": 12,
+    "grant_without_applicable_policy": 58,
+    "foreign_key_without_leading_index": 78
+  }
+}

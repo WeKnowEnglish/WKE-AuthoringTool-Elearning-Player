@@ -1,10 +1,26 @@
 # WeKnow English Database Architecture
 
-Last verified: 2026-09-30
-Registry review boundary: migration 154
+Last reviewed: 2026-10-06
+Registry review boundary: migration 161
 
 Migrations 150 through 154 sit outside the eight learning-critical journeys. 150 records first-touch marketing attribution. 151 adds an opt-in public preview of open trial times on a published Classroom Wall. 152 records each lesson-plan file download and whether the file was sent. 153 adds service-only administrator email logging plus private teacher-to-teacher conversations, safe directory profiles, membership-scoped messages, and Realtime publication for new messages. 154 adds a service-only audit trail for security-sensitive administrator actions.
 Scope: learning-critical public data plus storage and realtime policy surfaces
+
+## Migration reconciliation: 155–161
+
+The linked project was verified through 155 before this maintenance release. Migrations 156–161 passed against a full logical backup restored into isolated PostgreSQL 17.6. Existing enrollment counts remained unchanged and existing teacher account access was preserved. The targeted SQL suites also passed: communications, onboarding, vocabulary and reviewed delivery. Docker was unavailable, so the restore-and-apply rehearsal substitutes for the documented local Supabase reset; it does not claim full provider or browser acceptance.
+
+| Migration | Records and authority | Rollout boundary |
+|---|---|---|
+| 155 | Private Secret Roles rounds, cards and assignments; atomic service launch | Already applied |
+| 156 | Durable email outbox, provider events, duplicate request linking and private unread counts | SQL does not send email; new worker/webhook application remains pending |
+| 157 | Selected lesson vocabulary and ownership-checked material generation | No legacy plan replacement; application integration preserved separately |
+| 158 | Immutable reviewed lesson releases, session binding and release-bound homework | No destructive backfill of existing sessions or homework |
+| 159 | Current Auth approval, restrictive teacher account guards, audited suspension and legacy access backfill | Existing teachers retain approved access and their tier; no account deletion |
+| 160 | Immutable whiteboard provenance, participant/board authority and guarded submission saves | New service RPC consumers remain in the onboarding checkout |
+| 161 | Current teacher approval for class owner writes and current student-only class joining | Retains enrollment rows and student own-membership reads |
+
+The registry includes schema review through 161. Missing future application consumers are recorded as pendingCallSites; migration paths provide the present SQL evidence. This maintenance release does not deploy those consumers, turn on email cron, or certify onboarding for new teachers. The current post-push inventory is recorded below; the older linked inventory is retained as history. Migration 162 belongs to the continuing onboarding work and is outside this frozen release.
 
 ## Purpose
 
@@ -25,7 +41,13 @@ It is intentionally not a dump of student data and not permission to clean up sc
 
 The JSON registry is the machine source for learning-critical ownership. This document explains the journeys and decisions in human terms. Migrations remain the source of truth for schema history.
 
-## Verified Linked Inventory
+## Verified after migration push: 2026-10-06
+
+Supabase now records migrations 001–161, with no pending SQL in this maintenance branch. The linked baseline and metadata architecture audits passed with zero blocking findings. The dated report is docs/database/linked-audit-2026-10-06.json. It records 127 public tables/views, 104 public functions, 9 public triggers, 219 foreign keys, 410 indexes and 399 policies.
+
+Remaining advisory findings: 81 foreign-key index candidates, 31 grants without applicable policies, and one usage-verification item. These require measured follow-up; the cleanup does not remove schema objects or create speculative indexes. The registry maps 86 objects across all eight required journeys plus communications.
+
+## Historical Linked Inventory: 2026-09-30
 
 The catalog-only audit returned:
 
@@ -40,7 +62,7 @@ The catalog-only audit returned:
 | Browser-role table grants inspected | 1,232 |
 | Browser-role function grants inspected | 132 |
 
-The registry contains 53 learning-critical objects across all eight required journeys. Every registered table, function, policy surface, migration, and call-site path was present during verification.
+At that historical verification, the registry contained 53 learning-critical objects across all eight required journeys. Every registered table, function, policy surface, migration, and call-site path was present during verification.
 
 ## Ownership Model
 

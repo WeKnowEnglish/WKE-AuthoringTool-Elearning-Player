@@ -63,6 +63,7 @@ export type ActivityTrackPartKind =
   | "question_writing"
   | "writing_prompt"
   | "creative_presentation"
+  | "mini_play"
   | "free_response"
   | "speaking_prompt"
   | "secondary_sequence"
@@ -304,6 +305,12 @@ export const ACTIVITY_TRACK_PART_CATALOG: ActivityTrackPartCatalogEntry[] = [
     kind: "creative_presentation",
     label: "Creative presentation",
     description: "Guided VLOG plan with simple writing, photos, and drawing.",
+    gradedOnly: true,
+  },
+  {
+    kind: "mini_play",
+    label: "Mini play",
+    description: "Describe characters and a setting, then write a script using their names.",
     gradedOnly: true,
   },
   {

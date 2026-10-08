@@ -1,0 +1,50 @@
+import { test, expect } from "@playwright/test";
+
+test("authors a play, reuses and renames speakers, and renders teacher review", async ({ page }) => {
+  await page.goto("/pilots/mini-play");
+  await page.getByRole("button", { name: "Teacher authoring", exact: true }).click();
+  await page.getByRole("textbox", { name: "Play-writing task", exact: true }).fill("Write a play about a missing lunch.");
+  await page.getByRole("spinbutton", { name: "Minimum spoken lines", exact: true }).fill("2");
+  await page.getByRole("button", { name: "Student preview", exact: true }).click();
+  await expect(page.getByText("Write a play about a missing lunch.", { exact: true })).toBeVisible();
+  await page.getByRole("textbox", { name: "Play title", exact: true }).fill("The missing lunch");
+  await page.getByRole("textbox", { name: "Character 1 name", exact: true }).fill("Mia");
+  await page.getByRole("textbox", { name: "Describe character 1", exact: true }).fill("A student who needs help.");
+  await page.getByRole("textbox", { name: "Character 2 name", exact: true }).fill("Sam");
+  await page.getByRole("textbox", { name: "Describe character 2", exact: true }).fill("A friend who finds the lunch.");
+  await page.getByRole("button", { name: "2. Setting", exact: true }).click();
+  await page.getByRole("textbox", { name: "Place", exact: true }).fill("The playground");
+  await page.getByRole("textbox", { name: "Describe the setting", exact: true }).fill("Two bags sit beside a bench.");
+  await page.getByRole("button", { name: "3. Script", exact: true }).click();
+  await page.getByRole("button", { name: "Add spoken line", exact: true }).click();
+  await page.getByRole("combobox", { name: "Speaker for line 1", exact: true }).selectOption({ label: "Mia" });
+  await page.getByRole("textbox", { name: "Dialogue for line 1", exact: true }).fill("Where is my lunch?");
+  await page.getByRole("button", { name: "Add spoken line", exact: true }).click();
+  await page.getByRole("combobox", { name: "Speaker for line 2", exact: true }).selectOption({ label: "Sam" });
+  await page.getByRole("textbox", { name: "Dialogue for line 2", exact: true }).fill("Here it is!");
+  await page.getByRole("button", { name: "Add stage direction", exact: true }).click();
+  await page.getByRole("textbox", { name: "Action for line 3", exact: true }).fill("They sit together.");
+  await page.getByRole("button", { name: "Move line 3 up", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Action for line 2", exact: true })).toHaveValue("They sit together.");
+  await page.getByRole("button", { name: "1. Characters", exact: true }).click();
+  await page.getByRole("textbox", { name: "Character 1 name", exact: true }).fill("Linh");
+  await expect(page.getByRole("button", { name: "Remove character 1", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "3. Script", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "Speaker for line 1", exact: true }).locator("option:checked")).toHaveText("Linh");
+  await page.getByRole("button", { name: "4. Read my play", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Your play is ready to submit", exact: true })).toBeVisible();
+  await expect(page.getByRole("article", { name: "Play preview" })).toContainText("Linh: Where is my lunch?");
+  await expect(page.getByRole("article", { name: "Play preview" })).toContainText("[They sit together.]");
+  await page.getByRole("button", { name: "Review preview", exact: true }).click();
+  await expect(page.getByRole("article", { name: "Play preview" })).toContainText("Sam: Here it is!");
+  await expect(page.locator("textarea")).toHaveCount(0);
+});
+
+test("fits a phone and shows actionable checks for an unfinished play", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/pilots/mini-play");
+  await page.getByRole("button", { name: "4. Read my play", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Before you submit", exact: true })).toBeVisible();
+  await expect(page.getByText("Give your play a title.", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});

@@ -12,6 +12,7 @@ import {
   homeworkCollectionPartMaxScore,
 } from "@/lib/homework-collections/document";
 import { isCompletionLpStudioFormat } from "@/lib/activity-formats/registry";
+import { MINI_PLAY_ANSWER_IDS, MINI_PLAY_MAX_ANSWER_LENGTH, miniPlayResponseIssues, miniPlaySectionComplete } from "./mini-play";
 import {
   lessonPlayerPackItemIds,
   scoreGradedLessonPlayerPackAnswers,
@@ -25,8 +26,8 @@ import {
   creativePresentationStepAnswerIds,
 } from "@/lib/homework-collections/creative-presentation";
 
-function normalizeAnswer(value: unknown): string {
-  return typeof value === "string" ? value.trim().slice(0, 10_000) : "";
+function normalizeAnswer(value: unknown, maxLength = 10_000): string {
+  return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
 
 function comparable(value: string): string {
@@ -40,6 +41,7 @@ function comparable(value: string): string {
 }
 
 function allowedAnswerIds(part: HomeworkCollectionPart): Set<string> {
+  if (part.kind === "mini_play") return new Set(MINI_PLAY_ANSWER_IDS);
   if (part.kind === "multiple_choice") {
     return new Set(part.questions.map((question) => question.id));
   }
@@ -75,7 +77,7 @@ export function normalizeHomeworkCollectionPartResponse(
   const answers = Object.fromEntries(
     Object.entries(source)
       .filter(([id]) => allowed.has(id))
-      .map(([id, answer]) => [id, normalizeAnswer(answer)])
+      .map(([id, answer]) => [id, normalizeAnswer(answer, part.kind === "mini_play" ? MINI_PLAY_MAX_ANSWER_LENGTH : 10_000)])
       .filter(([, answer]) => Boolean(answer)),
   );
   return { partId: part.id, answers };
@@ -142,7 +144,7 @@ export function scoreHomeworkCollectionPart(
     answers,
     correct,
     maxScore: homeworkCollectionPartMaxScore(part),
-    answered: Object.keys(answers).length,
+    answered: part.kind === "mini_play" ? miniPlaySectionComplete(part, answers).filter(Boolean).length : Object.keys(answers).length,
     itemCount: homeworkCollectionPartItemCount(part),
   };
 }
@@ -186,6 +188,7 @@ export function homeworkCollectionRequiredPartsComplete(
   return document.parts.every((part) => {
     if (!part.required) return true;
     const scored = content.parts[part.id];
+    if (part.kind === "mini_play") return Boolean(scored && miniPlayResponseIssues(part, scored.answers).length === 0);
     if (!scored || scored.answered < scored.itemCount) return false;
     if (part.kind === "free_response") {
       return part.prompts.every((prompt) => {

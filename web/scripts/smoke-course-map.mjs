@@ -194,6 +194,7 @@ try {
     fullPage: true,
   });
   await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("button", { name: "Save map", exact: true })).toBeEnabled();
   await expect(
     page.getByLabel("Planned lesson title", { exact: true }),
   ).toHaveValue("Ask about classroom objects");

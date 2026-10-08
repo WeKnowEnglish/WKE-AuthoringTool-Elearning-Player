@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   useTransition,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
@@ -40,6 +41,7 @@ const inputClass =
   "mt-1 block w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-normal text-neutral-900 disabled:bg-neutral-100";
 const buttonClass =
   "rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold hover:border-teal-600 disabled:opacity-40";
+const subscribeHydration = () => () => {};
 function Field({
   label,
   value,
@@ -101,6 +103,7 @@ export function CourseMapEditor({
   initialClassId,
 }: Props) {
   const router = useRouter();
+  const hydrated = useSyncExternalStore(subscribeHydration, () => true, () => false);
   const [saved, setSaved] = useState(initialMap);
   const [document, setDocument] = useState(initialMap.document);
   const [selectedId, setSelectedId] = useState(
@@ -376,13 +379,14 @@ export function CourseMapEditor({
           </span>
           <button
             className={buttonClass}
+            disabled={busy || !hydrated}
             onClick={() => setShowBrief(!showBrief)}
           >
             Course details
           </button>
           <button
             className="rounded-lg bg-teal-800 px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
-            disabled={busy}
+            disabled={busy || !hydrated}
             onClick={() =>
               startTransition(async () => {
                 await persist();
@@ -421,7 +425,7 @@ export function CourseMapEditor({
         </p>
       )}
       <fieldset
-        disabled={busy}
+        disabled={busy || !hydrated}
         className="min-w-0 space-y-4 disabled:opacity-70"
       >
         {showBrief && (

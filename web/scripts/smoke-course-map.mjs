@@ -264,6 +264,9 @@ try {
     const response = await preview.goto(new URL(href, baseURL).href, { waitUntil: "domcontentloaded", timeout: 120_000 });
     assert.equal(response.status(), 200);
     await expect(preview.locator("body")).toContainText(source.name);
+    if (new URL(href, baseURL).pathname.includes("flashcards")) {
+      await preview.getByRole("button", { name: "Card front. Tap to flip.", exact: true }).click();
+    }
     await expect(preview.locator("body")).toContainText(/pencil|book|chair/);
     await preview.screenshot({ path: resolve(output, `material-${index + 1}.png`), fullPage: true });
     await preview.close();
@@ -313,6 +316,21 @@ try {
   check(
     "Later curriculum edits preserve the prepared class plan and its copied vocabulary",
   );
+  const release = await supabase.from("class_lesson_releases").select("snapshot").eq("id", report.releaseId).single();
+  if (release.error) throw release.error;
+  const [releasedStepId, releasedMaterial] = Object.entries(release.data.snapshot.materials)
+    .find(([, material]) => material.format === "flashcards");
+  const releasedPreview = await context.newPage();
+  releasedPreview.on("pageerror", (error) => browserErrors.push(error.message));
+  const releasedResponse = await releasedPreview.goto(`${baseURL}/teacher/lesson-releases/${report.releaseId}/steps/${releasedStepId}/play`, { waitUntil: "domcontentloaded", timeout: 120_000 });
+  assert.equal(releasedResponse.status(), 200);
+  await expect(releasedPreview.locator("body")).toContainText("Reviewed lesson material");
+  await expect(releasedPreview.locator("body")).toContainText(releasedMaterial.title);
+  await releasedPreview.getByRole("button", { name: "Card front. Tap to flip.", exact: true }).click();
+  await expect(releasedPreview.locator("body")).toContainText(/pencil|book|chair/);
+  await releasedPreview.screenshot({ path: resolve(output, "released-material.png"), fullPage: true });
+  await releasedPreview.close();
+  check("Pinned reviewed material plays after the course map changes");
   assert.deepEqual(browserErrors, []);
   report.status = "passed";
 } catch (error) {

@@ -58,7 +58,7 @@ Each preview build is pinned to a commit-specific `wke-preview/<sha>` branch. Ho
 Create this as a third, independent Node.js web application:
 
 - Repository: `WeKnowEnglish/WKE-AuthoringTool-Elearning-Player`
-- Branch: the branch containing this dashboard until it is merged
+- Branch: `main`
 - Root directory: `deploy-dashboard`
 - Framework: `Next.js`
 - Node.js: 24.x
@@ -68,6 +68,8 @@ Create this as a third, independent Node.js web application:
 - Intended hostname: `deploy.weknowenglish.online`
 
 Set the variables above in the Hostinger dashboard application. The dashboard health check is available at `/api/health`. Without administrator variables, the public status page remains available and all controls fail closed.
+
+Preview builds default to `main`. Existing `WKE_DASHBOARD_PREVIEW_BRANCH` values naming the retired `codex/infra-002-managed-release`, `codex/vercel-retirement`, or `codex/fix-deploy-form-origin` branches resolve to `main`; other explicit branch overrides remain supported. This compatibility keeps saved hosting settings usable without replacing the site's secret environment variables.
 
 ## Safety boundary
 

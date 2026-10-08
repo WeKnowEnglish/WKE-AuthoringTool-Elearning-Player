@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import nextConfig from "../next.config.mjs";
+
 import {
   assertSameOrigin,
   createSessionToken,
@@ -48,4 +50,29 @@ test("password comparison and same-origin enforcement fail closed", () => {
       ),
     /rejected/,
   );
+});
+
+test("dashboard headers preserve native form origins without sharing cross-origin referrers", async () => {
+  const rules = await nextConfig.headers();
+  const policy = rules
+    .find((rule) => rule.source === "/:path*")
+    ?.headers.find((header) => header.key.toLowerCase() === "referrer-policy");
+  // A no-referrer policy turns native form Origin headers into null and
+  // prevents authenticated operators from passing the request guard.
+  assert.equal(policy?.value, "same-origin");
+});
+
+test("form origin validation rejects missing, opaque, and foreign origins", () => {
+  const url = "https://deploy.weknowenglish.online/api/control/preview";
+  for (const origin of [undefined, "null", "https://attacker.example"]) {
+    const request = new Request(url, {
+      method: "POST",
+      headers: origin === undefined ? {} : { origin },
+    });
+    assert.throws(() => assertSameOrigin(request), /rejected/);
+  }
+  assert.doesNotThrow(() => assertSameOrigin(new Request(url, {
+    method: "POST",
+    headers: { origin: "https://deploy.weknowenglish.online" },
+  })));
 });

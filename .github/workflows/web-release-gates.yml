@@ -3,6 +3,8 @@ name: Web release gates
 on:
   pull_request:
     paths:
+      - "package.json"
+      - "package-lock.json"
       - "web/**"
       - "packages/**"
       - ".github/workflows/web-release-gates.yml"
@@ -10,6 +12,8 @@ on:
     branches:
       - main
     paths:
+      - "package.json"
+      - "package-lock.json"
       - "web/**"
       - "packages/**"
       - ".github/workflows/web-release-gates.yml"
@@ -52,6 +56,9 @@ jobs:
 
       - name: Audit production dependencies
         run: npm run audit:production
+
+      - name: Audit standalone production dependencies
+        run: npm audit --package-lock-only --workspaces=false --omit=dev --audit-level=high
 
       - name: Lint
         run: npm run lint -- --quiet

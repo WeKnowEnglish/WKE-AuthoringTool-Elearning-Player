@@ -10,6 +10,7 @@ import {
   homeworkCollectionGradingMode,
   isHomeworkCollectionPartKind,
 } from "@/lib/homework-collections/document";
+import { MINI_PLAY_MAX_ANSWER_LENGTH } from "./mini-play";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -33,7 +34,7 @@ export function normalizeHomeworkCollectionAttemptContent(
           Object.entries(value.answers)
             .filter(([, answer]) => typeof answer === "string")
             .slice(0, 50)
-            .map(([id, answer]) => [id.slice(0, 100), String(answer).slice(0, 10_000)]),
+            .map(([id, answer]) => [id.slice(0, 100), String(answer).slice(0, value.kind === "mini_play" ? MINI_PLAY_MAX_ANSWER_LENGTH : 10_000)]),
         )
       : {};
     const maxScore = nonNegativeInt(value.maxScore);

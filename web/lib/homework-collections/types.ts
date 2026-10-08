@@ -14,6 +14,7 @@ export const HOMEWORK_COLLECTION_PART_KINDS = [
   "listening_item_match",
   "sentence_scramble",
   "creative_presentation",
+  "mini_play",
   "free_response",
   "speaking_prompt",
   "lesson_player_pack",
@@ -108,6 +109,22 @@ export type HomeworkCollectionFreeResponsePart = HomeworkCollectionPartBase & {
   }>;
 };
 
+/** Student-authored scenes share the collection's draft, submission and review lifecycle. */
+export type HomeworkCollectionMiniPlayPart = HomeworkCollectionPartBase & {
+  kind: "mini_play";
+  prompt: string;
+  charactersPrompt: string;
+  settingPrompt: string;
+  scriptPrompt: string;
+  minCharacters: number;
+  maxCharacters: number;
+  minDialogueLines: number;
+  wordBank: string[];
+  sentenceStarters: string[];
+  successCriteria: string[];
+  maxPoints: number;
+};
+
 export type HomeworkCollectionCreativePresentationPart =
   HomeworkCollectionPartBase & {
     kind: "creative_presentation";
@@ -172,6 +189,7 @@ export type HomeworkCollectionPart =
   | HomeworkCollectionListeningItemMatchPart
   | HomeworkCollectionSentenceScramblePart
   | HomeworkCollectionCreativePresentationPart
+  | HomeworkCollectionMiniPlayPart
   | HomeworkCollectionFreeResponsePart
   | HomeworkCollectionSpeakingPromptPart
   | HomeworkCollectionLessonPlayerPackPart
@@ -214,6 +232,8 @@ export type HomeworkCollectionAttempt = {
   manualMaxScore: number;
   submittedAt: string | null;
   updatedAt: string;
+  /** Loaded for the authenticated student when viewing submitted work. */
+  review?: HomeworkCollectionReview | null;
 };
 
 export type HomeworkCollectionReviewPart = {

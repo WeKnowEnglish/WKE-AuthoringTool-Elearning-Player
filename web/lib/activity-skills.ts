@@ -75,6 +75,7 @@ export const ACTIVITY_TRACK_PART_SKILLS: Record<
   question_writing: "writing",
   writing_prompt: "writing",
   creative_presentation: "speaking",
+  mini_play: "writing",
   free_response: "writing",
   speaking_prompt: "speaking",
   secondary_sequence: "reading",

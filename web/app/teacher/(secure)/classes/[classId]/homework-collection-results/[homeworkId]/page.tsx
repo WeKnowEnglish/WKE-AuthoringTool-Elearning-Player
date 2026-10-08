@@ -13,6 +13,7 @@ import {
 } from "@/lib/homework-collections/review-display";
 import type { AssessmentSpeakingRecording } from "@/lib/assessment";
 import { CreativePresentationViewer } from "@/components/homework/CreativePresentationViewer";
+import { MiniPlayViewer } from "@/components/homework/MiniPlayViewer";
 
 function speakingRecordingForAnswer(
   recordings: readonly AssessmentSpeakingRecording[],
@@ -106,7 +107,7 @@ export default async function HomeworkCollectionResultsPage({
                     const part = partById.get(scored.partId);
                     if (!part) return null;
                     return (
-                      <article key={scored.partId} className={`rounded-lg border border-neutral-200 bg-neutral-50 p-4 ${part.kind === "creative_presentation" ? "lg:col-span-2" : ""}`}>
+                      <article key={scored.partId} className={`rounded-lg border border-neutral-200 bg-neutral-50 p-4 ${part.kind === "creative_presentation" || part.kind === "mini_play" ? "lg:col-span-2" : ""}`}>
                         <div className="flex items-center justify-between gap-2">
                           <h3 className="font-semibold text-neutral-900">{part.title}</h3>
                           {scored.correct === null ? (
@@ -115,7 +116,7 @@ export default async function HomeworkCollectionResultsPage({
                             <span className="text-xs font-semibold text-emerald-700">{scored.correct}/{scored.maxScore}</span>
                           )}
                         </div>
-                        {part.kind === "creative_presentation" ? (
+                        {part.kind === "mini_play" ? <div className="mt-4"><MiniPlayViewer part={part} answers={scored.answers} /></div> : part.kind === "creative_presentation" ? (
                           <div className="mt-4">
                             <CreativePresentationViewer
                               part={part}

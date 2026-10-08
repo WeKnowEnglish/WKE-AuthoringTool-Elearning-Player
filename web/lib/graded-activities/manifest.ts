@@ -11,6 +11,7 @@ import {
 import { lessonPlayerPackItemIds } from "@/lib/homework-collections/lesson-player-pack";
 import { documentModuleItemIds } from "@/lib/homework-collections/document-module";
 import { creativePresentationAnswerIds } from "@/lib/homework-collections/creative-presentation";
+import { MINI_PLAY_ANSWER_IDS } from "@/lib/homework-collections/mini-play";
 import {
   GRADED_ACTIVITY_MANIFEST_VERSION,
   type GradedActivityManifestItem,
@@ -28,6 +29,7 @@ function cleanId(value: unknown): string | null {
 }
 
 function collectionItemIds(part: HomeworkCollectionPart): string[] {
+  if (part.kind === "mini_play") return [...MINI_PLAY_ANSWER_IDS];
   if (part.kind === "multiple_choice") {
     return part.questions.map((question) => question.id);
   }
@@ -62,6 +64,8 @@ function collectionManifestPart(
       ? new Map(part.prompts.map((prompt) => [prompt.id, prompt.maxPoints]))
       : part.kind === "speaking_prompt"
         ? new Map([[part.responseId, part.maxPoints]])
+        : part.kind === "mini_play"
+          ? new Map(MINI_PLAY_ANSWER_IDS.map((itemId) => [itemId, 0]))
         : part.kind === "creative_presentation"
           ? new Map(creativePresentationAnswerIds(part).map((itemId) => [itemId, 0]))
           : null;
@@ -92,6 +96,7 @@ function policyForTemplateKind(kind: ActivityTrackPartKind): GradedActivityPolic
     kind === "question_writing" ||
     kind === "writing_prompt" ||
     kind === "creative_presentation" ||
+    kind === "mini_play" ||
     kind === "free_response" ||
     kind === "speaking_prompt"
   ) {

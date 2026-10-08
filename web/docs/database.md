@@ -20,7 +20,7 @@ The linked project was verified through 155 before this maintenance release. Mig
 | 160 | Immutable whiteboard provenance, participant/board authority and guarded submission saves | New service RPC consumers remain in the onboarding checkout |
 | 161 | Current teacher approval for class owner writes and current student-only class joining | Retains enrollment rows and student own-membership reads |
 
-The registry includes schema review through 161. Missing future application consumers are recorded as pendingCallSites; migration paths provide the present SQL evidence. This maintenance release does not deploy those consumers, turn on email cron, or certify onboarding for new teachers. The prior linked inventory below is historical until a dated post-push audit replaces it. Migration 162 belongs to the continuing onboarding work and is outside this frozen release.
+The registry includes schema review through 161. Missing future application consumers are recorded as pendingCallSites; migration paths provide the present SQL evidence. This maintenance release does not deploy those consumers, turn on email cron, or certify onboarding for new teachers. The current post-push inventory is recorded below; the older linked inventory is retained as history. Migration 162 belongs to the continuing onboarding work and is outside this frozen release.
 
 ## Purpose
 
@@ -41,7 +41,13 @@ It is intentionally not a dump of student data and not permission to clean up sc
 
 The JSON registry is the machine source for learning-critical ownership. This document explains the journeys and decisions in human terms. Migrations remain the source of truth for schema history.
 
-## Verified Linked Inventory
+## Verified after migration push: 2026-10-06
+
+Supabase now records migrations 001–161, with no pending SQL in this maintenance branch. The linked baseline and metadata architecture audits passed with zero blocking findings. The dated report is docs/database/linked-audit-2026-10-06.json. It records 127 public tables/views, 104 public functions, 9 public triggers, 219 foreign keys, 410 indexes and 399 policies.
+
+Remaining advisory findings: 81 foreign-key index candidates, 31 grants without applicable policies, and one usage-verification item. These require measured follow-up; the cleanup does not remove schema objects or create speculative indexes. The registry maps 86 objects across all eight required journeys plus communications.
+
+## Historical Linked Inventory: 2026-09-30
 
 The catalog-only audit returned:
 
@@ -56,7 +62,7 @@ The catalog-only audit returned:
 | Browser-role table grants inspected | 1,232 |
 | Browser-role function grants inspected | 132 |
 
-The registry contains 53 learning-critical objects across all eight required journeys. Every registered table, function, policy surface, migration, and call-site path was present during verification.
+At that historical verification, the registry contained 53 learning-critical objects across all eight required journeys. Every registered table, function, policy surface, migration, and call-site path was present during verification.
 
 ## Ownership Model
 

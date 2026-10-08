@@ -263,6 +263,7 @@ try {
     const href = await previews.nth(index).getAttribute("href");
     const response = await preview.goto(new URL(href, baseURL).href, { waitUntil: "domcontentloaded", timeout: 120_000 });
     assert.equal(response.status(), 200);
+    await expect(preview.locator("body")).toContainText(source.name);
     await expect(preview.locator("body")).toContainText(/pencil|book|chair/);
     await preview.screenshot({ path: resolve(output, `material-${index + 1}.png`), fullPage: true });
     await preview.close();

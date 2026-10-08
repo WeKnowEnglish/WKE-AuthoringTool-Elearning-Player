@@ -18,6 +18,7 @@ import {
   type HomeworkCollectionAttempt,
 } from "@/lib/homework-collections";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
+import { miniPlayResponseIssues } from "@/lib/homework-collections/mini-play";
 import {
   parseHomeworkFinalizationReceipt,
   type HomeworkFinalizationReceipt,
@@ -76,6 +77,14 @@ export async function saveHomeworkCollectionAttempt(input: {
     }
 
     const content = scoreHomeworkCollectionAttempt(document, input.responses);
+    if (input.submit) {
+      for (const part of document.parts) {
+        if (part.kind === "mini_play" && part.required) {
+          const issues = miniPlayResponseIssues(part, content.parts[part.id]?.answers ?? {});
+          if (issues.length) return { ok: false, error: `${part.title}: ${issues[0]}` };
+        }
+      }
+    }
     if (input.submit && !homeworkCollectionRequiredPartsComplete(document, content)) {
       return { ok: false, error: "Complete every required activity before submitting." };
     }

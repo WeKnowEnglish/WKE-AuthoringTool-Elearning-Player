@@ -13,6 +13,7 @@ import type {
 import { lessonPlayerPackItemIds } from "@/lib/homework-collections/lesson-player-pack";
 import { documentModuleItemIds } from "@/lib/homework-collections/document-module";
 import { creativePresentationAnswerIds } from "@/lib/homework-collections/creative-presentation";
+import { MINI_PLAY_ANSWER_IDS } from "./mini-play";
 
 export type HomeworkCollectionLessonPlayerResponses = Record<
   string,
@@ -20,6 +21,7 @@ export type HomeworkCollectionLessonPlayerResponses = Record<
 >;
 
 function itemIds(part: HomeworkCollectionPart): Set<string> {
+  if (part.kind === "mini_play") return new Set(MINI_PLAY_ANSWER_IDS);
   if (part.kind === "multiple_choice") {
     return new Set(part.questions.map((question) => question.id));
   }

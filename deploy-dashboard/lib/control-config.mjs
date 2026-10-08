@@ -3,6 +3,12 @@ const REPOSITORY_NAME_PATTERN = /^[A-Za-z0-9._-]{1,100}$/;
 const OWNER_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DASHBOARD_ROLES = new Set(["owner", "administrator", "developer", "viewer"]);
+// Preserve saved hosting configurations while retiring the temporary release branches.
+const RETIRED_PREVIEW_BRANCHES = new Set([
+  "codex/infra-002-managed-release",
+  "codex/vercel-retirement",
+  "codex/fix-deploy-form-origin",
+]);
 
 function value(environment, key) {
   const normalized = environment[key]?.trim();
@@ -24,6 +30,7 @@ function validate(name, resolved, pattern) {
 
 export function readControlPlaneConfig(environment = process.env) {
   const missing = [];
+  const configuredPreviewBranch = value(environment, "WKE_DASHBOARD_PREVIEW_BRANCH") || "main";
   const githubToken = value(environment, "GITHUB_DEPLOY_TOKEN");
   const githubAppId = validate(
     "WKE_GITHUB_APP_ID",
@@ -80,8 +87,7 @@ export function readControlPlaneConfig(environment = process.env) {
       value(environment, "WKE_PREVIEW_DOMAIN") || "preview.weknowenglish.online",
       DOMAIN_PATTERN,
     ),
-    previewBranch:
-      value(environment, "WKE_DASHBOARD_PREVIEW_BRANCH") || "codex/infra-002-managed-release",
+    previewBranch: RETIRED_PREVIEW_BRANCHES.has(configuredPreviewBranch) ? "main" : configuredPreviewBranch,
     productionBranch: value(environment, "WKE_DASHBOARD_PRODUCTION_BRANCH") || "main",
   };
 

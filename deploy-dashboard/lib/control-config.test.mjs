@@ -22,7 +22,25 @@ test("control-plane config applies the WKE managed-hosting defaults", () => {
   assert.equal(result.configured, true);
   assert.equal(result.config.productionDomain, "weknowenglish.online");
   assert.equal(result.config.previewDomain, "preview.weknowenglish.online");
+  assert.equal(result.config.previewBranch, "main");
   assert.equal(result.config.productionBranch, "main");
+});
+
+test("retired preview branches resolve to main without overriding other work branches", () => {
+  for (const branch of [
+    "codex/infra-002-managed-release",
+    "codex/vercel-retirement",
+    "codex/fix-deploy-form-origin",
+  ]) {
+    assert.equal(readControlPlaneConfig({
+      ...completeEnvironment,
+      WKE_DASHBOARD_PREVIEW_BRANCH: branch,
+    }).config.previewBranch, "main");
+  }
+  assert.equal(readControlPlaneConfig({
+    ...completeEnvironment,
+    WKE_DASHBOARD_PREVIEW_BRANCH: "feat/activity-builder",
+  }).config.previewBranch, "feat/activity-builder");
 });
 
 test("control-plane config reports secrets that are not configured", () => {

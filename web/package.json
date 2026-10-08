@@ -18,7 +18,7 @@
     "build:live-game-ground": "node scripts/build-english-craft-ground.mjs",
     "prebuild": "node ./scripts/check-web-workspace.mjs && node ./scripts/check-classroom-realtime-rollout.mjs && node ./scripts/ensure-explore-hotspots-react.mjs && npm run validate:grammar",
     "analyze": "cross-env ANALYZE=true next build",
-    "audit:production": "npm audit --omit=dev --audit-level=critical",
+    "audit:production": "npm audit --omit=dev --audit-level=high",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
@@ -105,7 +105,7 @@
     "jszip": "^3.10.1",
     "lucide-react": "^1.24.0",
     "motion": "^12.38.0",
-    "next": "16.3.6",
+    "next": "16.3.8",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-markdown": "^10.1.0",
@@ -115,8 +115,11 @@
     "three": "^0.186.0",
     "zod": "^4.3.6"
   },
+  "overrides": {
+    "sharp": "$sharp"
+  },
   "devDependencies": {
-    "@next/bundle-analyzer": "16.3.6",
+    "@next/bundle-analyzer": "16.3.8",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/jsdom": "^28.0.3",

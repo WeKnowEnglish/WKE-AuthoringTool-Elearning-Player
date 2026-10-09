@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import {
   useBroadcastEvent,
   useEventListener,
@@ -12,17 +14,29 @@ import { GlobalTimerBanner } from "@/components/virtual-classroom/GlobalTimerPan
 import { StudentSessionChrome } from "@/components/virtual-classroom/StudentSessionChrome";
 import { useLobbyPresence } from "@/components/virtual-classroom/useLobbyPresence";
 import { useClassroomRealtimeShadowPresence } from "@/components/virtual-classroom/useClassroomRealtimeShadowPresence";
-import { VirtualClassroomLearnControls } from "@/components/virtual-classroom/VirtualClassroomLearnControls";
-import { VirtualClassroomLearnStage } from "@/components/virtual-classroom/VirtualClassroomLearnStage";
+// Keep meeting entry independent of tools that are only used in Learn.
+const VirtualClassroomLearnControls = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomLearnControls").then((module) => module.VirtualClassroomLearnControls),
+  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening learning tools…</p> },
+);
+// Keep meeting entry independent of tools that are only used in Learn.
+const VirtualClassroomLearnStage = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomLearnStage").then((module) => module.VirtualClassroomLearnStage),
+  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening learning tools…</p> },
+);
 import { VirtualClassroomLiveProvider } from "@/components/virtual-classroom/VirtualClassroomLiveProvider";
-import { VirtualClassroomNativeSessionView } from "@/components/virtual-classroom/VirtualClassroomNativeSessionView";
-import { VirtualClassroomRoomShell } from "@/components/virtual-classroom/VirtualClassroomRoomShell";
-import { launchWhiteboardInLearn } from "@/components/virtual-classroom/VirtualClassroomWhiteboardEmbed";
+// Keep meeting entry independent of tools that are only used in Learn.
+const VirtualClassroomNativeSessionView = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomNativeSessionView").then((module) => module.VirtualClassroomNativeSessionView),
+  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening classroom…</p> },
+);
+import { ClassroomConnectionStatus, VirtualClassroomRoomShell } from "@/components/virtual-classroom/VirtualClassroomRoomShell";
+import { launchWhiteboardInLearn } from "@/lib/virtual-classroom/client/launch-whiteboard";
 import {
   collabDiagnosticExportEnabled,
   exportCollabDiagnosticEvents,
 } from "@/lib/collab-diagnostics/client";
-import { diagnosticFetch } from "@/lib/app-diagnostics/client";
+import { diagnosticFetch, recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 import type { ClassroomRuntimeSnapshot } from "@/lib/classroom-realtime/types";
 import {
   clearVirtualClassroomContext,
@@ -114,6 +128,10 @@ export function VirtualClassroomSessionView({
   const [error, setError] = useState<string | null>(null);
   const [ended, setEnded] = useState(false);
   const [snapshotCheck, setSnapshotCheck] = useState<string | null>(null);
+  const [pendingNavigation, setPendingNavigation] = useState<{
+    uiMode?: VirtualClassroomUiMode;
+    learnStage?: LearnStageId;
+  } | null>(null);
   const rosterSyncAttempted = useRef(false);
   const broadcast = useBroadcastEvent();
 
@@ -211,9 +229,25 @@ export function VirtualClassroomSessionView({
   const liveNavigationPatch = classroomRealtimeLearnNavigationPilotEnabled()
     ? shadowHealth.runtimePatch
     : null;
-  const uiMode = liveNavigationPatch?.uiMode ?? snapshotLearnNavigation?.uiMode ?? liveblocksUiMode;
-  const learnStage =
+  const committedUiMode = liveNavigationPatch?.uiMode ?? snapshotLearnNavigation?.uiMode ?? liveblocksUiMode;
+  const committedLearnStage =
     liveNavigationPatch?.learnStage ?? snapshotLearnNavigation?.learnStage ?? liveblocksLearnStage;
+  const uiMode = pendingNavigation?.uiMode ?? committedUiMode;
+  const learnStage = pendingNavigation?.learnStage ?? committedLearnStage;
+  useEffect(() => {
+    if (!pendingNavigation) return;
+    if ((!pendingNavigation.uiMode || pendingNavigation.uiMode === committedUiMode) &&
+        (!pendingNavigation.learnStage || pendingNavigation.learnStage === committedLearnStage)) {
+      setPendingNavigation(null);
+      return;
+    }
+    // Never leave the teacher indefinitely on an unconfirmed local view.
+    const timeout = window.setTimeout(() => {
+      setPendingNavigation(null);
+      setError("Classroom navigation is taking longer than expected. Please try again.");
+    }, 10_000);
+    return () => window.clearTimeout(timeout);
+  }, [committedUiMode, committedLearnStage, pendingNavigation]);
   const learnActivity =
     liveNavigationPatch && Object.hasOwn(liveNavigationPatch, "learnActivity")
       ? liveNavigationPatch.learnActivity ?? null
@@ -222,6 +256,12 @@ export function VirtualClassroomSessionView({
     liveNavigationPatch && Object.hasOwn(liveNavigationPatch, "learnPresentation")
       ? liveNavigationPatch.learnPresentation ?? null
       : snapshotLearnNavigation?.learnPresentation ?? liveblocksLearnPresentation;
+
+  useEffect(() => {
+    recordAppDiagnostic(role === "host" ? "teacher" : "student", "virtual-classroom", "classroom_view_changed", {
+      sessionId, uiMode, learnStage, activityKind: activeActivity?.kind ?? null,
+    });
+  }, [role, sessionId, uiMode, learnStage, activeActivity?.kind]);
   const learnStudentPensEnabled =
     classroomRealtimeLearnPensPilotEnabled() && shadowHealth.runtimeSnapshot
       ? shadowHealth.runtimeSnapshot.learnStudentPensEnabled
@@ -355,23 +395,37 @@ export function VirtualClassroomSessionView({
 
   const runToolCommand = useCallback(
     async (command: Record<string, unknown>) => {
+      // Respond immediately for the teacher, then reconcile with the shared
+      // server state. Failed commands restore the last confirmed view.
+      const navigation = command.type === "SET_UI_MODE"
+        ? { uiMode: normalizeVirtualClassroomUiMode(command.mode) }
+        : command.type === "SET_LEARN_STAGE"
+          ? { learnStage: normalizeVirtualClassroomLearnStage(command.stage) }
+          : null;
+      if (navigation) setPendingNavigation(navigation);
       setBusy("tools");
       setError(null);
       try {
-        const res = await fetch(`/api/virtual-classroom/${sessionId}/tools`, {
+        const res = await diagnosticFetch(`/api/virtual-classroom/${sessionId}/tools`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(command),
+        }, {
+          surface: role === "host" ? "teacher" : "student",
+          phase: "virtual-classroom",
+          name: "classroom_tool_command",
+          detail: { sessionId, commandType: typeof command.type === "string" ? command.type : "unknown" },
         });
         const payload = (await res.json()) as { error?: string };
         if (!res.ok) throw new Error(payload.error ?? "Tool command failed.");
       } catch (err) {
+        if (navigation) setPendingNavigation(null);
         setError(err instanceof Error ? err.message : "Failed.");
       } finally {
         setBusy(null);
       }
     },
-    [sessionId],
+    [role, sessionId],
   );
 
   const setUiMode = useCallback(
@@ -483,6 +537,8 @@ export function VirtualClassroomSessionView({
       data-classroom-shell="liveblocks-compat"
       className="flex h-dvh min-h-0 flex-row overflow-hidden bg-gradient-to-b from-slate-50 to-teal-50"
     >
+      <ClassroomConnectionStatus sessionId={sessionId} role={role} />
+      {busy === "tools" ? <p role="status" className="pointer-events-none fixed left-1/2 top-3 z-50 -translate-x-1/2 rounded-lg bg-white px-3 py-2 text-sm text-slate-700 shadow">Updating classroom…</p> : null}
       {error ? (
         <p className="pointer-events-auto fixed left-1/2 top-3 z-50 max-w-md -translate-x-1/2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-center text-sm text-red-700 shadow-lg">
           {error}
@@ -528,6 +584,7 @@ export function VirtualClassroomSessionView({
         }
         onEndSession={role === "host" ? () => void endSession() : undefined}
         endSessionBusy={busy === "end"}
+        navigationBusy={busy === "tools"}
         onLeaveClassroom={role === "member" ? leaveSession : undefined}
       />
 

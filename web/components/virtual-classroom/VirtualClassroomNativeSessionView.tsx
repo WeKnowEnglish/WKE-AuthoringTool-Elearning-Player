@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DailyVideoDock } from "@/components/virtual-classroom/daily/DailyVideoDock";
@@ -8,9 +10,17 @@ import { GlobalTimerBannerContent } from "@/components/virtual-classroom/GlobalT
 import { StudentSessionChromeContent } from "@/components/virtual-classroom/StudentSessionChrome";
 import { useClassroomRealtimeShadowPresence } from "@/components/virtual-classroom/useClassroomRealtimeShadowPresence";
 import { useLobbyPresence } from "@/components/virtual-classroom/useLobbyPresence";
-import { VirtualClassroomLearnControlsContent } from "@/components/virtual-classroom/VirtualClassroomLearnControls";
-import { VirtualClassroomLearnStage } from "@/components/virtual-classroom/VirtualClassroomLearnStage";
-import { launchWhiteboardInLearn } from "@/components/virtual-classroom/VirtualClassroomWhiteboardEmbed";
+// Keep meeting entry independent of tools that are only used in Learn.
+const VirtualClassroomLearnControlsContent = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomLearnControls").then((module) => module.VirtualClassroomLearnControlsContent),
+  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening learning tools…</p> },
+);
+// Keep meeting entry independent of tools that are only used in Learn.
+const VirtualClassroomLearnStage = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomLearnStage").then((module) => module.VirtualClassroomLearnStage),
+  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening learning tools…</p> },
+);
+import { launchWhiteboardInLearn } from "@/lib/virtual-classroom/client/launch-whiteboard";
 import { classroomRecoveryFeedback } from "@/lib/classroom-realtime/recovery-feedback";
 import { resolveClassroomRuntimeViewState } from "@/lib/classroom-realtime/runtime-view-state";
 import {
@@ -480,6 +490,7 @@ export function VirtualClassroomNativeSessionView(props: Props) {
         onEnterMeeting={role === "host" ? () => setUiMode("meeting") : undefined}
         onEndSession={role === "host" ? () => void endSession() : undefined}
         endSessionBusy={busy === "end"}
+        navigationBusy={busy === "tools"}
         onLeaveClassroom={role === "member" ? leaveSession : undefined}
       />
 

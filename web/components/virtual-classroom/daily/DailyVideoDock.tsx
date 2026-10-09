@@ -23,6 +23,8 @@ type Props = {
   /** Host: end the VC for everyone. */
   onEndSession?: () => void;
   endSessionBusy?: boolean;
+  /** Prevent duplicate navigation requests while the class changes view. */
+  navigationBusy?: boolean;
   /** Student: leave the classroom entirely. */
   onLeaveClassroom?: () => void;
 };
@@ -51,6 +53,7 @@ export function DailyVideoDock({
   onEnterMeeting,
   onEndSession,
   endSessionBusy = false,
+  navigationBusy = false,
   onLeaveClassroom,
 }: Props) {
   const isStage = layout === "stage";
@@ -350,6 +353,8 @@ export function DailyVideoDock({
         <button
           type="button"
           onClick={onEnterMeeting}
+          disabled={navigationBusy}
+          aria-busy={navigationBusy}
           className="rounded-md border px-2.5 py-1 text-xs font-bold"
           style={{
             borderColor: "var(--teacher-accent-border)",
@@ -363,6 +368,8 @@ export function DailyVideoDock({
         <button
           type="button"
           onClick={onExitToLearn}
+          disabled={navigationBusy}
+          aria-busy={navigationBusy}
           className="rounded-md border px-2.5 py-1 text-xs font-bold"
           style={{
             borderColor: "var(--teacher-accent-border)",
@@ -412,7 +419,7 @@ export function DailyVideoDock({
           : " max-sm:hidden"
         : "");
 
-  const frameHeightClass = "min-h-0 w-full flex-1";
+  const frameHeightClass = "relative min-h-0 w-full flex-1 overflow-hidden";
 
   const shellStyle = {
     ...themeVars,

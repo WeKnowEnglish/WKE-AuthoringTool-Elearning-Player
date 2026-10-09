@@ -1,0 +1,1932 @@
+{
+  "version": 1,
+  "code": "UP1",
+  "title": "Upper Primary 1",
+  "ageRange": [
+    9,
+    11
+  ],
+  "gradeRange": "Grade 3-5",
+  "cefr": "A1–A2: A1 consolidation toward A2 communication",
+  "entryExpectations": "Broad A1 familiarity: exchange basic personal information; follow simple classroom instructions; recognise familiar everyday words; read and write short simple sentences with support. Use the existing welcome lesson as an entry diagnostic. Revisit gaps in question forms, sound–spelling links, everyday verbs and numbers before increasing task demands. A1 entry to A2-oriented outcomes is a planning target, not a guarantee from age or course completion. Provisional allocation: four 45-minute slots per unit (48 slots including the existing welcome lesson); adjust after piloting, learner evidence and timetable decisions.",
+  "provisionalMinutes": 45,
+  "sources": [
+    {
+      "id": "CV2020",
+      "title": "Council of Europe (2020), CEFR Companion Volume",
+      "url": "https://rm.coe.int/16809ea0d4"
+    },
+    {
+      "id": "YL7-10",
+      "title": "Council of Europe (2018), Young learner descriptor collation, ages 7–10",
+      "url": "https://rm.coe.int/16808b1688"
+    },
+    {
+      "id": "YL11-15",
+      "title": "Council of Europe (2018), Young learner descriptor collation, ages 11–15",
+      "url": "https://rm.coe.int/16808b1689"
+    }
+  ],
+  "alignmentNote": "Original WKE course objectives aligned to the cited CEFR scales and age-adapted using the young-learner collections. The twelve themes and grammar order are the school's curriculum choices; CEFR does not prescribe this grammar syllabus. Printed page numbers refer to the 2020 Companion Volume.",
+  "standards": {
+    "L": {
+      "level": "A2",
+      "scale": "Overall oral comprehension",
+      "pages": "48",
+      "summary": "Follow clear, slow speech about familiar needs."
+    },
+    "R": {
+      "level": "A2",
+      "scale": "Overall reading comprehension",
+      "pages": "54",
+      "summary": "Read brief texts with familiar everyday vocabulary."
+    },
+    "RO": {
+      "level": "A2",
+      "scale": "Reading for orientation",
+      "pages": "55–56",
+      "summary": "Locate predictable information in everyday written material."
+    },
+    "RI": {
+      "level": "A2",
+      "scale": "Reading for information and argument",
+      "pages": "56–57",
+      "summary": "Find key information in simple factual texts."
+    },
+    "D": {
+      "level": "A2",
+      "scale": "Sustained monologue: describing experience",
+      "pages": "62–63",
+      "summary": "Describe familiar people, places, routines and events."
+    },
+    "P": {
+      "level": "A2",
+      "scale": "Addressing audiences",
+      "pages": "65–66",
+      "summary": "Give a prepared talk with supported follow-up."
+    },
+    "W": {
+      "level": "A2",
+      "scale": "Overall written production",
+      "pages": "66",
+      "summary": "Connect short sentences on familiar topics."
+    },
+    "CW": {
+      "level": "A2",
+      "scale": "Creative writing",
+      "pages": "67",
+      "summary": "Write simple descriptions and short event accounts."
+    },
+    "I": {
+      "level": "A2",
+      "scale": "Information exchange",
+      "pages": "78–79",
+      "summary": "Exchange everyday facts and straightforward directions."
+    },
+    "S": {
+      "level": "A2",
+      "scale": "Obtaining goods and services",
+      "pages": "77–78",
+      "summary": "Handle predictable purchases, quantities and prices."
+    },
+    "G": {
+      "level": "A2",
+      "scale": "Goal-oriented co-operation",
+      "pages": "76–77",
+      "summary": "Participate in practical tasks with supportive partners."
+    },
+    "Q": {
+      "level": "A2",
+      "scale": "Asking for clarification",
+      "pages": "89–90",
+      "summary": "Request repetition or explanation when necessary."
+    },
+    "M": {
+      "level": "A2",
+      "scale": "Relaying specific information",
+      "pages": "93–95",
+      "summary": "Pass on relevant details from short sources."
+    },
+    "T": {
+      "level": "A2",
+      "scale": "Expressing a personal response to creative texts (including literature)",
+      "pages": "106–107",
+      "summary": "Respond simply to characters, feelings and events."
+    },
+    "C": {
+      "level": "A2",
+      "scale": "Facilitating collaborative interaction with peers",
+      "pages": "109–111",
+      "summary": "Contribute to shared tasks with appropriate support."
+    },
+    "CC": {
+      "level": "A2",
+      "scale": "Coherence and cohesion",
+      "pages": "140–141",
+      "summary": "Join ideas with basic linking expressions."
+    }
+  },
+  "courseObjectives": [
+    {
+      "code": "UP1.C01",
+      "statement": "Identify the purpose and useful details in short spoken messages about the twelve course themes.",
+      "learnerStatement": "I can listen for the information I need.",
+      "successCriteria": "After a short, clear recording, identify its purpose and at least 3 useful details. Record repetitions, visuals and other support used.",
+      "evidenceMode": "recognition",
+      "standardCodes": [
+        "L"
+      ]
+    },
+    {
+      "code": "UP1.C02",
+      "statement": "Use short profiles, timetables, maps, labels and stories to find information for a classroom task.",
+      "learnerStatement": "I can read a short text and use its information.",
+      "successCriteria": "Locate 4 of 5 requested details in a familiar text type and use at least 2 to complete the task; rereading is allowed.",
+      "evidenceMode": "recognition",
+      "standardCodes": [
+        "R",
+        "RO",
+        "RI"
+      ]
+    },
+    {
+      "code": "UP1.C03",
+      "statement": "Sustain a brief peer exchange about a familiar topic, asking relevant questions and clarifying information.",
+      "learnerStatement": "I can ask, answer and check that I understand.",
+      "successCriteria": "Complete 4 relevant question-answer exchanges, contribute in both roles, and request repetition or clarification when needed.",
+      "evidenceMode": "production",
+      "standardCodes": [
+        "I",
+        "Q"
+      ]
+    },
+    {
+      "code": "UP1.C04",
+      "statement": "Describe familiar people, routines, homes, schools and places, including relevant comparisons.",
+      "learnerStatement": "I can describe my world and compare things.",
+      "successCriteria": "Give 5–6 understandable statements with 3 relevant details and an appropriate comparison when the task calls for one; keyword cues are allowed.",
+      "evidenceMode": "production",
+      "standardCodes": [
+        "D"
+      ]
+    },
+    {
+      "code": "UP1.C05",
+      "statement": "Recount an event or construct a simple story with an understandable order of events.",
+      "learnerStatement": "I can tell what happened in order.",
+      "successCriteria": "Communicate at least 4 ordered events, use past-time language and 3 suitable connectors, and make the ending understandable.",
+      "evidenceMode": "production",
+      "standardCodes": [
+        "D",
+        "CW",
+        "CC"
+      ]
+    },
+    {
+      "code": "UP1.C06",
+      "statement": "Produce and revise a short description, message, advice note or story for a familiar reader.",
+      "learnerStatement": "I can write a short message that someone can understand.",
+      "successCriteria": "Produce 6–8 relevant linked sentences, then improve meaning and at least 2 language or presentation features using a checklist.",
+      "evidenceMode": "production",
+      "standardCodes": [
+        "W",
+        "CW",
+        "CC"
+      ]
+    },
+    {
+      "code": "UP1.C07",
+      "statement": "Help a partner complete a practical task by sharing source information, suggesting an action and responding.",
+      "learnerStatement": "I can share useful information and help my group decide.",
+      "successCriteria": "Pass on 3 accurate details from a short source, make one relevant suggestion, respond to a partner, and record any help with formulation.",
+      "evidenceMode": "production",
+      "standardCodes": [
+        "M",
+        "G",
+        "C"
+      ]
+    },
+    {
+      "code": "UP1.C08",
+      "statement": "Present a familiar discovery using selected facts, descriptions and simple explanations, then answer questions.",
+      "learnerStatement": "I can share a discovery and answer questions about it.",
+      "successCriteria": "Give a prepared 1–2-minute talk using visuals or keywords, communicate 4 sourced facts and one explanation, and answer 2 straightforward questions with repetition/support recorded.",
+      "evidenceMode": "transfer",
+      "standardCodes": [
+        "P",
+        "I",
+        "M"
+      ]
+    }
+  ],
+  "units": [
+    {
+      "number": 1,
+      "title": "Who Am I?",
+      "themeFocus": "Identity, strengths and interests",
+      "languageFocus": "Present simple statements and questions; be/greetings; like/enjoy; be good at; always, usually, often, sometimes, never.",
+      "example": "I usually draw after school. I am good at solving puzzles.",
+      "outcome": "Introduce yourself, describe interests and strengths, and exchange information about familiar routines.",
+      "vocabularyStrands": [
+        "interests and hobbies",
+        "personal strengths",
+        "daily/weekly routines",
+        "frequency"
+      ],
+      "courseObjectiveCodes": [
+        "UP1.C01",
+        "UP1.C03",
+        "UP1.C04",
+        "UP1.C06"
+      ],
+      "reviewUnits": [],
+      "assessmentTask": "My learner profile: respond to a new peer profile, interview a partner, then share a short profile of yourself or a fictional learner.",
+      "support": "Picture profiles, hobby/strength cards, a frequency line and question frames; fade full sentence models before the checkpoint. Fictional profiles are acceptable.",
+      "extension": "Add a relevant reason with because and one unscripted follow-up question; compare two routines without making this a core requirement.",
+      "objectives": [
+        {
+          "code": "UP1.U01.1",
+          "statement": "Find personal details, interests and routine information in short spoken or written learner profiles.",
+          "learnerStatement": "I can understand a short profile.",
+          "successCriteria": "Identify 4 of 5 details across a new short profile, including an interest and a frequency detail; record replay or picture support.",
+          "evidenceMode": "recognition",
+          "standardCodes": [
+            "L",
+            "R"
+          ]
+        },
+        {
+          "code": "UP1.U01.2",
+          "statement": "Exchange information about interests, strengths and routines with a partner.",
+          "learnerStatement": "I can ask about interests and say what I often do.",
+          "successCriteria": "Ask and answer 4 relevant questions; communicate 2 interests/strengths and use 2 frequency expressions appropriately. Clarify if needed.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "I",
+            "D",
+            "Q"
+          ]
+        },
+        {
+          "code": "UP1.U01.3",
+          "statement": "Create a short learner profile describing strengths, interests and weekly routines.",
+          "learnerStatement": "I can tell others about myself and my routines.",
+          "successCriteria": "Produce 6–8 understandable linked sentences covering strengths, interests and routines, including 3 frequency expressions; share a brief oral version from keywords.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "D",
+            "W"
+          ]
+        }
+      ],
+      "lessons": [
+        {
+          "title": "Hello, welcome to class!",
+          "preserveExisting": true
+        },
+        {
+          "title": "My interests, strengths and weekly routines",
+          "objectiveIndexes": [
+            0
+          ],
+          "courseCodes": [
+            "UP1.C01",
+            "UP1.C04"
+          ],
+          "skills": [
+            "listening",
+            "reading",
+            "speaking",
+            "grammar",
+            "vocabulary"
+          ],
+          "task": "Use two short fictional learner profiles with pictures. Identify names, interests, strengths and routine/frequency details. Model present-simple questions and frequency placement; learners sort examples on a frequency line and make three true or fictional statements. Teach a simple request for repetition, then check comprehension with a fresh profile."
+        },
+        {
+          "title": "Find someone who: strengths and interests",
+          "objectiveIndexes": [
+            1,
+            2
+          ],
+          "courseCodes": [
+            "UP1.C03"
+          ],
+          "skills": [
+            "speaking",
+            "listening",
+            "writing",
+            "pronunciation"
+          ],
+          "task": "Learners interview partners using interest, strength and routine prompts, taking both roles. Each records facts rather than copying the question card, then drafts a 6–8-sentence learner profile. Give brief feedback on question formation and frequency placement, and let learners improve their profile. Practise clarification when a detail is unclear."
+        },
+        {
+          "title": "My learner profile: unit checkpoint",
+          "checkpoint": true,
+          "objectiveIndexes": [
+            0,
+            1,
+            2
+          ],
+          "courseCodes": [],
+          "skills": [
+            "listening",
+            "reading",
+            "speaking",
+            "writing"
+          ],
+          "task": "Use a fresh short profile for five comprehension checks. Each learner greets a partner, exchanges names/ages/feelings, then asks and answers four interest/routine questions. Collect the revised profile and a brief oral introduction. Use the three unit criteria separately; record prompts and repetitions, give feedback, and plan a later recheck for gaps."
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "title": "School Life Around the World",
+      "themeFocus": "Subjects, schedules and comparisons between individual schools",
+      "languageFocus": "School subjects and clock times; present simple; comparative adjectives/adverbs; earlier/later/longer than; our/their and ours/theirs.",
+      "example": "Our school starts earlier than theirs.",
+      "outcome": "Read school-day information, compare two schools and share a clear description of your own school day.",
+      "vocabularyStrands": [
+        "subjects",
+        "timetables and times",
+        "school-day routines",
+        "similarities and differences"
+      ],
+      "courseObjectiveCodes": [
+        "UP1.C02",
+        "UP1.C04",
+        "UP1.C06",
+        "UP1.C07"
+      ],
+      "reviewUnits": [
+        1
+      ],
+      "assessmentTask": "Partner-school exchange: interpret two timetables, discuss comparisons and write a short school-day message.",
+      "support": "Colour-coded timetables, clock visuals, comparison strips and a short message model. Describe particular schools rather than making claims about all children in a country.",
+      "extension": "Explain a preference with because and ask one question about the partner school.",
+      "objectives": [
+        {
+          "code": "UP1.U02.1",
+          "statement": "Retrieve subjects, times and routine details from two short school profiles and timetables.",
+          "learnerStatement": "I can read and compare school-day information.",
+          "successCriteria": "Locate 4 of 5 requested subject/time facts and match each to the correct school; rereading and clock visuals are allowed.",
+          "evidenceMode": "recognition",
+          "standardCodes": [
+            "RO",
+            "R"
+          ]
+        },
+        {
+          "code": "UP1.U02.2",
+          "statement": "Compare two school days using information from their timetables.",
+          "learnerStatement": "I can say how two school days are different.",
+          "successCriteria": "Give 3 accurate comparisons about times, subjects or length, using than and making clear whose school each statement describes.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "D",
+            "I"
+          ]
+        },
+        {
+          "code": "UP1.U02.3",
+          "statement": "Write a short message introducing a school day to a partner class.",
+          "learnerStatement": "I can write about our school day for another class.",
+          "successCriteria": "Write 6–8 linked sentences with 3 timetable facts, 2 comparisons and a relevant question; revise one unclear detail after feedback.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "W",
+            "CC"
+          ]
+        }
+      ],
+      "lessons": [
+        {
+          "title": "Read two school days",
+          "objectiveIndexes": [
+            0
+          ],
+          "courseCodes": [
+            "UP1.C02"
+          ],
+          "skills": [
+            "reading",
+            "listening",
+            "vocabulary"
+          ],
+          "task": "Begin with a short greeting/name/age/feeling exchange from Unit 1. Read two school profiles and timetables; locate subjects, start times and breaks. Listen to one school-day description and match it to the correct timetable. Check facts using clocks and highlighting, then ask a partner to confirm a missing detail."
+        },
+        {
+          "title": "Compare our timetables",
+          "objectiveIndexes": [
+            1
+          ],
+          "courseCodes": [
+            "UP1.C04"
+          ],
+          "skills": [
+            "speaking",
+            "listening",
+            "grammar",
+            "pronunciation"
+          ],
+          "task": "Model earlier/later/longer than from the same timetables, then practise our/their and ours/theirs with clear referents. Partners hold different timetables, exchange missing information, and agree on three true comparisons. Revisit present-simple routines and frequency expressions from Unit 1."
+        },
+        {
+          "title": "A message to a partner school",
+          "objectiveIndexes": [
+            2
+          ],
+          "courseCodes": [
+            "UP1.C06",
+            "UP1.C07"
+          ],
+          "skills": [
+            "writing",
+            "reading",
+            "speaking"
+          ],
+          "task": "Pairs decide which school-day facts would interest a partner class, each contributing one suggestion. Individually write a 6–8-sentence message with timetable facts, comparisons and a question. Peer-check factual accuracy and who each pronoun refers to; revise before sharing."
+        },
+        {
+          "title": "School-life exchange: unit checkpoint",
+          "checkpoint": true,
+          "objectiveIndexes": [
+            0,
+            1,
+            2
+          ],
+          "courseCodes": [],
+          "skills": [
+            "reading",
+            "speaking",
+            "listening",
+            "writing"
+          ],
+          "task": "Provide two fresh, accessible school timetables. Check five facts, hear each learner give three comparisons in a short partner exchange, and collect an individual school-day message. Assess the three criteria separately and record support; do not assess national stereotypes or cultural knowledge."
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Home Sweet Home",
+      "themeFocus": "Housing, furniture and household responsibilities",
+      "languageFocus": "There is/are and place prepositions; have to/don't have to for responsibilities; present-simple questions.",
+      "example": "I have to tidy my room.",
+      "outcome": "Describe a home or imaginary room and explain a fair set of household responsibilities.",
+      "vocabularyStrands": [
+        "types of homes",
+        "rooms and furniture",
+        "household chores",
+        "responsibilities"
+      ],
+      "courseObjectiveCodes": [
+        "UP1.C02",
+        "UP1.C03",
+        "UP1.C04",
+        "UP1.C07"
+      ],
+      "reviewUnits": [
+        1,
+        2
+      ],
+      "assessmentTask": "Home tour and chore agreement: interpret a floor plan, agree on responsibilities and present a simple home plan.",
+      "support": "Labelled floor plans, movable furniture icons and chore cards; use an imaginary home so no learner needs to reveal home circumstances.",
+      "extension": "Compare two rooms and explain why one arrangement works better.",
+      "objectives": [
+        {
+          "code": "UP1.U03.1",
+          "statement": "Locate rooms, furniture and responsibilities in a simple home plan and chore chart.",
+          "learnerStatement": "I can understand a home plan and chore chart.",
+          "successCriteria": "Identify 4 of 5 room/furniture/chore details and correctly locate 2 items using the plan.",
+          "evidenceMode": "recognition",
+          "standardCodes": [
+            "RO",
+            "R"
+          ]
+        },
+        {
+          "code": "UP1.U03.2",
+          "statement": "Agree on household responsibilities in a short partner exchange.",
+          "learnerStatement": "I can say what I have to do and ask about chores.",
+          "successCriteria": "Complete 4 exchanges and agree on 3 responsibilities using have to; distinguish something unnecessary with don't have to.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "I",
+            "G"
+          ]
+        },
+        {
+          "code": "UP1.U03.3",
+          "statement": "Present a simple home plan with furniture locations and household responsibilities.",
+          "learnerStatement": "I can give a short home tour and explain our chores.",
+          "successCriteria": "Communicate 3 accurate locations and 3 responsibilities in 6–8 linked sentences; use a labelled plan and keywords rather than a full oral script.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "D",
+            "W"
+          ]
+        }
+      ],
+      "lessons": [
+        {
+          "title": "Explore homes and rooms",
+          "objectiveIndexes": [
+            0
+          ],
+          "courseCodes": [
+            "UP1.C02"
+          ],
+          "skills": [
+            "reading",
+            "listening",
+            "vocabulary"
+          ],
+          "task": "Read a simple floor plan and chore chart, matching rooms, furniture and responsibilities. Revisit Unit 1 routines with two frequency statements. Use there is/are and prepositions to locate furniture, then check understanding against a different room plan."
+        },
+        {
+          "title": "Who does which chores?",
+          "objectiveIndexes": [
+            1
+          ],
+          "courseCodes": [
+            "UP1.C03"
+          ],
+          "skills": [
+            "speaking",
+            "listening",
+            "grammar"
+          ],
+          "task": "Model have to and don't have to through contrasting chore cards; show that not necessary is different from not allowed. Partners ask about chores and agree on three responsibilities for fictional housemates. Revisit how often questions and frequency expressions."
+        },
+        {
+          "title": "Design a fair home plan",
+          "objectiveIndexes": [
+            2
+          ],
+          "courseCodes": [
+            "UP1.C04",
+            "UP1.C07"
+          ],
+          "skills": [
+            "speaking",
+            "writing",
+            "reading"
+          ],
+          "task": "Pairs arrange an imaginary room and a fair chore chart, exchanging suggestions and comparing two possible layouts using Unit 2 language. Each learner prepares their own 6–8-sentence home description with three locations and responsibilities, then gives a brief tour from a diagram."
+        },
+        {
+          "title": "Home tour and chores: unit checkpoint",
+          "checkpoint": true,
+          "objectiveIndexes": [
+            0,
+            1,
+            2
+          ],
+          "courseCodes": [],
+          "skills": [
+            "reading",
+            "listening",
+            "speaking",
+            "writing"
+          ],
+          "task": "Use a fresh floor plan/chore chart for five checks. Observe a four-exchange chore agreement and collect each learner's home description plus short tour. Assess information, responsibility meanings and understandable description separately; record support and plan feedback/recheck."
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Healthy Living",
+      "themeFocus": "Everyday wellbeing, habits and nutrition",
+      "languageFocus": "Should/shouldn't for advice; present-simple habits and frequency; because for a simple reason.",
+      "example": "You should exercise and eat vegetables.",
+      "outcome": "Understand familiar wellbeing information, offer kind everyday advice and plan realistic habits.",
+      "vocabularyStrands": [
+        "food groups and varied meals",
+        "active play and movement",
+        "sleep and rest",
+        "water and everyday habits"
+      ],
+      "courseObjectiveCodes": [
+        "UP1.C01",
+        "UP1.C03",
+        "UP1.C06",
+        "UP1.C07"
+      ],
+      "reviewUnits": [
+        1,
+        3
+      ],
+      "assessmentTask": "Wellbeing buddy plan: interpret a fictional weekly log, discuss advice and write a realistic habit plan.",
+      "support": "Picture logs, choice cards and advice frames. Focus on wellbeing and varied habits, not body size, food shame, diagnosis or treatment.",
+      "extension": "Compare two practical choices and explain which suits the fictional learner's routine.",
+      "objectives": [
+        {
+          "code": "UP1.U04.1",
+          "statement": "Identify habits and practical wellbeing information in a short weekly log or recording.",
+          "learnerStatement": "I can understand information about everyday habits.",
+          "successCriteria": "Identify 4 of 5 details about food, movement, sleep or water in a fictional log; record any replay or visual support.",
+          "evidenceMode": "recognition",
+          "standardCodes": [
+            "L",
+            "R"
+          ]
+        },
+        {
+          "code": "UP1.U04.2",
+          "statement": "Offer and respond to simple, kind advice about everyday wellbeing habits.",
+          "learnerStatement": "I can give useful advice and explain a simple reason.",
+          "successCriteria": "Offer 3 relevant should/shouldn't suggestions, give a simple reason for 2, and respond to a partner's suggestion without judging their body or circumstances.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "I",
+            "G"
+          ]
+        },
+        {
+          "code": "UP1.U04.3",
+          "statement": "Write a realistic weekly wellbeing plan linked to a learner's routine.",
+          "learnerStatement": "I can plan habits that help me feel well.",
+          "successCriteria": "Write 6 linked sentences covering 3 realistic habits, their frequency and one reason; distinguish a chosen habit from a required responsibility.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "W",
+            "CC"
+          ]
+        }
+      ],
+      "lessons": [
+        {
+          "title": "Discover everyday wellbeing",
+          "objectiveIndexes": [
+            0
+          ],
+          "courseCodes": [
+            "UP1.C01"
+          ],
+          "skills": [
+            "listening",
+            "reading",
+            "vocabulary"
+          ],
+          "task": "Retrieve frequency expressions from Unit 1. Read/listen to fictional weekly logs and identify routines involving varied food, movement, sleep and water. Match information to pictures and answer five detail questions; keep discussion practical and non-judgemental."
+        },
+        {
+          "title": "Give kind, practical advice",
+          "objectiveIndexes": [
+            1
+          ],
+          "courseCodes": [
+            "UP1.C03"
+          ],
+          "skills": [
+            "speaking",
+            "listening",
+            "grammar"
+          ],
+          "task": "Model should/shouldn't with familiar habit cards and because for a brief reason. In pairs, offer three relevant suggestions to a fictional learner and respond to advice. Compare advice with Unit 3 have to responsibilities; practise asking for repetition or a clearer example."
+        },
+        {
+          "title": "Make a weekly wellbeing plan",
+          "objectiveIndexes": [
+            2
+          ],
+          "courseCodes": [
+            "UP1.C06",
+            "UP1.C07"
+          ],
+          "skills": [
+            "writing",
+            "speaking",
+            "reading"
+          ],
+          "task": "Choose three manageable habits for a fictional or personal weekly plan. Partners share log details and discuss realistic frequencies, then each learner writes six linked sentences. Peer-check whether the advice fits the routine and revise one unrealistic or unclear suggestion."
+        },
+        {
+          "title": "Wellbeing buddy plan: unit checkpoint",
+          "checkpoint": true,
+          "objectiveIndexes": [
+            0,
+            1,
+            2
+          ],
+          "courseCodes": [],
+          "skills": [
+            "listening",
+            "reading",
+            "speaking",
+            "writing"
+          ],
+          "task": "Use a new fictional habit log for five checks, hear three advice suggestions with reasons, and collect an individual weekly plan. Score understanding, communication and advice meanings separately. Nutrition knowledge, appearance and medical decision-making are not language assessment criteria."
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Our Amazing Planet",
+      "themeFocus": "Landscapes, habitats and geographical facts",
+      "languageFocus": "Superlatives with the; comparative review; descriptive adjectives; simple because explanations.",
+      "example": "The Pacific is the largest ocean.",
+      "outcome": "Use simple source information to describe and compare places and explain a habitat feature.",
+      "vocabularyStrands": [
+        "landscapes",
+        "habitats",
+        "animals and habitat features",
+        "size, height, length and temperature"
+      ],
+      "courseObjectiveCodes": [
+        "UP1.C02",
+        "UP1.C04",
+        "UP1.C07",
+        "UP1.C08"
+      ],
+      "reviewUnits": [
+        2,
+        3
+      ],
+      "assessmentTask": "Planet discovery gallery: read fact cards, compare places and explain a labelled habitat factfile.",
+      "support": "Verified, teacher-selected short fact cards, maps, pictures and a comparison chart; teach unfamiliar science words in context.",
+      "extension": "Add a second source fact and explain a simple cause using because without requiring a technical scientific explanation.",
+      "objectives": [
+        {
+          "code": "UP1.U05.1",
+          "statement": "Retrieve landscape and habitat facts from short labelled maps and fact cards.",
+          "learnerStatement": "I can find facts about places and habitats.",
+          "successCriteria": "Find 4 of 5 requested facts and match 2 places or animals to the appropriate habitat; distinguish source facts from guesses.",
+          "evidenceMode": "recognition",
+          "standardCodes": [
+            "RI",
+            "RO"
+          ]
+        },
+        {
+          "code": "UP1.U05.2",
+          "statement": "Describe and compare familiar landscapes using supported geographical facts.",
+          "learnerStatement": "I can compare amazing places.",
+          "successCriteria": "Communicate 3 source-consistent facts, including 2 appropriate superlatives and one comparison; make the comparison group clear.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "D",
+            "I"
+          ]
+        },
+        {
+          "code": "UP1.U05.3",
+          "statement": "Create and explain a short habitat factfile with labelled features.",
+          "learnerStatement": "I can explain what makes a habitat special.",
+          "successCriteria": "Use a map/picture and 6 linked sentences to give location, 3 habitat facts and a simple because explanation; answer one familiar question with support recorded.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "W",
+            "P",
+            "M"
+          ]
+        }
+      ],
+      "lessons": [
+        {
+          "title": "Explore landscapes and habitats",
+          "objectiveIndexes": [
+            0
+          ],
+          "courseCodes": [
+            "UP1.C02"
+          ],
+          "skills": [
+            "reading",
+            "listening",
+            "vocabulary"
+          ],
+          "task": "Locate landscapes on a map and read short teacher-verified habitat fact cards. Revisit home/location descriptions from Unit 3. Sort source facts from guesses, match animals to habitats, and complete five information checks using a picture glossary where needed."
+        },
+        {
+          "title": "Compare Earth's amazing places",
+          "objectiveIndexes": [
+            1
+          ],
+          "courseCodes": [
+            "UP1.C04"
+          ],
+          "skills": [
+            "speaking",
+            "listening",
+            "grammar",
+            "pronunciation"
+          ],
+          "task": "Retrieve Unit 2 comparative language, then model the largest/highest/longest and the comparison group. Partners use different fact cards to give three accurate comparisons/superlatives and confirm the facts in a shared chart. Do not reward unsupported superlative claims."
+        },
+        {
+          "title": "Create a habitat factfile",
+          "objectiveIndexes": [
+            2
+          ],
+          "courseCodes": [
+            "UP1.C07",
+            "UP1.C08"
+          ],
+          "skills": [
+            "writing",
+            "reading",
+            "speaking"
+          ],
+          "task": "Learners select a familiar habitat from supplied sources, label a map/picture and write six linked sentences. Exchange three useful source details with a partner, explain one habitat feature with because, and rehearse a brief factfile explanation from keywords."
+        },
+        {
+          "title": "Planet discovery gallery: unit checkpoint",
+          "checkpoint": true,
+          "objectiveIndexes": [
+            0,
+            1,
+            2
+          ],
+          "courseCodes": [],
+          "skills": [
+            "reading",
+            "speaking",
+            "listening",
+            "writing"
+          ],
+          "task": "Provide a fresh accessible map/fact card for comprehension. Hear three supported comparisons/superlatives, collect the factfile and ask one straightforward follow-up question. Record source accuracy and language performance separately; allow visuals and note formulation help."
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "title": "The Mystery of the Past",
+      "themeFocus": "Past events, clues and recounts",
+      "languageFocus": "Past simple regular/irregular verbs; was/were; did questions and negatives; first/next/then/finally.",
+      "example": "We found a clue. Then we asked the caretaker what happened.",
+      "outcome": "Understand a simple past-event account, ask about what happened and produce an ordered recount.",
+      "vocabularyStrands": [
+        "past-time expressions",
+        "common regular/irregular verbs",
+        "clues and evidence",
+        "events and sequence"
+      ],
+      "courseObjectiveCodes": [
+        "UP1.C01",
+        "UP1.C03",
+        "UP1.C05",
+        "UP1.C06"
+      ],
+      "reviewUnits": [
+        1,
+        3
+      ],
+      "assessmentTask": "Solve a classroom mystery: interpret clues, interview a fictional witness and recount the event sequence.",
+      "support": "Picture timeline, short clue cards, a small regular/irregular verb bank and did-question frames; no graphic or frightening content.",
+      "extension": "Offer a second possible explanation using a supplied clue, without requiring past perfect or complex inference.",
+      "objectives": [
+        {
+          "code": "UP1.U06.1",
+          "statement": "Identify people, places, times and event order in a short past-event account.",
+          "learnerStatement": "I can understand the clues and order what happened.",
+          "successCriteria": "Answer 4 of 5 who/where/when/event questions and order 4 events from a fresh short account; record replay or picture support.",
+          "evidenceMode": "recognition",
+          "standardCodes": [
+            "L",
+            "R"
+          ]
+        },
+        {
+          "code": "UP1.U06.2",
+          "statement": "Ask and answer simple questions about a past event using clue information.",
+          "learnerStatement": "I can ask what happened and share a clue.",
+          "successCriteria": "Complete 4 relevant exchanges about who, where, when or what happened; use did/was/were questions and understandable past-time answers.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "I",
+            "Q"
+          ]
+        },
+        {
+          "code": "UP1.U06.3",
+          "statement": "Produce an ordered recount of a familiar or fictional past event.",
+          "learnerStatement": "I can recount an event in the right order.",
+          "successCriteria": "Communicate 4 events in 6–8 linked sentences, including a mix of regular/irregular past verbs and 3 sequence markers; meaning and event order stay clear despite minor errors.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "D",
+            "CW",
+            "CC"
+          ]
+        }
+      ],
+      "lessons": [
+        {
+          "title": "Read the clues: what happened?",
+          "objectiveIndexes": [
+            0
+          ],
+          "courseCodes": [
+            "UP1.C01"
+          ],
+          "skills": [
+            "listening",
+            "reading",
+            "vocabulary"
+          ],
+          "task": "Retrieve present-simple routines from Unit 1 and contrast every day with yesterday. Read/listen to a short, non-threatening classroom mystery with picture clues. Identify who/where/when and place four events on a timeline; check against a fresh short account."
+        },
+        {
+          "title": "Build a past-event timeline",
+          "objectiveIndexes": [
+            2
+          ],
+          "courseCodes": [
+            "UP1.C05"
+          ],
+          "skills": [
+            "speaking",
+            "writing",
+            "grammar",
+            "pronunciation"
+          ],
+          "task": "Model was/were, a small useful set of regular/irregular past verbs, and first/next/then/finally. Learners reconstruct four events from pictures, practise understandable regular -ed endings, and draft a 6–8-sentence recount. Revisit place descriptions from Unit 3 to say where events occurred."
+        },
+        {
+          "title": "Interview a witness and recount",
+          "objectiveIndexes": [
+            1,
+            2
+          ],
+          "courseCodes": [
+            "UP1.C03"
+          ],
+          "skills": [
+            "speaking",
+            "listening",
+            "writing"
+          ],
+          "task": "Partners hold different fictional witness cards, ask did/was/were questions and exchange four useful facts, clarifying unclear clues. Each writes or records their own event recount from a timeline, checks it against the evidence, and improves an unclear past-time reference."
+        },
+        {
+          "title": "Solve the mystery: unit checkpoint",
+          "checkpoint": true,
+          "objectiveIndexes": [
+            0,
+            1,
+            2
+          ],
+          "courseCodes": [],
+          "skills": [
+            "listening",
+            "reading",
+            "speaking",
+            "writing"
+          ],
+          "task": "Give a fresh short clue account for comprehension and event ordering. Observe four past-event exchanges and collect an individual 6–8-sentence recount. Assess understanding, question-answer meaning and narrative order separately; note support and recheck misconceptions later."
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "title": "Let's Go Shopping",
+      "themeFocus": "Prices, quantities, money and choices",
+      "languageFocus": "How much does it cost?/How much are...?; I'd like/Can I have...?; some/any; countable/uncountable quantities; cheaper/the cheapest review.",
+      "example": "How much does it cost? I'd like two notebooks, please.",
+      "outcome": "Interpret simple price information and complete a polite shopping exchange with quantities and a budget.",
+      "vocabularyStrands": [
+        "everyday products",
+        "prices and pretend money",
+        "quantities and containers",
+        "polite requests"
+      ],
+      "courseObjectiveCodes": [
+        "UP1.C02",
+        "UP1.C03",
+        "UP1.C07"
+      ],
+      "reviewUnits": [
+        1,
+        2,
+        4,
+        5
+      ],
+      "assessmentTask": "Class shop: read a price list, buy/sell two items and explain a small shopping plan.",
+      "support": "Picture price lists, pretend money, quantity cards and role cues. Calculators are allowed; arithmetic and language are recorded separately.",
+      "extension": "Compare two suitable purchases and explain a choice using cheaper/cheapest and because.",
+      "objectives": [
+        {
+          "code": "UP1.U07.1",
+          "statement": "Locate item, quantity and price details in a simple price list or receipt.",
+          "learnerStatement": "I can read prices and quantities.",
+          "successCriteria": "Find 4 of 5 item/quantity/price details, including a spoken price confirmation; use pretend currency and calculator support where needed.",
+          "evidenceMode": "recognition",
+          "standardCodes": [
+            "RO",
+            "L"
+          ]
+        },
+        {
+          "code": "UP1.U07.2",
+          "statement": "Complete a polite shopping exchange as buyer and seller.",
+          "learnerStatement": "I can ask a price and buy what I need.",
+          "successCriteria": "Complete at least 4 exchanges to request 2 items, ask/confirm prices and quantities, and close politely; clarify an unclear amount instead of guessing.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "S",
+            "I",
+            "Q"
+          ]
+        },
+        {
+          "code": "UP1.U07.3",
+          "statement": "Prepare and explain a simple shopping plan using a supplied budget and price list.",
+          "learnerStatement": "I can choose items and explain my shopping plan.",
+          "successCriteria": "List 3 items with quantities/prices and explain 2 choices in understandable sentences; keep a supplied budget with calculator support, scored separately from language.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "W",
+            "G"
+          ]
+        }
+      ],
+      "lessons": [
+        {
+          "title": "Read prices and quantities",
+          "objectiveIndexes": [
+            0
+          ],
+          "courseCodes": [
+            "UP1.C02"
+          ],
+          "skills": [
+            "reading",
+            "listening",
+            "vocabulary"
+          ],
+          "task": "Retrieve welcome-lesson numbers 1–15, then extend price-reading as needed using a visible number chart. Read a picture price list and listen to short price confirmations. Match products, quantities, containers and prices; check five details without requiring mental arithmetic."
+        },
+        {
+          "title": "Ask, pay and clarify",
+          "objectiveIndexes": [
+            1
+          ],
+          "courseCodes": [
+            "UP1.C03"
+          ],
+          "skills": [
+            "speaking",
+            "listening",
+            "grammar",
+            "pronunciation"
+          ],
+          "task": "Model polite buyer/seller exchanges, How much does it cost?, quantities and some/any. Pairs swap roles to request two items, confirm prices and clarify one unclear amount. Revisit Unit 2 comparisons and Unit 5 cheapest language when choosing between supplied options."
+        },
+        {
+          "title": "Plan a small class shop",
+          "objectiveIndexes": [
+            2
+          ],
+          "courseCodes": [
+            "UP1.C07"
+          ],
+          "skills": [
+            "writing",
+            "speaking",
+            "reading"
+          ],
+          "task": "Give a small pretend budget and fixed price list. Partners share item information and suggest choices, revisiting Unit 4 advice where useful. Each learner writes a three-item shopping plan and explains two choices with because; calculators support arithmetic while language is checked separately."
+        },
+        {
+          "title": "Class shop: unit checkpoint",
+          "checkpoint": true,
+          "objectiveIndexes": [
+            0,
+            1,
+            2
+          ],
+          "courseCodes": [],
+          "skills": [
+            "reading",
+            "listening",
+            "speaking",
+            "writing"
+          ],
+          "task": "Use a fresh price list for five checks. Observe each learner in buyer and seller roles and collect an individual shopping plan. Assess price/quantity communication, polite exchanges and reasons separately; do not treat arithmetic mistakes as automatic language failure."
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "title": "My City, My Community",
+      "themeFocus": "Buildings, services and directions",
+      "languageFocus": "Where is...? / How can I get to...?; imperatives; go straight/turn left/right; next to/opposite/between; route sequence.",
+      "example": "Go straight, turn left at the library, and the clinic is opposite the park.",
+      "outcome": "Use a local map to locate services and give understandable directions to a destination.",
+      "vocabularyStrands": [
+        "community buildings",
+        "services and helpers",
+        "map landmarks",
+        "direction and location phrases"
+      ],
+      "courseObjectiveCodes": [
+        "UP1.C02",
+        "UP1.C03",
+        "UP1.C06",
+        "UP1.C07"
+      ],
+      "reviewUnits": [
+        3,
+        4,
+        7
+      ],
+      "assessmentTask": "Community visitor guide: follow a route, give a partner directions and write a short visitor note.",
+      "support": "Simple contrasting maps, route arrows, landmark pictures and direction strips; use fictional locations rather than personal addresses.",
+      "extension": "Compare two routes with shorter/longer and explain a route choice.",
+      "objectives": [
+        {
+          "code": "UP1.U08.1",
+          "statement": "Interpret a simple community map and follow short directions to a service.",
+          "learnerStatement": "I can use a map and follow directions.",
+          "successCriteria": "Match 4 of 5 buildings/services to map information and reach the intended destination on a new short route; record repetition or arrow support.",
+          "evidenceMode": "recognition",
+          "standardCodes": [
+            "RO",
+            "L",
+            "I"
+          ]
+        },
+        {
+          "code": "UP1.U08.2",
+          "statement": "Ask for and give directions using a map, landmarks and ordered instructions.",
+          "learnerStatement": "I can explain how to get somewhere.",
+          "successCriteria": "Give 4–6 ordered steps that take a partner to the intended place, use 2 location/landmark phrases, and respond to a clarification question.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "I",
+            "Q"
+          ]
+        },
+        {
+          "code": "UP1.U08.3",
+          "statement": "Write a simple visitor guide explaining a service and how to reach it.",
+          "learnerStatement": "I can write directions for a visitor.",
+          "successCriteria": "Write a relevant service description and 4–6 route steps, with a clear starting point, landmarks and destination; revise after a partner follows the route.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "W",
+            "M"
+          ]
+        }
+      ],
+      "lessons": [
+        {
+          "title": "Explore community services and maps",
+          "objectiveIndexes": [
+            0
+          ],
+          "courseCodes": [
+            "UP1.C02"
+          ],
+          "skills": [
+            "reading",
+            "listening",
+            "vocabulary"
+          ],
+          "task": "Retrieve Unit 3 place prepositions and Unit 7 service encounters. Match community buildings to services on a fictional map. Listen to short routes and locate destinations, checking starting points and landmarks rather than memorising a single route."
+        },
+        {
+          "title": "Ask for and give a route",
+          "objectiveIndexes": [
+            1
+          ],
+          "courseCodes": [
+            "UP1.C03"
+          ],
+          "skills": [
+            "speaking",
+            "listening",
+            "grammar",
+            "pronunciation"
+          ],
+          "task": "Model ordered imperative directions with landmarks and Where is/How can I get to questions. Partners use contrasting maps to exchange missing routes, trace what they hear and ask for clarification when a turn is unclear. Revisit simple should advice for a visitor when useful."
+        },
+        {
+          "title": "Write a community visitor guide",
+          "objectiveIndexes": [
+            2
+          ],
+          "courseCodes": [
+            "UP1.C06",
+            "UP1.C07"
+          ],
+          "skills": [
+            "writing",
+            "reading",
+            "speaking"
+          ],
+          "task": "Each learner chooses a useful service on the supplied map and writes a short description plus 4–6 route steps. A partner follows the written route and reports any unclear step. Share map details, revise the guide, and optionally compare two routes using earlier comparative language."
+        },
+        {
+          "title": "Guide a visitor: unit checkpoint",
+          "checkpoint": true,
+          "objectiveIndexes": [
+            0,
+            1,
+            2
+          ],
+          "courseCodes": [],
+          "skills": [
+            "reading",
+            "listening",
+            "speaking",
+            "writing"
+          ],
+          "task": "Provide an unfamiliar but simple map of familiar services. Check understanding of a short route, hear each learner guide a partner to a destination, and collect the revised visitor note. Assess reaching the destination and clarity of directions; record all repetition or formulation support."
+        }
+      ]
+    },
+    {
+      "number": 9,
+      "title": "Wonderful Inventions",
+      "themeFocus": "Materials, uses and purposes of familiar inventions",
+      "languageFocus": "We use a/an ... to + verb; It is for ...; material adjectives/nouns; is made of as a useful chunk, not a full passive-voice syllabus.",
+      "example": "We use a thermometer to measure temperature.",
+      "outcome": "Explain what familiar objects are made of and used for, then describe a simple invention for a classroom need.",
+      "vocabularyStrands": [
+        "familiar tools and inventions",
+        "materials",
+        "use/purpose verbs",
+        "parts and classroom needs"
+      ],
+      "courseObjectiveCodes": [
+        "UP1.C02",
+        "UP1.C04",
+        "UP1.C07",
+        "UP1.C08"
+      ],
+      "reviewUnits": [
+        3,
+        5,
+        7
+      ],
+      "assessmentTask": "Young inventors expo: interpret object cards, describe uses and present a labelled classroom invention.",
+      "support": "Safe object pictures, material samples/pictures, use-to frames and labelled diagrams; teach made of as a chunk and avoid hazardous construction tasks.",
+      "extension": "Compare two designs, add a second use and explain which works better for a stated need.",
+      "objectives": [
+        {
+          "code": "UP1.U09.1",
+          "statement": "Match familiar invention descriptions to their materials, parts and uses.",
+          "learnerStatement": "I can find out what an object is made of and used for.",
+          "successCriteria": "Identify 4 of 5 material/use/part details from short object cards and correctly match 2 tools to a stated need.",
+          "evidenceMode": "recognition",
+          "standardCodes": [
+            "RI",
+            "RO"
+          ]
+        },
+        {
+          "code": "UP1.U09.2",
+          "statement": "Describe the material and purpose of familiar objects in a short exchange.",
+          "learnerStatement": "I can explain what we use an object to do.",
+          "successCriteria": "Explain the material and purpose of 2 objects, using 2 understandable use-to statements and an accurate material description for each.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "D",
+            "I"
+          ]
+        },
+        {
+          "code": "UP1.U09.3",
+          "statement": "Present a labelled invention idea that solves a familiar classroom problem.",
+          "learnerStatement": "I can explain my invention and how it helps.",
+          "successCriteria": "Label 3 parts/materials, identify the need, explain 2 uses with to + verb, and answer 2 simple questions using diagram/keyword support.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "P",
+            "G"
+          ]
+        }
+      ],
+      "lessons": [
+        {
+          "title": "Match tools to everyday problems",
+          "objectiveIndexes": [
+            0
+          ],
+          "courseCodes": [
+            "UP1.C02"
+          ],
+          "skills": [
+            "reading",
+            "listening",
+            "vocabulary"
+          ],
+          "task": "Read short cards for safe, familiar inventions and match materials, parts and uses to pictures. Retrieve Unit 3 object locations and Unit 7 quantities with a simple materials list. Distinguish what an object does from what it is made of, then check five details on a new card."
+        },
+        {
+          "title": "Explain materials and purposes",
+          "objectiveIndexes": [
+            1
+          ],
+          "courseCodes": [
+            "UP1.C04"
+          ],
+          "skills": [
+            "speaking",
+            "listening",
+            "grammar",
+            "pronunciation"
+          ],
+          "task": "Model We use ... to ... and made of as a short useful chunk. Partners hold different object cards and ask about material and purpose. Retrieve Unit 5 superlatives in a two-minute fact-card comparison, then make four clear material/purpose statements."
+        },
+        {
+          "title": "Design a classroom invention",
+          "objectiveIndexes": [
+            2
+          ],
+          "courseCodes": [
+            "UP1.C07",
+            "UP1.C08"
+          ],
+          "skills": [
+            "speaking",
+            "writing",
+            "reading"
+          ],
+          "task": "Pairs suggest solutions to a familiar classroom need and agree on a safe imaginary design. Each learner labels three parts/materials and explains two uses from their own diagram. Use a simple supplied materials/quantity list, share relevant source facts, and rehearse two follow-up questions."
+        },
+        {
+          "title": "Young inventors expo: unit checkpoint",
+          "checkpoint": true,
+          "objectiveIndexes": [
+            0,
+            1,
+            2
+          ],
+          "courseCodes": [],
+          "skills": [
+            "reading",
+            "speaking",
+            "listening",
+            "writing"
+          ],
+          "task": "Use a fresh object card for five detail checks. Hear each learner explain two familiar objects, then present their labelled invention and answer two simple questions. Assess the need/use/material meanings and individual language performance; drawing or engineering polish is not a language score."
+        }
+      ]
+    },
+    {
+      "number": 10,
+      "title": "Stories That Inspire",
+      "themeFocus": "Characters, problems, choices and narrative sequence",
+      "languageFocus": "Past-simple retrieval; first/then/after that/finally; suddenly; and/but/because/so for simple links.",
+      "example": "Suddenly, the door opened...",
+      "outcome": "Understand a simple inspiring story, explain a response to a character and create a short coherent story.",
+      "vocabularyStrands": [
+        "characters and qualities",
+        "feelings and actions",
+        "story problems and solutions",
+        "narrative connectors"
+      ],
+      "courseObjectiveCodes": [
+        "UP1.C02",
+        "UP1.C05",
+        "UP1.C06",
+        "UP1.C03"
+      ],
+      "reviewUnits": [
+        1,
+        6
+      ],
+      "assessmentTask": "Story circle: interpret a new illustrated story, discuss a character's choice and share an original short story.",
+      "support": "Illustrated story, event cards, story mountain, small past-verb bank and connector strip; no graphic violence or required personal disclosures.",
+      "extension": "Add character speech or a different ending; past continuous is optional extension rather than a required new tense.",
+      "objectives": [
+        {
+          "code": "UP1.U10.1",
+          "statement": "Identify characters, the problem, key events and ending in a short illustrated story.",
+          "learnerStatement": "I can understand who did what in a story.",
+          "successCriteria": "Identify the character/problem/ending and order 4 key events from a fresh accessible story, with rereading allowed.",
+          "evidenceMode": "recognition",
+          "standardCodes": [
+            "R"
+          ]
+        },
+        {
+          "code": "UP1.U10.2",
+          "statement": "Explain a simple personal response to a character's action using story evidence.",
+          "learnerStatement": "I can say what I think about a character and why.",
+          "successCriteria": "State a feeling or opinion about a character, support it with 2 story details, and respond to one partner question; a phrase bank is allowed.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "T",
+            "I"
+          ]
+        },
+        {
+          "code": "UP1.U10.3",
+          "statement": "Create and share an understandable short story with a problem and resolution.",
+          "learnerStatement": "I can create a story with a clear order and ending.",
+          "successCriteria": "Write or tell 8–10 short linked sentences with 4 ordered events, a problem/resolution, past-time language and 3 suitable connectors; revise one confusing link.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "CW",
+            "D",
+            "CC"
+          ]
+        }
+      ],
+      "lessons": [
+        {
+          "title": "Read an inspiring story",
+          "objectiveIndexes": [
+            0
+          ],
+          "courseCodes": [
+            "UP1.C02"
+          ],
+          "skills": [
+            "reading",
+            "listening",
+            "vocabulary"
+          ],
+          "task": "Retrieve Unit 6 past verbs and timeline language. Read/listen to a short illustrated story, identify character/problem/ending, and sequence four events. Discuss strengths from Unit 1 through what characters do rather than unsupported personality labels."
+        },
+        {
+          "title": "Link events and explain a character's choice",
+          "objectiveIndexes": [
+            1,
+            2
+          ],
+          "courseCodes": [
+            "UP1.C05"
+          ],
+          "skills": [
+            "speaking",
+            "listening",
+            "grammar",
+            "reading"
+          ],
+          "task": "Use event cards to practise first/then/after that/finally and suddenly; compare and/but/because/so through meaning. Partners describe a character's choice, cite two story details and ask a simple follow-up. Reconstruct a short narrative with an understandable order."
+        },
+        {
+          "title": "Create, share and revise a story",
+          "objectiveIndexes": [
+            2
+          ],
+          "courseCodes": [
+            "UP1.C06",
+            "UP1.C03"
+          ],
+          "skills": [
+            "writing",
+            "speaking",
+            "listening"
+          ],
+          "task": "Plan an original, age-appropriate story with a character, problem, four events and resolution. Write 8–10 short sentences using a small past-verb/connector bank. A partner listens or reads, asks about one unclear event and gives one useful response; revise before the story circle."
+        },
+        {
+          "title": "Story circle: unit checkpoint",
+          "checkpoint": true,
+          "objectiveIndexes": [
+            0,
+            1,
+            2
+          ],
+          "courseCodes": [],
+          "skills": [
+            "reading",
+            "listening",
+            "speaking",
+            "writing"
+          ],
+          "task": "Check comprehension and event order with a new short story. Hear an individual character response supported by two details, then collect/share the learner's revised original story. Score understanding, supported response and coherent story separately, recording any prompts or reference help."
+        }
+      ]
+    },
+    {
+      "number": 11,
+      "title": "Our Changing World",
+      "themeFocus": "Local environmental care, responsibilities and practical action",
+      "languageFocus": "Must/mustn't for obligation/prohibition; have to/don't have to review; should for advice; because for simple reasons.",
+      "example": "We must protect rivers.",
+      "outcome": "Understand simple environmental messages, distinguish rules from advice and propose practical actions with reasons.",
+      "vocabularyStrands": [
+        "water and rivers",
+        "waste and recycling",
+        "local habitats",
+        "responsibilities and actions"
+      ],
+      "courseObjectiveCodes": [
+        "UP1.C02",
+        "UP1.C03",
+        "UP1.C06",
+        "UP1.C07"
+      ],
+      "reviewUnits": [
+        3,
+        4,
+        5,
+        9
+      ],
+      "assessmentTask": "Our eco-action plan: interpret notices, explain rules/advice and agree on a safe school or community action.",
+      "support": "Picture notices, action-choice cards and contrasting rule/advice examples; discuss safe, supervised or hypothetical action rather than unsupervised river clean-up.",
+      "extension": "Compare two actions and explain which better addresses a supplied local problem.",
+      "objectives": [
+        {
+          "code": "UP1.U11.1",
+          "statement": "Interpret simple environmental notices and identify the action they require or discourage.",
+          "learnerStatement": "I can understand environmental notices.",
+          "successCriteria": "Match 4 of 5 notices to the appropriate action and identify the intended rule or advice; explain one key sign in everyday words.",
+          "evidenceMode": "recognition",
+          "standardCodes": [
+            "RI",
+            "RO",
+            "M"
+          ]
+        },
+        {
+          "code": "UP1.U11.2",
+          "statement": "Explain a simple environmental rule, prohibition and recommendation in a familiar situation.",
+          "learnerStatement": "I can explain what we must, mustn't and should do.",
+          "successCriteria": "Give 2 obligations, one prohibition and one suggestion that fit the situation; distinguish mustn't from don't have to through a concrete example.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "I",
+            "G"
+          ]
+        },
+        {
+          "code": "UP1.U11.3",
+          "statement": "Collaborate on a practical environmental action plan and explain individual responsibilities.",
+          "learnerStatement": "I can help make an action plan and explain my part.",
+          "successCriteria": "Each learner contributes a suggestion and response, then records 3 suitable actions/responsibilities and 2 simple reasons; note any help with formulation.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "C",
+            "G",
+            "W"
+          ]
+        }
+      ],
+      "lessons": [
+        {
+          "title": "Read the signs: our environment",
+          "objectiveIndexes": [
+            0
+          ],
+          "courseCodes": [
+            "UP1.C02"
+          ],
+          "skills": [
+            "reading",
+            "listening",
+            "vocabulary"
+          ],
+          "task": "Retrieve Unit 5 habitat facts and read short environmental notices about water, waste or local habitats. Match signs to practical actions and relay one notice to a partner in simple words. Avoid complex climate claims unless a short, verified source supports them."
+        },
+        {
+          "title": "Rules, responsibilities and advice",
+          "objectiveIndexes": [
+            1
+          ],
+          "courseCodes": [
+            "UP1.C03"
+          ],
+          "skills": [
+            "speaking",
+            "listening",
+            "grammar"
+          ],
+          "task": "Contrast must/mustn't with Unit 3 have to/don't have to and Unit 4 should through familiar school/environment scenarios. Partners explain obligations, prohibitions and advice, then check what each means in action. Clarify the difference between not allowed and not necessary."
+        },
+        {
+          "title": "Plan a small eco-action",
+          "objectiveIndexes": [
+            2
+          ],
+          "courseCodes": [
+            "UP1.C06",
+            "UP1.C07"
+          ],
+          "skills": [
+            "speaking",
+            "writing",
+            "reading"
+          ],
+          "task": "Choose a safe school-based or hypothetical local action from supplied options. Pairs share notice facts, suggest actions, respond to suggestions and assign responsibilities. Retrieve Unit 9 uses/materials when selecting safe equipment and Unit 4/Unit 1 habits for a repeatable plan. Each writes three actions and two reasons."
+        },
+        {
+          "title": "Our eco-action plan: unit checkpoint",
+          "checkpoint": true,
+          "objectiveIndexes": [
+            0,
+            1,
+            2
+          ],
+          "courseCodes": [],
+          "skills": [
+            "reading",
+            "listening",
+            "speaking",
+            "writing"
+          ],
+          "task": "Check five new notices, hear each learner explain obligations/prohibition/advice and observe an individual contribution to a shared plan. Collect each learner's actions and reasons. Score message understanding, modal meanings and communication separately; avoid grading family resources or environmental virtue."
+        }
+      ]
+    },
+    {
+      "number": 12,
+      "title": "The Great Discovery Challenge",
+      "themeFocus": "Review, integration and a personally chosen familiar discovery",
+      "languageFocus": "Select at least three useful functions from the course: factual description, comparison, past-event account, purpose, reasons or responsible action; audience questions and clarification.",
+      "example": "This invention helps us measure temperature. It is smaller than the first model. We use it to check how warm something is.",
+      "outcome": "Present a discovery using accurate selected facts, descriptions and simple explanations, and respond to an audience.",
+      "vocabularyStrands": [
+        "selected discovery topic",
+        "facts and sources",
+        "presentation/signposting",
+        "questions and clarification"
+      ],
+      "courseObjectiveCodes": [
+        "UP1.C01",
+        "UP1.C02",
+        "UP1.C03",
+        "UP1.C04",
+        "UP1.C05",
+        "UP1.C06",
+        "UP1.C07",
+        "UP1.C08"
+      ],
+      "reviewUnits": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "assessmentTask": "Great Discovery Showcase: prepare an individual factfile and 1–2-minute illustrated talk, then answer two simple audience questions.",
+      "support": "Choice of familiar animal/place/object/discovery, two short teacher-curated sources, fact grid, labelled visual, keyword cue card and rehearsal. Record support; do not require memorising a script.",
+      "extension": "Add a source comparison or an unexpected audience question as optional stretch; do not turn the core task into a B1 research presentation.",
+      "objectives": [
+        {
+          "code": "UP1.U12.1",
+          "statement": "Select and check useful information about a chosen discovery from short accessible sources.",
+          "learnerStatement": "I can find facts and show where they came from.",
+          "successCriteria": "Record 4 accurate facts from 2 short teacher-selected sources, identify each source, and label a guess or unknown rather than presenting it as a fact.",
+          "evidenceMode": "recognition",
+          "standardCodes": [
+            "RI",
+            "M"
+          ]
+        },
+        {
+          "code": "UP1.U12.2",
+          "statement": "Prepare an illustrated discovery factfile combining familiar language functions.",
+          "learnerStatement": "I can make a clear discovery factfile.",
+          "successCriteria": "Create 8–10 short linked sentences and a labelled visual; include 4 supported facts and at least 3 useful functions such as description, comparison, past event, purpose or reason.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "W",
+            "CW",
+            "CC"
+          ]
+        },
+        {
+          "code": "UP1.U12.3",
+          "statement": "Present and explain a discovery to a familiar audience and respond to simple questions.",
+          "learnerStatement": "I can present my discovery and answer questions.",
+          "successCriteria": "Give a prepared 1–2-minute talk using visuals/keywords, convey 4 facts and one simple explanation, and answer 2 straightforward questions; record repetition and formulation support.",
+          "evidenceMode": "transfer",
+          "standardCodes": [
+            "P",
+            "I",
+            "Q"
+          ]
+        }
+      ],
+      "lessons": [
+        {
+          "title": "Choose a discovery and gather facts",
+          "objectiveIndexes": [
+            0
+          ],
+          "courseCodes": [
+            "UP1.C02",
+            "UP1.C07"
+          ],
+          "skills": [
+            "reading",
+            "listening",
+            "speaking"
+          ],
+          "task": "Choose a familiar discovery topic and read/listen to two short teacher-curated sources. Complete a four-fact grid with source labels and mark any unknowns. Begin with brief retrieval stations for greetings/routines, comparisons/superlatives and a past-event timeline from earlier units; include our/their and ours/theirs when comparing school fact cards. Do not require every reviewed structure in the final talk."
+        },
+        {
+          "title": "Build an illustrated discovery factfile",
+          "objectiveIndexes": [
+            1
+          ],
+          "courseCodes": [
+            "UP1.C06",
+            "UP1.C04"
+          ],
+          "skills": [
+            "writing",
+            "reading",
+            "speaking"
+          ],
+          "task": "Turn the fact grid into an 8–10-sentence factfile and labelled visual, selecting three useful language functions that fit the topic. Start with short retrieval cards for responsibilities/advice, prices/quantities, room/place prepositions, because reasons and a community route. Give feedback on source accuracy, linking and understandable explanations; keep arithmetic separate from language."
+        },
+        {
+          "title": "Rehearse, ask and improve",
+          "objectiveIndexes": [
+            2
+          ],
+          "courseCodes": [
+            "UP1.C03",
+            "UP1.C08"
+          ],
+          "skills": [
+            "speaking",
+            "listening",
+            "pronunciation"
+          ],
+          "task": "Start with a brief retrieval sort on object uses/materials, narrative links and must/mustn't meanings. Learners rehearse a 1–2-minute talk from keywords and visuals, then partners ask two simple questions, request clarification if needed and give one specific improvement suggestion. Revise the talk rather than memorising a full script."
+        },
+        {
+          "title": "The Great Discovery Showcase and reflection",
+          "checkpoint": true,
+          "objectiveIndexes": [
+            0,
+            1,
+            2
+          ],
+          "courseCodes": [],
+          "skills": [
+            "reading",
+            "listening",
+            "speaking",
+            "writing"
+          ],
+          "task": "Check one short new source detail, collect the individual factfile and visual, then hear each learner's prepared discovery talk and two question responses. Score reception, written organisation and oral communication separately using the unit criteria. Record support and select one learning strength plus one next step; do not award an overall CEFR level from this task alone."
+        }
+      ]
+    }
+  ],
+  "grammarTargets": [
+    {
+      "key": "present-simple-habits",
+      "label": "Present simple: familiar habits and routines",
+      "introducedIn": 1
+    },
+    {
+      "key": "frequency-adverbs",
+      "label": "Frequency adverbs: always to never",
+      "introducedIn": 1
+    },
+    {
+      "key": "comparatives",
+      "label": "Comparatives and than in familiar comparisons",
+      "introducedIn": 2
+    },
+    {
+      "key": "school-possessives",
+      "label": "Our/their and ours/theirs with clear referents",
+      "introducedIn": 2
+    },
+    {
+      "key": "home-locations",
+      "label": "There is/are and place prepositions",
+      "introducedIn": 3
+    },
+    {
+      "key": "have-to",
+      "label": "Have to / don't have to: necessity",
+      "introducedIn": 3
+    },
+    {
+      "key": "should-advice",
+      "label": "Should / shouldn't: everyday advice",
+      "introducedIn": 4
+    },
+    {
+      "key": "simple-reasons",
+      "label": "Because: a simple reason or explanation",
+      "introducedIn": 4
+    },
+    {
+      "key": "superlatives",
+      "label": "Superlatives with a clear comparison group",
+      "introducedIn": 5
+    },
+    {
+      "key": "past-simple",
+      "label": "Past simple: regular/irregular verbs and did questions",
+      "introducedIn": 6
+    },
+    {
+      "key": "shopping-quantities",
+      "label": "Prices, quantities and polite shopping requests",
+      "introducedIn": 7
+    },
+    {
+      "key": "directions",
+      "label": "Ordered directions using imperatives and landmarks",
+      "introducedIn": 8
+    },
+    {
+      "key": "materials-purpose",
+      "label": "Materials and we use ... to ... for purpose",
+      "introducedIn": 9
+    },
+    {
+      "key": "narrative-links",
+      "label": "Narrative links: first, then, suddenly, finally",
+      "introducedIn": 10
+    },
+    {
+      "key": "must-rules",
+      "label": "Must / mustn't: obligation and prohibition",
+      "introducedIn": 11
+    },
+    {
+      "key": "clarification",
+      "label": "Ask for repetition and clarification",
+      "introducedIn": 1,
+      "type": "skill"
+    }
+  ],
+  "revisitTargets": {
+    "2": [
+      "present-simple-habits",
+      "frequency-adverbs"
+    ],
+    "3": [
+      "present-simple-habits",
+      "frequency-adverbs",
+      "comparatives"
+    ],
+    "4": [
+      "present-simple-habits",
+      "frequency-adverbs",
+      "have-to"
+    ],
+    "5": [
+      "comparatives",
+      "home-locations"
+    ],
+    "6": [
+      "present-simple-habits",
+      "home-locations"
+    ],
+    "7": [
+      "comparatives",
+      "should-advice",
+      "superlatives"
+    ],
+    "8": [
+      "home-locations",
+      "should-advice",
+      "shopping-quantities"
+    ],
+    "9": [
+      "home-locations",
+      "superlatives",
+      "shopping-quantities"
+    ],
+    "10": [
+      "past-simple"
+    ],
+    "11": [
+      "have-to",
+      "should-advice",
+      "simple-reasons",
+      "present-simple-habits",
+      "frequency-adverbs",
+      "materials-purpose"
+    ],
+    "12": [
+      "present-simple-habits",
+      "frequency-adverbs",
+      "comparatives",
+      "school-possessives",
+      "home-locations",
+      "have-to",
+      "should-advice",
+      "simple-reasons",
+      "superlatives",
+      "past-simple",
+      "shopping-quantities",
+      "directions",
+      "materials-purpose",
+      "narrative-links",
+      "must-rules"
+    ]
+  },
+  "assessmentNotes": [
+    "All task counts, timings and response lengths are local WKE planning benchmarks, not official CEFR cut-scores or mandated word counts.",
+    "Record a profile by skill and objective: reception, spoken interaction, spoken production and writing. A quiz score does not prove independent speaking.",
+    "Separate supported practice from the checkpoint. At checkpoints, allow the repetition, visual cues or formulation support appropriate to the task, and record what was used.",
+    "Use a simple local rubric: 0 no interpretable evidence; 1 partial response with frequent modelling; 2 task achieved with appropriate recorded support; 3 task achieved with less support and clear relevant detail. These are teaching judgements, not CEFR certification scores.",
+    "Assess communicative success and intelligibility alongside target-language meaning. Minor grammar or accent differences do not automatically invalidate successful A2-oriented communication.",
+    "Recheck weak objectives on a different but familiar task after feedback and a delay. Use the later-unit retrieval plan rather than massed revision only at the end.",
+    "Resources remain to be selected/created in Libraries; no unverified media, vocabulary packs or activity links are invented by this mapping pass."
+  ]
+}

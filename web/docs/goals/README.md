@@ -1,6 +1,6 @@
 # Active Codex Goals
 
-Last updated: 2026-09-15
+Last updated: 2026-10-10
 
 These executable goals are derived from the [Codex Master Goals](../CODEX_MASTER_GOALS.md). They support the immediate milestone of making WeKnow English safe and reliable for the first 100 active students.
 
@@ -36,7 +36,15 @@ The third sequence connects the existing learning tools into one measurable and 
 | 8 | [WKE-008 — Release-Gate the Authoring-to-Learning Journey](./WKE-008-authoring-to-learning-release-gate.md) | Ready | P1 | A teacher's validated preview becomes the frozen mobile student assignment and returns trustworthy learning evidence through one repeatable gate. |
 | 9 | [WKE-009 — Turn Mastery into the Next Learning Action](./WKE-009-mastery-to-next-practice-loop.md) | Ready | P1 | Eligible students receive one transparent next practice action that teachers can inspect, override, assign, and verify after completion. |
 
-## Execution Rule
+## Curriculum authoring goals
+
+These bounded content-design goals are tracked separately from the engineering execution order above.
+
+| Goal | Status | Priority | Primary outcome |
+| --- | --- | --- | --- |
+| [CURR-001 — Adaptable unit-builder guide](./CURR-001-adaptable-unit-builder-guide.md) | Complete | P1 | Teachers have consistent learning commitments, six distinct focus lessons and flexible evidence-based paths through each unit. |
+
+## Engineering execution rule
 
 WKE-001 through WKE-003 are complete; the WKE-003 release gate remains advisory until the team chooses to make it mandatory.
 

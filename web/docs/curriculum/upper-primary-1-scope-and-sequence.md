@@ -6,6 +6,8 @@ Original WKE course objectives aligned to the cited CEFR scales and age-adapted 
 
 Provisional sequence: **4 × 45-minute slots per unit; 48 slots total**, including the teacher's existing welcome lesson. These are adjustable planning slots, not a claim that a fixed number of hours produces A2 proficiency.
 
+**Authoring update — 10 October 2026:** Use the [unit-builder guide](./unit-builder-guide.md) when developing these sketches into complete units. The four-slot drafts do not yet meet its requirement for six distinct reading, writing, listening, speaking, vocabulary and grammar lessons. Unit lengths and sequences must be adapted accordingly, with introduction, review, spaced retrieval and independent application. This note changes the authoring guidance, not the live course data.
+
 ## Entry expectations
 
 Broad A1 familiarity: exchange basic personal information; follow simple classroom instructions; recognise familiar everyday words; read and write short simple sentences with support. Use the existing welcome lesson as an entry diagnostic. Revisit gaps in question forms, sound–spelling links, everyday verbs and numbers before increasing task demands. A1 entry to A2-oriented outcomes is a planning target, not a guarantee from age or course completion. Provisional allocation: four 45-minute slots per unit (48 slots including the existing welcome lesson); adjust after piloting, learner evidence and timetable decisions.

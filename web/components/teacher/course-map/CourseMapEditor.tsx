@@ -103,12 +103,26 @@ export function CourseMapEditor({
   initialClassId,
 }: Props) {
   const router = useRouter();
-  const hydrated = useSyncExternalStore(subscribeHydration, () => true, () => false);
+  const hydrated = useSyncExternalStore(
+    subscribeHydration,
+    () => true,
+    () => false,
+  );
   const [saved, setSaved] = useState(initialMap);
   const [document, setDocument] = useState(initialMap.document);
   const [selectedId, setSelectedId] = useState(
     initialLessonId ?? activeLessons(initialMap.document)[0]?.id ?? "",
   );
+  // Navigation state stays separate from the saved curriculum document.
+  const [openUnitIds, setOpenUnitIds] = useState<string[]>(() => {
+    const lessonId =
+      initialLessonId ?? activeLessons(initialMap.document)[0]?.id;
+    const initialUnit =
+      initialMap.document.units.find((u) =>
+        u.lessons.some((l) => l.id === lessonId),
+      ) ?? initialMap.document.units.find((u) => !u.archived);
+    return initialUnit ? [initialUnit.id] : [];
+  });
   const [resources, setResources] = useState(initialResources);
   const [view, setView] = useState<"sequence" | "coverage">("sequence");
   const [query, setQuery] = useState("");
@@ -214,12 +228,22 @@ export function CourseMapEditor({
   }
   function selectLesson(id: string) {
     setSelectedId(id);
+    const selectedUnit = document.units.find((u) =>
+      u.lessons.some((l) => l.id === id),
+    );
+    if (selectedUnit) openUnit(selectedUnit.id);
     setResourceSelection("");
     setExistingId("");
     operation.current = null;
     const url = new URL(window.location.href);
     url.searchParams.set("lesson", id);
     window.history.replaceState(window.history.state, "", url.toString());
+  }
+  function openUnit(id: string) {
+    setOpenUnitIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
+  }
+  function expandAllUnits() {
+    setOpenUnitIds(document.units.map((u) => u.id));
   }
   function addLesson(unitId: string, afterId?: string) {
     const lesson = blankPlannedLesson();
@@ -245,6 +269,7 @@ export function CourseMapEditor({
       }),
     }));
     selectLesson(lesson.id);
+    openUnit(unitId);
   }
   function moveUnit(index: number, delta: number) {
     change((d) => {
@@ -577,7 +602,10 @@ export function CourseMapEditor({
                   <input
                     className={inputClass}
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      expandAllUnits();
+                    }}
                     placeholder="Find a lesson…"
                   />
                 </label>
@@ -586,7 +614,10 @@ export function CourseMapEditor({
                   <select
                     className={inputClass}
                     value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
+                    onChange={(e) => {
+                      setFilter(e.target.value);
+                      expandAllUnits();
+                    }}
                   >
                     <option value="">All lessons</option>
                     <option value="gaps">Preparation gaps</option>
@@ -606,13 +637,108 @@ export function CourseMapEditor({
                 />
                 Show archived units and lessons
               </label>
-              {document.units.map(
-                (u, ui) =>
-                  (showArchived || !u.archived) && (
-                    <div
-                      key={u.id}
-                      className={`rounded-xl border ${u.archived ? "bg-neutral-100" : "bg-neutral-50"}`}
-                    >
+              <div className="flex flex-wrap gap-2">
+                <button className={buttonClass} onClick={expandAllUnits}>
+                  Expand all
+                </button>
+                <button
+                  className={buttonClass}
+                  onClick={() => setOpenUnitIds([])}
+                >
+                  Collapse all
+                </button>
+                {unit && (
+                  <button
+                    className={buttonClass}
+                    onClick={() => {
+                      setQuery("");
+                      setFilter("");
+                      if (unit.archived || selected?.archived)
+                        setShowArchived(true);
+                      openUnit(unit.id);
+                      requestAnimationFrame(() =>
+                        window.document
+                          .getElementById(`unit-${unit.id}`)
+                          ?.scrollIntoView({ block: "nearest" }),
+                      );
+                    }}
+                  >
+                    Show selected lesson
+                  </button>
+                )}
+              </div>
+              {document.units.map((u, ui) => {
+                if (!showArchived && u.archived) return null;
+                const visibleLessons = u.lessons
+                  .filter((l) => showArchived || !l.archived)
+                  .filter((l) => {
+                    const terms = [
+                      u.title,
+                      u.outcome,
+                      l.title,
+                      l.targetLanguage,
+                      ...lessonObjectives(document, l).map((o) => o.statement),
+                      ...l.resources.map((r) => r.title),
+                      ...l.targets.map(
+                        (t) =>
+                          document.targets.find((x) => x.id === t.targetId)
+                            ?.label ?? "",
+                      ),
+                    ]
+                      .join(" ")
+                      .toLowerCase();
+                    return (
+                      terms.includes(query.trim().toLowerCase()) &&
+                      (!filter ||
+                        (filter === "gaps"
+                          ? planningIssues(document, l, resources).length > 0
+                          : l.skills.includes(
+                              filter as (typeof SKILL_FOCUSES)[number],
+                            )))
+                    );
+                  });
+                const searching = Boolean(query.trim() || filter);
+                if (searching && !visibleLessons.length) return null;
+                const expanded = openUnitIds.includes(u.id);
+                return (
+                  <div
+                    key={u.id}
+                    id={`unit-${u.id}`}
+                    className={`rounded-xl border ${u.archived ? "bg-neutral-100" : "bg-neutral-50"}`}
+                  >
+                    <h3>
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-3 rounded-xl p-3 text-left hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+                        aria-expanded={expanded}
+                        aria-controls={`unit-content-${u.id}`}
+                        onClick={() =>
+                          setOpenUnitIds((ids) =>
+                            expanded
+                              ? ids.filter((id) => id !== u.id)
+                              : [...ids, u.id],
+                          )
+                        }
+                      >
+                        <span aria-hidden="true" className="text-neutral-500">
+                          {expanded ? "▾" : "▸"}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block break-words text-sm font-semibold">
+                            {u.title || "Untitled unit"}
+                            {u.archived && " (archived)"}
+                          </span>
+                          <span className="mt-1 block text-xs text-neutral-600">
+                            {visibleLessons.length}{" "}
+                            {searching ? "matching " : ""}
+                            {visibleLessons.length === 1 ? "lesson" : "lessons"}
+                            {unit?.id === u.id &&
+                              " · Selected lesson in this unit"}
+                          </span>
+                        </span>
+                      </button>
+                    </h3>
+                    <div id={`unit-content-${u.id}`} hidden={!expanded}>
                       <div className="space-y-2 p-3">
                         <Field
                           label="Unit title"
@@ -645,16 +771,18 @@ export function CourseMapEditor({
                           </button>
                           <button
                             className={buttonClass}
-                            onClick={() =>
+                            onClick={() => {
+                              const copy = duplicateUnit(u);
                               change((d) => ({
                                 ...d,
                                 units: [
                                   ...d.units.slice(0, ui + 1),
-                                  duplicateUnit(u),
+                                  copy,
                                   ...d.units.slice(ui + 1),
                                 ],
-                              }))
-                            }
+                              }));
+                              openUnit(copy.id);
+                            }}
                           >
                             Duplicate unit
                           </button>
@@ -676,77 +804,43 @@ export function CourseMapEditor({
                         </div>
                       </div>
                       <ul className="divide-y border-t">
-                        {u.lessons
-                          .filter((l) => showArchived || !l.archived)
-                          .filter((l) => {
-                            const terms = [
-                              l.title,
-                              l.targetLanguage,
-                              ...lessonObjectives(document, l).map(
-                                (o) => o.statement,
-                              ),
-                              ...l.resources.map((r) => r.title),
-                              ...l.targets.map(
-                                (t) =>
-                                  document.targets.find(
-                                    (x) => x.id === t.targetId,
-                                  )?.label ?? "",
-                              ),
-                            ]
-                              .join(" ")
-                              .toLowerCase();
-                            return (
-                              terms.includes(query.toLowerCase()) &&
-                              (!filter ||
-                                (filter === "gaps"
-                                  ? planningIssues(document, l, resources)
-                                      .length > 0
-                                  : l.skills.includes(
-                                      filter as (typeof SKILL_FOCUSES)[number],
-                                    )))
-                            );
-                          })
-                          .map((l) => {
-                            const issues = planningIssues(
-                              document,
-                              l,
-                              resources,
-                            );
-                            return (
-                              <li key={l.id}>
-                                <button
-                                  className={`w-full p-3 text-left ${selectedId === l.id ? "bg-teal-100" : "hover:bg-white"}`}
-                                  onClick={() => selectLesson(l.id)}
-                                  aria-pressed={selectedId === l.id}
+                        {visibleLessons.map((l) => {
+                          const issues = planningIssues(document, l, resources);
+                          return (
+                            <li key={l.id}>
+                              <button
+                                className={`w-full p-3 text-left ${selectedId === l.id ? "bg-teal-100" : "hover:bg-white"}`}
+                                onClick={() => selectLesson(l.id)}
+                                aria-pressed={selectedId === l.id}
+                              >
+                                <span className="flex items-center justify-between gap-2">
+                                  <strong className="text-sm">
+                                    {l.title}
+                                    {l.archived && " (archived)"}
+                                  </strong>
+                                  <span className="text-xs text-neutral-500">
+                                    {l.durationMinutes} min
+                                  </span>
+                                </span>
+                                <span className="mt-1 line-clamp-2 text-xs text-neutral-600">
+                                  {lessonObjectives(document, l)
+                                    .map((o) => o.statement)
+                                    .filter(Boolean)
+                                    .join(" · ") ||
+                                    "Define the learning objective"}
+                                </span>
+                                <span
+                                  className={`mt-2 block text-xs ${issues.length ? "text-amber-800" : "text-teal-800"}`}
                                 >
-                                  <span className="flex items-center justify-between gap-2">
-                                    <strong className="text-sm">
-                                      {l.title}
-                                      {l.archived && " (archived)"}
-                                    </strong>
-                                    <span className="text-xs text-neutral-500">
-                                      {l.durationMinutes} min
-                                    </span>
-                                  </span>
-                                  <span className="mt-1 block text-xs text-neutral-600">
-                                    {lessonObjectives(document, l)
-                                      .map((o) => o.statement)
-                                      .filter(Boolean)
-                                      .join(" · ") ||
-                                      "Define the learning objective"}
-                                  </span>
-                                  <span
-                                    className={`mt-2 block text-xs ${issues.length ? "text-amber-800" : "text-teal-800"}`}
-                                  >
-                                    {issues.length
-                                      ? issues.join(" · ")
-                                      : "Ready to plan"}{" "}
-                                    · {l.resources.length} resources
-                                  </span>
-                                </button>
-                              </li>
-                            );
-                          })}
+                                  {issues.length
+                                    ? issues.join(" · ")
+                                    : "Ready to plan"}{" "}
+                                  · {l.resources.length} resources
+                                </span>
+                              </button>
+                            </li>
+                          );
+                        })}
                       </ul>
                       {!u.archived && (
                         <button
@@ -757,25 +851,30 @@ export function CourseMapEditor({
                         </button>
                       )}
                     </div>
-                  ),
-              )}
+                  </div>
+                );
+              })}
               <button
                 className={buttonClass}
-                onClick={() =>
+                onClick={() => {
+                  const id = crypto.randomUUID();
                   change((d) => ({
                     ...d,
                     units: [
                       ...d.units,
                       {
-                        id: crypto.randomUUID(),
+                        id,
                         title: `Unit ${d.units.length + 1}`,
                         outcome: "",
                         archived: false,
                         lessons: [],
                       },
                     ],
-                  }))
-                }
+                  }));
+                  setQuery("");
+                  setFilter("");
+                  openUnit(id);
+                }}
               >
                 + Add unit
               </button>
@@ -1131,6 +1230,7 @@ export function CourseMapEditor({
                             ],
                           });
                           selectLesson(copy.id);
+                          openUnit(unit.id);
                         }}
                       >
                         Duplicate lesson

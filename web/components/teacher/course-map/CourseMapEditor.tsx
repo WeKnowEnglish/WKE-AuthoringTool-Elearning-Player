@@ -920,6 +920,7 @@ export function CourseMapEditor({
                           value={unit.id}
                           onChange={(e) => {
                             const destination = e.target.value;
+                            openUnit(destination);
                             change((d) => ({
                               ...d,
                               units: d.units.map((u) => ({

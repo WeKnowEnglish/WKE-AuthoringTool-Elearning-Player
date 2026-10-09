@@ -6,6 +6,7 @@ import { VirtualClassroomWhiteboardEmbed } from "@/components/virtual-classroom/
 import { VirtualClassroomPresentationStage } from "@/components/virtual-classroom/VirtualClassroomPresentationStage";
 import { SecretRolesLaunchPanel } from "@/components/secret-roles/SecretRolesLaunchPanel";
 import { SecretRolesSessionView } from "@/components/secret-roles/SecretRolesSessionView";
+import { SharedDocumentLaunchPanel, VirtualClassroomDocumentEmbed } from "@/components/virtual-classroom/VirtualClassroomDocumentEmbed";
 import type { ActiveActivityRef } from "@/lib/activity-runtime/active-activity-routing";
 import type { ClassLesson } from "@/lib/class-lessons/types";
 import { playPathForStudioActivity } from "@/lib/studio-activities/paths";
@@ -80,6 +81,7 @@ export function VirtualClassroomLearnStage({
   const [bankLoading, setBankLoading] = useState(false);
   const [bankError, setBankError] = useState<string | null>(null);
   const [secretRolesLaunchOpen, setSecretRolesLaunchOpen] = useState(false);
+  const [documentLaunchOpen, setDocumentLaunchOpen] = useState(false);
   const [launchedSecretRoundId, setLaunchedSecretRoundId] = useState<string | null>(null);
   const secretRolesRoundId =
     activeActivity?.kind === "secret_roles"
@@ -163,6 +165,7 @@ export function VirtualClassroomLearnStage({
     setSecretRolesLaunchOpen(false);
     setLaunchedSecretRoundId(null);
     setPickerOpen(false);
+    setDocumentLaunchOpen(false);
   };
 
   return (
@@ -204,8 +207,20 @@ export function VirtualClassroomLearnStage({
             );
           })}
         </div>
-        {isHost && learnStage === "activity" ? (
+        {isHost ? (
           <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={busy}
+              onClick={() => {
+                setPickerOpen(false);
+                setSecretRolesLaunchOpen(false);
+                setLaunchedSecretRoundId(null);
+                setDocumentLaunchOpen(activeActivity?.kind !== "document");
+                onSetStage("activity");
+              }}
+              className="rounded-lg border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-900 hover:bg-sky-100 disabled:opacity-50">
+              Shared document
+            </button>
+            {learnStage === "activity" && <>
             <button
               type="button"
               onClick={() => {
@@ -220,6 +235,7 @@ export function VirtualClassroomLearnStage({
               type="button"
               onClick={() => {
                 setPickerOpen(false);
+                setDocumentLaunchOpen(false);
                 setSecretRolesLaunchOpen((value) => !value);
               }}
               className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-900 hover:bg-violet-100"
@@ -234,6 +250,7 @@ export function VirtualClassroomLearnStage({
             >
               Start new track
             </a>
+            </>}
           </div>
         ) : null}
       </div>
@@ -311,7 +328,16 @@ export function VirtualClassroomLearnStage({
       ) : null}
 
       <div className="min-h-0 flex-1">
-        {learnStage === "activity" && secretRolesRoundId ? (
+        {learnStage === "activity" && activeActivity?.kind === "document" && (activeActivity.roundId || activeActivity.joinCode) ? (
+          <div className="h-full overflow-y-auto rounded-xl border border-sky-200 bg-white">
+            <VirtualClassroomDocumentEmbed key={activeActivity.roundId ?? activeActivity.joinCode}
+              roundId={(activeActivity.roundId ?? activeActivity.joinCode)!} />
+          </div>
+        ) : learnStage === "activity" && isHost && documentLaunchOpen ? (
+          <div className="h-full overflow-y-auto">
+            <SharedDocumentLaunchPanel sessionId={sessionId} onLaunched={() => setDocumentLaunchOpen(false)} />
+          </div>
+        ) : learnStage === "activity" && secretRolesRoundId ? (
           <SecretRolesSessionView
             roundId={secretRolesRoundId}
             role={role}

@@ -2,7 +2,6 @@ import "server-only";
 
 import { LiveObject, toPlainLson, type PlainLsonObject } from "@liveblocks/client";
 import { Liveblocks } from "@liveblocks/node";
-import type { ActiveActivityRef } from "@/lib/activity-runtime/active-activity-routing";
 import {
   createRoundId,
   defaultPromptForTemplate,
@@ -33,27 +32,6 @@ import type {
   DocumentTemplateType,
 } from "@/lib/document-activity/types";
 
-export async function getVcActiveActivity(roomId: string): Promise<ActiveActivityRef | null> {
-  const liveblocks = getLiveblocksServerClient();
-  try {
-    const storage = await liveblocks.getStorageDocument(roomId, "json");
-    const runtime =
-      (storage as { data?: { runtime?: Record<string, unknown> } })?.data?.runtime ??
-      (storage as { runtime?: Record<string, unknown> }).runtime;
-    const activity = runtime?.activeActivity as ActiveActivityRef | undefined;
-    if (!activity || typeof activity !== "object") return null;
-    return {
-      kind: activity.kind ?? null,
-      joinCode: activity.joinCode ?? null,
-      label: activity.label ?? null,
-      roundId: activity.roundId ?? null,
-      roomId: activity.roomId ?? null,
-    };
-  } catch {
-    return null;
-  }
-}
-
 export type LaunchDocumentResult = {
   roundId: string;
   roomId: string;
@@ -79,33 +57,14 @@ export async function launchDocumentRound(input: {
   wordBank?: string[];
   sentenceStarters?: string[];
 }): Promise<LaunchDocumentResult> {
-  const existingActivity = await getVcActiveActivity(input.session.liveblocksRoomId);
-  if (existingActivity?.kind === "document" && existingActivity.roundId && existingActivity.roomId) {
-    await setVcActiveActivity({
-      roomId: input.session.liveblocksRoomId,
-      sessionId: input.session.id,
-      classId: input.session.classId,
-      actorUserId: input.teacher.userId,
-      kind: "document",
-      joinCode: existingActivity.joinCode,
-      label: existingActivity.label,
-      roundId: existingActivity.roundId,
-      activityRoomId: existingActivity.roomId,
-    }).catch(() => undefined);
-    return {
-      roundId: existingActivity.roundId,
-      roomId: existingActivity.roomId,
-      vcSessionId: input.session.id,
-      joinCode: existingActivity.joinCode ?? existingActivity.roundId,
-      label: existingActivity.label ?? "Document activity",
-      reused: true,
-      participationMode: input.participationMode ?? "individual",
-      groupsAssigned: 0,
-    };
+  if (input.session.status !== "active" || input.session.createdBy !== input.teacher.userId) {
+    throw new Error("Current classroom host access is required.");
   }
-
   const fromDb = await getActiveDocumentRoundForSession(input.session.id);
   if (fromDb) {
+    if (fromDb.createdBy !== input.teacher.userId) throw new Error("This activity belongs to another teacher.");
+    await ensureParticipantAndDocument({ roomId: fromDb.liveblocksRoomId,
+      userId: input.teacher.userId, displayName: input.teacher.displayName, color: "#0f172a", role: "host" });
     await setVcActiveActivity({
       roomId: input.session.liveblocksRoomId,
       sessionId: input.session.id,
@@ -116,7 +75,7 @@ export async function launchDocumentRound(input: {
       label: "Document activity",
       roundId: fromDb.id,
       activityRoomId: fromDb.liveblocksRoomId,
-    }).catch(() => undefined);
+    });
     return {
       roundId: fromDb.id,
       roomId: fromDb.liveblocksRoomId,
@@ -124,7 +83,7 @@ export async function launchDocumentRound(input: {
       joinCode: fromDb.id,
       label: "Document activity",
       reused: true,
-      participationMode: input.participationMode ?? "individual",
+      participationMode: fromDb.participationMode,
       groupsAssigned: 0,
     };
   }
@@ -173,11 +132,19 @@ export async function launchDocumentRound(input: {
 
   const root = new LiveObject(initial);
   const plain = toPlainLson(root) as PlainLsonObject;
-  try {
-    await liveblocks.initializeStorageDocument(roomId, plain);
-  } catch {
-    // client may initialize
-  }
+  await liveblocks.initializeStorageDocument(roomId, plain);
+
+  await upsertDocumentRoundMeta({
+    create: true,
+    roundId,
+    sessionId: input.session.id,
+    liveblocksRoomId: roomId,
+    createdBy: input.teacher.userId,
+    participationMode,
+    templateType,
+    phase: "waiting",
+    settings: { ...settings, prompt, scaffolds },
+  });
 
   await ensureParticipantAndDocument({
     roomId,
@@ -200,17 +167,6 @@ export async function launchDocumentRound(input: {
     }
   }
 
-  await upsertDocumentRoundMeta({
-    roundId,
-    sessionId: input.session.id,
-    liveblocksRoomId: roomId,
-    createdBy: input.teacher.userId,
-    participationMode,
-    templateType,
-    phase: "waiting",
-    settings: { ...settings, prompt, scaffolds },
-  }).catch(() => undefined);
-
   await setVcActiveActivity({
     roomId: input.session.liveblocksRoomId,
     sessionId: input.session.id,
@@ -221,7 +177,7 @@ export async function launchDocumentRound(input: {
     label: prompt.title,
     roundId,
     activityRoomId: roomId,
-  }).catch(() => undefined);
+  });
 
   return {
     roundId,

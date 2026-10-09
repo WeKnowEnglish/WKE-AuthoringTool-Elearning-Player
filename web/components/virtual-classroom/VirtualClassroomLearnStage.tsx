@@ -1,12 +1,36 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { useEffect, useState } from "react";
-import { VirtualClassroomActivityEmbed } from "@/components/virtual-classroom/VirtualClassroomActivityEmbed";
-import { VirtualClassroomWhiteboardEmbed } from "@/components/virtual-classroom/VirtualClassroomWhiteboardEmbed";
-import { VirtualClassroomPresentationStage } from "@/components/virtual-classroom/VirtualClassroomPresentationStage";
-import { SecretRolesLaunchPanel } from "@/components/secret-roles/SecretRolesLaunchPanel";
-import { SecretRolesSessionView } from "@/components/secret-roles/SecretRolesSessionView";
-import { SharedDocumentLaunchPanel, VirtualClassroomDocumentEmbed } from "@/components/virtual-classroom/VirtualClassroomDocumentEmbed";
+const VirtualClassroomActivityEmbed = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomActivityEmbed").then((module) => module.VirtualClassroomActivityEmbed),
+  { ssr: false, loading: () => <ToolLoading /> },
+);
+const VirtualClassroomWhiteboardEmbed = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomWhiteboardEmbed").then((module) => module.VirtualClassroomWhiteboardEmbed),
+  { ssr: false, loading: () => <ToolLoading /> },
+);
+const VirtualClassroomPresentationStage = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomPresentationStage").then((module) => module.VirtualClassroomPresentationStage),
+  { ssr: false, loading: () => <ToolLoading /> },
+);
+const SecretRolesLaunchPanel = dynamic(
+  () => import("@/components/secret-roles/SecretRolesLaunchPanel").then((module) => module.SecretRolesLaunchPanel),
+  { ssr: false, loading: () => <ToolLoading /> },
+);
+const SecretRolesSessionView = dynamic(
+  () => import("@/components/secret-roles/SecretRolesSessionView").then((module) => module.SecretRolesSessionView),
+  { ssr: false, loading: () => <ToolLoading /> },
+);
+const SharedDocumentLaunchPanel = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomDocumentEmbed").then((module) => module.SharedDocumentLaunchPanel),
+  { ssr: false, loading: () => <ToolLoading /> },
+);
+const VirtualClassroomDocumentEmbed = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomDocumentEmbed").then((module) => module.VirtualClassroomDocumentEmbed),
+  { ssr: false, loading: () => <ToolLoading /> },
+);
 import type { ActiveActivityRef } from "@/lib/activity-runtime/active-activity-routing";
 import type { ClassLesson } from "@/lib/class-lessons/types";
 import { playPathForStudioActivity } from "@/lib/studio-activities/paths";
@@ -17,6 +41,10 @@ import type {
 } from "@/lib/virtual-classroom/liveblocks/initial-storage";
 import type { WhiteboardSessionContext } from "@/lib/whiteboard/liveblocks/identity";
 import type { VirtualClassroomPresentation } from "@/lib/virtual-classroom/presentation";
+
+function ToolLoading() {
+  return <p role="status" className="p-4 text-sm text-slate-600">Opening learning tool…</p>;
+}
 
 type BankItem = {
   id: string;
@@ -190,7 +218,7 @@ export function VirtualClassroomLearnStage({
                 type="button"
                 role="tab"
                 aria-selected={active}
-                disabled={!isHost}
+                disabled={!isHost || busy}
                 onClick={() => {
                   if (isHost) onSetStage(tab.id);
                 }}

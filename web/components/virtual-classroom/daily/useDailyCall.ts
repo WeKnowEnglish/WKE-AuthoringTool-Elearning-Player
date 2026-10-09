@@ -5,6 +5,7 @@ import type { DailyCall, DailyThemeConfig } from "@daily-co/daily-js";
 import { dailyThemeColorsKey } from "@/lib/daily/theme-from-teacher";
 import {
   diagnosticFetch,
+  recordAppDiagnostic,
   startAppDiagnosticSpan,
 } from "@/lib/app-diagnostics/client";
 
@@ -115,7 +116,7 @@ export function useDailyCall(input: {
       frameRef.current = null;
       if (joinedRef.current && reportLeave) {
         joinedRef.current = false;
-        await postAttendance(sessionId, "leave");
+        void postAttendance(sessionId, "leave");
       } else {
         joinedRef.current = false;
       }
@@ -194,6 +195,15 @@ export function useDailyCall(input: {
     };
   }, [destroyCall]);
 
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      const classroom = containerRef.current?.closest("[data-classroom-shell]");
+      setIsFullscreen(Boolean(classroom && document.fullscreenElement === classroom));
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
   // Keep Prebuilt colors in sync when the teacher changes chrome theme.
   useEffect(() => {
     const call = frameRef.current;
@@ -254,10 +264,12 @@ export function useDailyCall(input: {
   );
 
   const tryRequestFullscreen = useCallback(async () => {
-    const call = frameRef.current;
-    if (!call) return false;
+    // Fullscreen the classroom, including Learn/Meeting controls. Fullscreening
+    // Daily's iframe traps the teacher inside video and hides those controls.
+    const classroom = containerRef.current?.closest<HTMLElement>("[data-classroom-shell]");
+    if (!classroom?.requestFullscreen) return false;
     try {
-      await call.requestFullscreen();
+      await classroom.requestFullscreen();
       return true;
     } catch {
       return false;
@@ -265,18 +277,23 @@ export function useDailyCall(input: {
   }, []);
 
   const exitFullscreen = useCallback(() => {
-    const call = frameRef.current;
-    if (!call) return;
-    try {
-      call.exitFullscreen();
-    } catch {
-      // ignore
+    const classroom = containerRef.current?.closest("[data-classroom-shell]");
+    if (classroom && document.fullscreenElement === classroom) {
+      void document.exitFullscreen().catch(() => undefined);
     }
   }, []);
 
   const attachCallHandlers = useCallback(
     (call: DailyCall) => {
+      let finishConnection: ReturnType<typeof startAppDiagnosticSpan> | undefined;
+      call.on("loaded", () => {
+        recordAppDiagnostic(diagnosticSurface, "virtual-classroom-video", "daily_lobby_ready", { sessionId });
+      });
+      call.on("joining-meeting", () => {
+        finishConnection = startAppDiagnosticSpan(diagnosticSurface, "virtual-classroom-video", "daily_connection", { sessionId });
+      });
       call.on("joined-meeting", () => {
+        finishConnection?.();
         joinedRef.current = true;
         setPhase("joined");
         setError(null);
@@ -300,16 +317,8 @@ export function useDailyCall(input: {
         }
       });
 
-      call.on("fullscreen", () => {
-        setIsFullscreen(true);
-        setExpanded(true);
-      });
-
-      call.on("exited-fullscreen", () => {
-        setIsFullscreen(false);
-      });
-
       call.on("error", (event) => {
+        finishConnection?.(undefined, new Error("Daily connection failed"));
         const message =
           event && typeof event === "object" && "errorMsg" in event
             ? String((event as { errorMsg?: string }).errorMsg)
@@ -318,8 +327,15 @@ export function useDailyCall(input: {
         setErrorCode("daily_error");
         setPhase((p) => (p === "joined" ? p : "error"));
       });
+      // Record coarse quality changes, never media, participant names or tokens.
+      call.on("network-quality-change", (event) => {
+        recordAppDiagnostic(diagnosticSurface, "virtual-classroom-video", "daily_network_quality", { sessionId, networkState: event.networkState });
+      });
+      call.on("cpu-load-change", (event) => {
+        recordAppDiagnostic(diagnosticSurface, "virtual-classroom-video", "daily_cpu_load", { sessionId, cpuLoadState: event.cpuLoadState, reason: event.cpuLoadStateReason });
+      });
     },
-    [sessionId, clearRefreshTimer],
+    [sessionId, diagnosticSurface, clearRefreshTimer],
   );
 
   const connect = useCallback(async () => {
@@ -392,7 +408,7 @@ export function useDailyCall(input: {
             borderRadius: "0",
           },
           showLeaveButton: false,
-          showFullscreenButton: true,
+          showFullscreenButton: false,
           ...(activeTheme ? { theme: activeTheme } : {}),
         });
         frameRef.current = call;

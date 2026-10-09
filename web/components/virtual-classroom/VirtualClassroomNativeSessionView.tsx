@@ -475,6 +475,7 @@ export function VirtualClassroomNativeSessionView(props: Props) {
         isHost={role === "host"}
         sessionEnded={false}
         layout={isMeeting ? "stage" : "dock"}
+        mobileDocumentMode={runtime.activeActivity.kind === "document"}
         onExitToLearn={role === "host" ? () => setUiMode("learn") : undefined}
         onEnterMeeting={role === "host" ? () => setUiMode("meeting") : undefined}
         onEndSession={role === "host" ? () => void endSession() : undefined}

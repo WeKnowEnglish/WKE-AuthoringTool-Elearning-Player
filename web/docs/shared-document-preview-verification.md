@@ -2,6 +2,10 @@
 
 Date: 9 October 2026, Asia/Ho_Chi_Minh.
 
+This records the first shared-document preview release. For the current classroom
+release and the combined live-video acceptance results, see
+[the trial findings and release checks](./classroom-trial-smoothness.md).
+
 ## Release
 
 - Preview: https://preview.weknowenglish.online

@@ -18,7 +18,7 @@ const admin = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: {
 const stamp = Date.now().toString(36);
 const output = resolve("../.codex-build/classroom-live-smoke", stamp);
 mkdirSync(output, { recursive: true });
-const report = { origin, checks: [], browserErrors: [], requestFailures: [], classId: null, sessionId: null, roundId: null };
+const report = { origin, checks: [], browserErrors: [], browserErrorOrigins: [], requestFailures: [], classId: null, sessionId: null, roundId: null };
 const check = message => { report.checks.push(message); console.log(message); };
 const createdUsers = [];
 const contexts = [];
@@ -58,6 +58,15 @@ async function surface(credentials, mobile = false) {
   await context.addCookies(cookies.map(cookie => ({ name: cookie.name, value: cookie.value, url: origin, sameSite: "Lax", secure: origin.startsWith("https:") })));
   await context.grantPermissions(["camera", "microphone"]);
   const page = await context.newPage();
+  await page.exposeBinding('__wkeSmokeErrorOrigin', ({ frame }, detail) => {
+    const frameUrl = frame.url();
+    report.browserErrorOrigins.push({ origin: frameUrl.startsWith('http') ? new URL(frameUrl).origin : frameUrl, name: detail.name, message: detail.message });
+  });
+  await page.addInitScript(() => {
+    const observeError = detail => { void window.__wkeSmokeErrorOrigin(detail).catch(() => {}); };
+    window.addEventListener('unhandledrejection', event => observeError({ name: event.reason?.name ?? 'Unknown', message: String(event.reason?.message ?? event.reason) }));
+    window.addEventListener('error', event => observeError({ name: event.error?.name ?? 'Error', message: event.message }));
+  });
   page.setDefaultTimeout(60_000);
   await page.addLocatorHandler(page.getByRole("button", { name: "Continue without video", exact: true }), async button => {
     await button.click();
@@ -143,10 +152,27 @@ try {
   await expect.poll(()=>teacher.page.evaluate(()=>Boolean(document.fullscreenElement))).toBe(false);
   report.learnSwitchMs=[];
   report.teacherLearnSwitchMs=[];
+  report.teacherRenderMs=[];
   for(let attempt=0;attempt<3;attempt++){
-    const started=Date.now();
-    await teacher.page.getByRole('button',{name:'Learn',exact:true}).click();
+    const learnButton=teacher.page.getByRole('button',{name:'Learn',exact:true});
+    // Exclude waiting for the preceding command's disabled button. Measure from
+    // the actual click; observe the teacher's first DOM update inside the browser.
+    await expect(learnButton).toBeEnabled();
+    await learnButton.evaluate(button=>button.addEventListener('click',()=>{
+      const measurement={startedAt:Date.now(),renderMs:null};
+      window.__wkeSmokeNavigation=measurement;
+      const clickedAt=performance.now();
+      const observer=new MutationObserver(()=>{
+        const tab=[...document.querySelectorAll('[role="tab"]')].find(element=>element.textContent.trim()==='Whiteboard'&&element.getClientRects().length>0);
+        if(tab){measurement.renderMs=Math.round(performance.now()-clickedAt);observer.disconnect();}
+      });
+      observer.observe(document.querySelector('[data-classroom-shell]'),{childList:true,subtree:true,attributes:true});
+    },{once:true,capture:true}));
+    await learnButton.click();
     await expect(teacher.page.getByRole('tab',{name:'Whiteboard',exact:true})).toBeVisible();
+    const measured=await teacher.page.evaluate(()=>window.__wkeSmokeNavigation);
+    const started=measured.startedAt;
+    report.teacherRenderMs.push(measured.renderMs);
     report.teacherLearnSwitchMs.push(Date.now()-started);
     for(const current of surfaces)await expect(current.page.getByRole('tab',{name:'Whiteboard',exact:true})).toBeVisible();
     report.learnSwitchMs.push(Date.now()-started);
@@ -237,6 +263,13 @@ try {
     assert.equal((await diagnostics(current)).filter(e=>e.name==='daily_join_start').length,joinsBefore[index],'Switching Learn must not rejoin video.');
   }
   check('Video iframe and joined call survive Learn navigation and whiteboard launch');
+  report.playingVideoCounts=[];
+  for(const current of surfaces) {
+    const videos=current.page.frameLocator('iframe').locator('video');
+    await expect.poll(()=>videos.evaluateAll(elements=>elements.filter(video=>!video.paused&&video.readyState>=2&&video.videoWidth>0).length)).toBeGreaterThan(0);
+    report.playingVideoCounts.push(await videos.evaluateAll(elements=>elements.filter(video=>!video.paused&&video.readyState>=2&&video.videoWidth>0).length));
+  }
+  check('Every participant still has playable video after navigation, reconnect and writing');
   report.javascript=await teacher.page.evaluate(()=>performance.getEntriesByType('resource').filter(e=>e.name.includes(location.origin)&&/\.js(?:\?|$)/.test(e.name)).map(e=>({path:new URL(e.name).pathname,bytes:e.encodedBodySize,ms:Math.round(e.duration)})));
   await teacher.page.screenshot({path:resolve(output,'teacher-document-video.png'),fullPage:true});
   assert.equal(report.browserErrors.length,0,JSON.stringify(report.browserErrors));

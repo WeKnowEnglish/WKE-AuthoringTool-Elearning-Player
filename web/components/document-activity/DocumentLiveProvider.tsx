@@ -5,7 +5,10 @@ import type { ReactNode } from "react";
 import { getDocumentSessionContext } from "@/lib/document-activity/client-context";
 import { getVirtualClassroomContext } from "@/lib/virtual-classroom/client-context";
 
-export function DocumentLiveProvider({ children }: { children: ReactNode }) {
+export function DocumentLiveProvider({ children, identity }: {
+  children: ReactNode;
+  identity?: { userId: string; displayName: string; role: "host" | "player" };
+}) {
   return (
     <LiveblocksProvider
       authEndpoint={async (room) => {
@@ -17,9 +20,9 @@ export function DocumentLiveProvider({ children }: { children: ReactNode }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             room,
-            userId: doc?.userId ?? vc?.userId ?? "guest",
-            displayName: doc?.displayName ?? vc?.displayName ?? "Guest",
-            role: doc?.role === "host" || vc?.role === "host" ? "host" : "player",
+            userId: identity?.userId ?? doc?.userId ?? vc?.userId ?? "guest",
+            displayName: identity?.displayName ?? doc?.displayName ?? vc?.displayName ?? "Guest",
+            role: identity?.role ?? (doc?.role === "host" || vc?.role === "host" ? "host" : "player"),
           }),
         });
         if (!response.ok) {

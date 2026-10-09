@@ -1,5 +1,7 @@
 "use client";
 
+import { dailyResumeKey } from "@/lib/daily/recovery";
+
 export type VirtualClassroomClientContext = {
   sessionId: string;
   joinCode: string;
@@ -22,14 +24,14 @@ const CONTEXT_KEY = "wke-vc-session-context";
 
 export function setVirtualClassroomContext(ctx: VirtualClassroomClientContext): void {
   if (typeof window === "undefined") return;
-  window.sessionStorage.setItem(CONTEXT_KEY, JSON.stringify(ctx));
+  try { window.sessionStorage.setItem(CONTEXT_KEY, JSON.stringify(ctx)); } catch { /* Server restore remains available. */ }
 }
 
 export function getVirtualClassroomContext(): VirtualClassroomClientContext | null {
   if (typeof window === "undefined") return null;
-  const raw = window.sessionStorage.getItem(CONTEXT_KEY);
-  if (!raw) return null;
   try {
+    const raw = window.sessionStorage.getItem(CONTEXT_KEY);
+    if (!raw) return null;
     const parsed = JSON.parse(raw) as VirtualClassroomClientContext;
     if (
       typeof parsed.sessionId !== "string" ||
@@ -60,7 +62,11 @@ export function getVirtualClassroomContext(): VirtualClassroomClientContext | nu
 
 export function clearVirtualClassroomContext(): void {
   if (typeof window === "undefined") return;
-  window.sessionStorage.removeItem(CONTEXT_KEY);
+  try {
+    const context = getVirtualClassroomContext();
+    if (context) window.sessionStorage.removeItem(dailyResumeKey(context.sessionId, context.userId));
+    window.sessionStorage.removeItem(CONTEXT_KEY);
+  } catch { /* Storage unavailable. */ }
 }
 
 export function isOneOffVirtualClassroom(ctx: { classId: string }): boolean {

@@ -114,6 +114,14 @@ describe("meeting token properties", () => {
     expect(callRoleFromVcRole("member", true)).toBe("teacher");
     expect(callRoleFromVcRole("member", false)).toBe("student");
   });
+  it("keeps first entry in the lobby and resumes with remembered mute choices", () => {
+    const input = { roomName: "room", userId: "student", userName: "Mia", role: "student" as const, exp: 123 };
+    expect(buildMeetingTokenProperties(input).enable_prejoin_ui).toBe(true);
+    expect(buildMeetingTokenProperties({ ...input, resume: { audioOff: true, videoOff: false } })).toMatchObject({
+      enable_prejoin_ui: false, start_audio_off: true, start_video_off: false,
+      is_owner: false, enable_screenshare: false, exp: 123,
+    });
+  });
 });
 
 describe("isDailyEnabled", () => {

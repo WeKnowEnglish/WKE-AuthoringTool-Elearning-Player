@@ -21,6 +21,7 @@ import {
 import { seedPracticeComposition } from "@/lib/activity-tracks/seed-practice";
 import { seedAssessmentFromTemplate } from "@/lib/activity-tracks/seed-assessment";
 import { parseHomeworkCollectionPart } from "@/lib/homework-collections";
+import { readMiniPlayDraft } from "@/lib/homework-collections/mini-play";
 
 function isPartKind(value: unknown): value is ActivityTrackPartKind {
   return (
@@ -52,6 +53,7 @@ function isPartKind(value: unknown): value is ActivityTrackPartKind {
       "question_writing",
       "writing_prompt",
       "creative_presentation",
+      "mini_play",
       "free_response",
       "speaking_prompt",
       "secondary_sequence",
@@ -66,6 +68,10 @@ function parsePartSource(raw: unknown): ActivityTrackPartSource {
   if (!raw || typeof raw !== "object") return { type: "empty" };
   const row = raw as Record<string, unknown>;
   if (row.type === "homework_part") {
+    if (row.part && typeof row.part === "object" && (row.part as Record<string, unknown>).kind === "mini_play") {
+      const draft = readMiniPlayDraft(row.part);
+      if (draft) return { type: "homework_part", part: draft };
+    }
     const part = parseHomeworkCollectionPart(row.part);
     if (part) return { type: "homework_part", part };
   }

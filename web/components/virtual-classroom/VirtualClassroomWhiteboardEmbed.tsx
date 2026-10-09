@@ -13,6 +13,7 @@ import {
   type WhiteboardSessionContext,
 } from "@/lib/whiteboard/liveblocks/identity";
 import { toWhiteboardRoomId } from "@/lib/whiteboard/liveblocks/room-id";
+import { isCurrentClassBoardContext } from "@/lib/virtual-classroom/client/class-board-context";
 
 type Props = {
   sessionId: string;
@@ -58,14 +59,16 @@ export function VirtualClassroomWhiteboardEmbed({
   const [clientInstanceId, setClientInstanceId] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const currentContext = whiteboardLive && isCurrentClassBoardContext(context, joinCode, userId, role) ? context : null;
 
   useEffect(() => {
     setClientInstanceId(createClientInstanceId());
+  }, []);
+
+  useEffect(() => {
     const existing = getWhiteboardSessionContext();
-    if (existing && whiteboardLive) {
-      setContext(existing);
-    }
-  }, [whiteboardLive]);
+    setContext(whiteboardLive && isCurrentClassBoardContext(existing, joinCode, userId, role) ? existing : null);
+  }, [joinCode, role, userId, whiteboardLive]);
 
   const joinAsStudent = useCallback(async () => {
     if (!joinCode) return;
@@ -113,9 +116,9 @@ export function VirtualClassroomWhiteboardEmbed({
   }, [classId, displayName, joinCode, userId]);
 
   useEffect(() => {
-    if (role !== "member" || !whiteboardLive || !joinCode || context) return;
+    if (role !== "member" || !whiteboardLive || !joinCode || currentContext) return;
     void joinAsStudent();
-  }, [context, joinAsStudent, joinCode, role, whiteboardLive]);
+  }, [currentContext, joinAsStudent, joinCode, role, whiteboardLive]);
 
   const startBoard = useCallback(async () => {
     setError(null);
@@ -123,22 +126,22 @@ export function VirtualClassroomWhiteboardEmbed({
     if (next) setContext(next);
   }, [onLaunch]);
 
-  if (context && clientInstanceId) {
-    const roomId = context.roomId || toWhiteboardRoomId(context.sessionId);
-    const wbUserId = context.userId || getOrCreateWhiteboardUserId();
+  if (currentContext && clientInstanceId) {
+    const roomId = currentContext.roomId || toWhiteboardRoomId(currentContext.sessionId);
+    const wbUserId = currentContext.userId || getOrCreateWhiteboardUserId();
     const board = (
       <div className="h-full min-h-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
         <WhiteboardRoomShell
           roomId={roomId}
-          sessionId={context.sessionId}
-          role={context.role}
-          displayName={context.displayName}
-          hostUserId={context.role === "host" ? wbUserId : "host-pending"}
+          sessionId={currentContext.sessionId}
+          role={currentContext.role}
+          displayName={currentContext.displayName}
+          hostUserId={currentContext.role === "host" ? wbUserId : "host-pending"}
           clientInstanceId={clientInstanceId}
         >
           <VirtualClassroomSharedBoard
-            sessionId={context.sessionId}
-            role={context.role}
+            sessionId={currentContext.sessionId}
+            role={currentContext.role}
             userId={wbUserId}
             studentPensEnabled={studentPensEnabled}
             onToggleStudentPens={role === "host" ? onToggleStudentPens : undefined}
@@ -193,107 +196,4 @@ export function VirtualClassroomWhiteboardEmbed({
       ) : null}
     </div>
   );
-}
-
-/** Host opens (or reopens) the shared class board room without leaving Learn. */
-export async function launchWhiteboardInLearn(input: {
-  sessionId: string;
-  displayName: string;
-  background?: {
-    url: string;
-    assetId?: string | null;
-    title?: string;
-  };
-}): Promise<WhiteboardSessionContext> {
-  const finishJourney = startAppDiagnosticSpan(
-    "teacher",
-    "virtual-classroom",
-    input.background ? "classroom_picture_add" : "classroom_board_launch",
-    { sessionId: input.sessionId },
-  );
-  try {
-  const res = await diagnosticFetch(
-    `/api/virtual-classroom/${input.sessionId}/whiteboard`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: input.background?.title?.trim() || "Class board",
-        instructions: input.background
-          ? "Look closely and annotate the picture together."
-          : "Draw and share ideas together.",
-        timerMinutes: 60,
-        worksheetPresetId: null,
-        mode: "individual",
-      }),
-    },
-    {
-      phase: "launch",
-      name: "vc.launch_class_board",
-      detail: {
-        activity: "classroom",
-        sessionId: input.sessionId,
-        commandType: "LAUNCH_CLASS_BOARD",
-      },
-    },
-  );
-  const payload = (await res.json()) as {
-    error?: string;
-    sessionId?: string;
-    roomId?: string;
-    userId?: string;
-    displayName?: string;
-  };
-  if (!res.ok || !payload.sessionId || !payload.roomId || !payload.userId) {
-    throw new Error(payload.error ?? "Could not open the class board.");
-  }
-  const next: WhiteboardSessionContext = {
-    sessionId: payload.sessionId,
-    roomId: payload.roomId,
-    role: "host",
-    displayName: payload.displayName ?? input.displayName,
-    color: "#0f172a",
-    userId: payload.userId,
-  };
-  setWhiteboardSessionContext(next);
-  if (input.background) {
-    const backgroundResponse = await diagnosticFetch(
-      `/api/whiteboard/${encodeURIComponent(payload.sessionId)}/command`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "SET_BACKGROUND",
-          assetId: input.background.assetId ?? null,
-          url: input.background.url,
-          fit: "contain",
-          opacity: 1,
-        }),
-      },
-      {
-        phase: "launch",
-        name: "vc.set_class_board_background",
-        detail: {
-          activity: "whiteboard",
-          sessionId: input.sessionId,
-          roomId: payload.roomId,
-          commandType: "SET_BACKGROUND",
-        },
-      },
-    );
-    if (!backgroundResponse.ok) {
-      const backgroundPayload = (await backgroundResponse.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-      throw new Error(
-        backgroundPayload?.error ?? "The board opened, but the picture could not be added.",
-      );
-    }
-  }
-  finishJourney({ hasBackground: Boolean(input.background) });
-  return next;
-  } catch (journeyError) {
-    finishJourney(undefined, journeyError);
-    throw journeyError;
-  }
 }

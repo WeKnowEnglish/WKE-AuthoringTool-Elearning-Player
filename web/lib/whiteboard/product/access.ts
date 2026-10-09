@@ -1,6 +1,6 @@
 import "server-only";
 
-import { canHostLive, isTeacher } from "@/lib/auth/roles";
+import { canHostLive, isStudent, isTeacher } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 
@@ -53,9 +53,15 @@ export async function requireWhiteboardStudent(classId: string): Promise<{
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.id) {
+  if (!user?.id || !isStudent(user)) {
     throw new Error("Sign in required.");
   }
+
+  const service = createServiceRoleSupabase();
+  if (!service) throw new Error("Class access is unavailable.");
+  const { data: cls, error: classError } = await service.from("teacher_classes")
+    .select("id, archived_at").eq("id", classId).maybeSingle();
+  if (classError || !cls || cls.archived_at) throw new Error("Class is unavailable.");
 
   const { data: enrollment, error } = await supabase
     .from("class_enrollments")

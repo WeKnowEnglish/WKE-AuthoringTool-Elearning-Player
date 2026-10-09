@@ -17,6 +17,11 @@ function tokenPropertiesForRole(input: DailyMeetingTokenInput) {
     exp: input.exp,
     enable_recording: false,
     start_cloud_recording: false,
+    enable_prejoin_ui: !input.resume,
+    ...(input.resume ? {
+      start_audio_off: input.resume.audioOff,
+      start_video_off: input.resume.videoOff,
+    } : {}),
   };
 
   if (input.role === "teacher") {

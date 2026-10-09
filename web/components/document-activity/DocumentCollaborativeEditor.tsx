@@ -1,6 +1,7 @@
 "use client";
 
 import { useLiveblocksExtension } from "@liveblocks/react-tiptap";
+import { useStatus } from "@liveblocks/react";
 import "@liveblocks/react-tiptap/styles.css";
 import Underline from "@tiptap/extension-underline";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
@@ -21,6 +22,7 @@ type Props = {
 
 export const DocumentCollaborativeEditor = forwardRef<DocumentEditorHandle, Props>(
   function DocumentCollaborativeEditor({ field, editable, className }, ref) {
+    const connected = useStatus() === "connected";
     const liveblocks = useLiveblocksExtension({
       field,
       offlineSupport_experimental: false,
@@ -28,7 +30,7 @@ export const DocumentCollaborativeEditor = forwardRef<DocumentEditorHandle, Prop
 
     const editor = useEditor({
       immediatelyRender: false,
-      editable,
+      editable: editable && connected,
       extensions: [
         liveblocks,
         StarterKit.configure({
@@ -70,8 +72,8 @@ export const DocumentCollaborativeEditor = forwardRef<DocumentEditorHandle, Prop
 
     useEffect(() => {
       if (!editor) return;
-      editor.setEditable(editable);
-    }, [editable, editor]);
+      editor.setEditable(editable && connected);
+    }, [connected, editable, editor]);
 
     if (!editor) {
       return (

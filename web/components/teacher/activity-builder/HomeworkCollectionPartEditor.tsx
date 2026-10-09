@@ -15,6 +15,7 @@ import { AssessmentListeningItemMatchPartEditor } from "@/components/teacher/act
 import { HomeworkCollectionLessonPlayerPackEditor } from "@/components/teacher/activity-builder/HomeworkCollectionLessonPlayerPackEditor";
 import { HomeworkCollectionDocumentModuleEditor } from "@/components/teacher/activity-builder/HomeworkCollectionDocumentModuleEditor";
 import { CreativePresentationPartEditor } from "@/components/teacher/activity-builder/CreativePresentationPartEditor";
+import { MiniPlayPartEditor } from "@/components/teacher/activity-builder/MiniPlayPartEditor";
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
 import { asDefinitionMatchDraft } from "@/lib/definition-match/draft";
 import { asPictureStoryDraft } from "@/lib/picture-story/draft";
@@ -36,6 +37,7 @@ function freshId() {
 }
 
 function authoringItemCount(part: HomeworkCollectionPart): number {
+  if (part.kind === "mini_play") return 4;
   if (part.kind === "creative_presentation") return 4;
   if (part.kind === "document_module") {
     if (part.moduleFormat === "picture_story") {
@@ -1117,6 +1119,7 @@ export function HomeworkCollectionPartEditor({
         </AuthoringItemPager>
       ) : null}
 
+      {showContent && part.kind === "mini_play" ? <MiniPlayPartEditor part={part} onChange={onChange} /> : null}
       {showContent && part.kind === "creative_presentation" ? (
         <CreativePresentationPartEditor part={part} onChange={onChange} />
       ) : null}

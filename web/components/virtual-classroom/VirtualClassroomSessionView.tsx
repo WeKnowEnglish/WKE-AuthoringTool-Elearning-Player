@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import {
   useBroadcastEvent,
   useEventListener,
@@ -12,22 +14,21 @@ import { GlobalTimerBanner } from "@/components/virtual-classroom/GlobalTimerPan
 import { StudentSessionChrome } from "@/components/virtual-classroom/StudentSessionChrome";
 import { useLobbyPresence } from "@/components/virtual-classroom/useLobbyPresence";
 import { useClassroomRealtimeShadowPresence } from "@/components/virtual-classroom/useClassroomRealtimeShadowPresence";
-import { VirtualClassroomLearnControls } from "@/components/virtual-classroom/VirtualClassroomLearnControls";
-import { VirtualClassroomLearnStage } from "@/components/virtual-classroom/VirtualClassroomLearnStage";
 import { VirtualClassroomLiveProvider } from "@/components/virtual-classroom/VirtualClassroomLiveProvider";
-import { VirtualClassroomNativeSessionView } from "@/components/virtual-classroom/VirtualClassroomNativeSessionView";
-import { VirtualClassroomRoomShell } from "@/components/virtual-classroom/VirtualClassroomRoomShell";
-import { launchWhiteboardInLearn } from "@/components/virtual-classroom/VirtualClassroomWhiteboardEmbed";
+import { ClassroomConnectionStatus, VirtualClassroomRoomShell } from "@/components/virtual-classroom/VirtualClassroomRoomShell";
+import { launchWhiteboardInLearn } from "@/lib/virtual-classroom/client/launch-whiteboard";
 import {
   collabDiagnosticExportEnabled,
   exportCollabDiagnosticEvents,
 } from "@/lib/collab-diagnostics/client";
-import { diagnosticFetch } from "@/lib/app-diagnostics/client";
+import { diagnosticFetch, recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 import type { ClassroomRuntimeSnapshot } from "@/lib/classroom-realtime/types";
 import {
   clearVirtualClassroomContext,
   getVirtualClassroomContext,
+  setVirtualClassroomContext,
 } from "@/lib/virtual-classroom/client-context";
+import { DAILY_RETRY_DELAYS_MS, canRetryDailyRequest } from "@/lib/daily/recovery";
 import { resolveVirtualClassroomExitHref } from "@/lib/virtual-classroom/exit-href";
 import {
   normalizeVirtualClassroomLearnActivity,
@@ -82,6 +83,22 @@ import {
   type VirtualClassroomPresentation,
 } from "@/lib/virtual-classroom/presentation";
 
+// Load learning tools only when their view is opened; keep video entry light.
+const VirtualClassroomLearnControls = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomLearnControls").then((module) => module.VirtualClassroomLearnControls),
+  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening learning tools…</p> },
+);
+
+const VirtualClassroomLearnStage = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomLearnStage").then((module) => module.VirtualClassroomLearnStage),
+  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening learning tools…</p> },
+);
+
+const VirtualClassroomNativeSessionView = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomNativeSessionView").then((module) => module.VirtualClassroomNativeSessionView),
+  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening classroom…</p> },
+);
+
 type Props = {
   sessionId: string;
   role: "host" | "member";
@@ -114,6 +131,10 @@ export function VirtualClassroomSessionView({
   const [error, setError] = useState<string | null>(null);
   const [ended, setEnded] = useState(false);
   const [snapshotCheck, setSnapshotCheck] = useState<string | null>(null);
+  const [pendingNavigation, setPendingNavigation] = useState<{
+    uiMode?: VirtualClassroomUiMode;
+    learnStage?: LearnStageId;
+  } | null>(null);
   const rosterSyncAttempted = useRef(false);
   const broadcast = useBroadcastEvent();
 
@@ -211,9 +232,25 @@ export function VirtualClassroomSessionView({
   const liveNavigationPatch = classroomRealtimeLearnNavigationPilotEnabled()
     ? shadowHealth.runtimePatch
     : null;
-  const uiMode = liveNavigationPatch?.uiMode ?? snapshotLearnNavigation?.uiMode ?? liveblocksUiMode;
-  const learnStage =
+  const committedUiMode = liveNavigationPatch?.uiMode ?? snapshotLearnNavigation?.uiMode ?? liveblocksUiMode;
+  const committedLearnStage =
     liveNavigationPatch?.learnStage ?? snapshotLearnNavigation?.learnStage ?? liveblocksLearnStage;
+  const uiMode = pendingNavigation?.uiMode ?? committedUiMode;
+  const learnStage = pendingNavigation?.learnStage ?? committedLearnStage;
+  useEffect(() => {
+    if (!pendingNavigation) return;
+    if ((!pendingNavigation.uiMode || pendingNavigation.uiMode === committedUiMode) &&
+        (!pendingNavigation.learnStage || pendingNavigation.learnStage === committedLearnStage)) {
+      setPendingNavigation(null);
+      return;
+    }
+    // Never leave the teacher indefinitely on an unconfirmed local view.
+    const timeout = window.setTimeout(() => {
+      setPendingNavigation(null);
+      setError("Classroom navigation is taking longer than expected. Please try again.");
+    }, 10_000);
+    return () => window.clearTimeout(timeout);
+  }, [committedUiMode, committedLearnStage, pendingNavigation]);
   const learnActivity =
     liveNavigationPatch && Object.hasOwn(liveNavigationPatch, "learnActivity")
       ? liveNavigationPatch.learnActivity ?? null
@@ -222,6 +259,12 @@ export function VirtualClassroomSessionView({
     liveNavigationPatch && Object.hasOwn(liveNavigationPatch, "learnPresentation")
       ? liveNavigationPatch.learnPresentation ?? null
       : snapshotLearnNavigation?.learnPresentation ?? liveblocksLearnPresentation;
+
+  useEffect(() => {
+    recordAppDiagnostic(role === "host" ? "teacher" : "student", "virtual-classroom", "classroom_view_changed", {
+      sessionId, uiMode, learnStage, activityKind: activeActivity?.kind ?? null,
+    });
+  }, [role, sessionId, uiMode, learnStage, activeActivity?.kind]);
   const learnStudentPensEnabled =
     classroomRealtimeLearnPensPilotEnabled() && shadowHealth.runtimeSnapshot
       ? shadowHealth.runtimeSnapshot.learnStudentPensEnabled
@@ -355,23 +398,37 @@ export function VirtualClassroomSessionView({
 
   const runToolCommand = useCallback(
     async (command: Record<string, unknown>) => {
+      // Respond immediately for the teacher, then reconcile with the shared
+      // server state. Failed commands restore the last confirmed view.
+      const navigation = command.type === "SET_UI_MODE"
+        ? { uiMode: normalizeVirtualClassroomUiMode(command.mode) }
+        : command.type === "SET_LEARN_STAGE"
+          ? { learnStage: normalizeVirtualClassroomLearnStage(command.stage) }
+          : null;
+      if (navigation) setPendingNavigation(navigation);
       setBusy("tools");
       setError(null);
       try {
-        const res = await fetch(`/api/virtual-classroom/${sessionId}/tools`, {
+        const res = await diagnosticFetch(`/api/virtual-classroom/${sessionId}/tools`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(command),
+        }, {
+          surface: role === "host" ? "teacher" : "student",
+          phase: "virtual-classroom",
+          name: "classroom_tool_command",
+          detail: { sessionId, commandType: typeof command.type === "string" ? command.type : "unknown" },
         });
         const payload = (await res.json()) as { error?: string };
         if (!res.ok) throw new Error(payload.error ?? "Tool command failed.");
       } catch (err) {
+        if (navigation) setPendingNavigation(null);
         setError(err instanceof Error ? err.message : "Failed.");
       } finally {
         setBusy(null);
       }
     },
-    [sessionId],
+    [role, sessionId],
   );
 
   const setUiMode = useCallback(
@@ -483,6 +540,8 @@ export function VirtualClassroomSessionView({
       data-classroom-shell="liveblocks-compat"
       className="flex h-dvh min-h-0 flex-row overflow-hidden bg-gradient-to-b from-slate-50 to-teal-50"
     >
+      <ClassroomConnectionStatus sessionId={sessionId} role={role} />
+      {busy === "tools" ? <p role="status" className="pointer-events-none fixed left-1/2 top-3 z-50 -translate-x-1/2 rounded-lg bg-white px-3 py-2 text-sm text-slate-700 shadow">Updating classroom…</p> : null}
       {error ? (
         <p className="pointer-events-auto fixed left-1/2 top-3 z-50 max-w-md -translate-x-1/2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-center text-sm text-red-700 shadow-lg">
           {error}
@@ -516,9 +575,11 @@ export function VirtualClassroomSessionView({
 
       <DailyVideoDock
         sessionId={sessionId}
+        userId={userId}
         isHost={role === "host"}
         sessionEnded={ended || status === "ended"}
         layout={isMeeting ? "stage" : "dock"}
+        mobileDocumentMode={activeActivity?.kind === "document"}
         onExitToLearn={
           role === "host" ? () => setUiMode("learn") : undefined
         }
@@ -527,6 +588,7 @@ export function VirtualClassroomSessionView({
         }
         onEndSession={role === "host" ? () => void endSession() : undefined}
         endSessionBusy={busy === "end"}
+        navigationBusy={busy === "tools"}
         onLeaveClassroom={role === "member" ? leaveSession : undefined}
       />
 
@@ -725,6 +787,8 @@ function VirtualClassroomResolvedSessionShell({ ctx }: { ctx: ClientContext }) {
 export function VirtualClassroomSessionGate() {
   const router = useRouter();
   const [bootstrapped, setBootstrapped] = useState(false);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [restoreAttempt, setRestoreAttempt] = useState(0);
   const [ctx, setCtx] = useState(() => null as ReturnType<typeof getVirtualClassroomContext>);
 
   useEffect(() => {
@@ -732,18 +796,57 @@ export function VirtualClassroomSessionGate() {
     const match = path.match(/virtual-classroom\/([^/]+)/i);
     const sessionIdFromPath = match?.[1] ? decodeURIComponent(match[1]) : "";
     const stored = getVirtualClassroomContext();
-    if (!stored || stored.sessionId !== sessionIdFromPath) {
-      setCtx(null);
-    } else {
+    if (stored?.sessionId === sessionIdFromPath) {
       setCtx(stored);
+      setBootstrapped(true);
+      return;
     }
-    setBootstrapped(true);
-  }, []);
+    setCtx(null); setBootstrapped(false); setRestoreError(null);
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let failures = 0;
+    let inFlight = false;
+    let finished = false;
+    const restore = async () => {
+      if (controller.signal.aborted || inFlight || finished) return;
+      if (!navigator.onLine) { setRestoreError("Waiting for your connection to return…"); return; }
+      inFlight = true;
+      try {
+        const response = await diagnosticFetch(`/api/virtual-classroom/${encodeURIComponent(sessionIdFromPath)}/restore`, {
+          method: "POST", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20_000)]),
+        }, { surface: path.startsWith("/teacher/") ? "teacher" : "student", phase: "virtual-classroom", name: "classroom_restore", detail: { sessionId: sessionIdFromPath } });
+        const payload = await response.json();
+        if (controller.signal.aborted) return;
+        if (!response.ok) {
+          if (!canRetryDailyRequest(response.status, payload.code)) {
+            finished = true;
+            setRestoreError(payload.error ?? "Please sign in and rejoin this class."); setBootstrapped(true); return;
+          }
+          throw new Error(payload.error ?? "Classroom connection is temporarily unavailable.");
+        }
+        const restored = { ...payload, classId: payload.classId ?? "" } as ClientContext;
+        if (restored.sessionId !== sessionIdFromPath || !restored.userId || !["host", "member"].includes(restored.role)) throw new Error("Could not restore classroom identity.");
+        setVirtualClassroomContext(restored);
+        finished = true;
+        if (payload.landing === "waiting" && restored.role === "member") { router.replace(`/virtual-classroom/${encodeURIComponent(restored.sessionId)}/waiting`); return; }
+        setCtx(restored); setBootstrapped(true); setRestoreError(null);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setRestoreError(error instanceof Error ? error.message : "Reconnecting to your classroom…");
+        if (failures < DAILY_RETRY_DELAYS_MS.length) timer = setTimeout(() => void restore(), DAILY_RETRY_DELAYS_MS[failures++]);
+        else setBootstrapped(true);
+      } finally { inFlight = false; }
+    };
+    const online = () => { if (timer) clearTimeout(timer); failures = 0; void restore(); };
+    window.addEventListener("online", online);
+    void restore();
+    return () => { controller.abort(); if (timer) clearTimeout(timer); window.removeEventListener("online", online); };
+  }, [router, restoreAttempt]);
 
   if (!bootstrapped) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-slate-100 text-slate-700">
-        Loading session…
+        {restoreError ?? "Reconnecting to your classroom…"}
       </div>
     );
   }
@@ -751,7 +854,8 @@ export function VirtualClassroomSessionGate() {
   if (!ctx) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-slate-100 p-6 text-center">
-        <p className="text-lg font-bold text-slate-900">Join the Virtual Classroom first.</p>
+        <p className="text-lg font-bold text-slate-900">{restoreError ?? "Join the Virtual Classroom first."}</p>
+        <button type="button" onClick={() => setRestoreAttempt(value => value + 1)} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white">Try reconnecting</button>
         <button
           type="button"
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white"

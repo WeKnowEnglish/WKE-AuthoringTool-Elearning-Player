@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DailyVideoDock } from "@/components/virtual-classroom/daily/DailyVideoDock";
@@ -8,9 +10,7 @@ import { GlobalTimerBannerContent } from "@/components/virtual-classroom/GlobalT
 import { StudentSessionChromeContent } from "@/components/virtual-classroom/StudentSessionChrome";
 import { useClassroomRealtimeShadowPresence } from "@/components/virtual-classroom/useClassroomRealtimeShadowPresence";
 import { useLobbyPresence } from "@/components/virtual-classroom/useLobbyPresence";
-import { VirtualClassroomLearnControlsContent } from "@/components/virtual-classroom/VirtualClassroomLearnControls";
-import { VirtualClassroomLearnStage } from "@/components/virtual-classroom/VirtualClassroomLearnStage";
-import { launchWhiteboardInLearn } from "@/components/virtual-classroom/VirtualClassroomWhiteboardEmbed";
+import { launchWhiteboardInLearn } from "@/lib/virtual-classroom/client/launch-whiteboard";
 import { classroomRecoveryFeedback } from "@/lib/classroom-realtime/recovery-feedback";
 import { resolveClassroomRuntimeViewState } from "@/lib/classroom-realtime/runtime-view-state";
 import {
@@ -47,6 +47,17 @@ import type {
 } from "@/lib/virtual-classroom/liveblocks/initial-storage";
 import type { VirtualClassroomPresentation } from "@/lib/virtual-classroom/presentation";
 import type { WhiteboardSessionContext } from "@/lib/whiteboard/liveblocks/identity";
+
+// Load learning tools only when their view is opened; keep video entry light.
+const VirtualClassroomLearnControlsContent = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomLearnControls").then((module) => module.VirtualClassroomLearnControlsContent),
+  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening learning tools…</p> },
+);
+
+const VirtualClassroomLearnStage = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomLearnStage").then((module) => module.VirtualClassroomLearnStage),
+  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening learning tools…</p> },
+);
 
 type Props = {
   sessionId: string;
@@ -472,13 +483,16 @@ export function VirtualClassroomNativeSessionView(props: Props) {
 
       <DailyVideoDock
         sessionId={sessionId}
+        userId={userId}
         isHost={role === "host"}
         sessionEnded={false}
         layout={isMeeting ? "stage" : "dock"}
+        mobileDocumentMode={runtime.activeActivity.kind === "document"}
         onExitToLearn={role === "host" ? () => setUiMode("learn") : undefined}
         onEnterMeeting={role === "host" ? () => setUiMode("meeting") : undefined}
         onEndSession={role === "host" ? () => void endSession() : undefined}
         endSessionBusy={busy === "end"}
+        navigationBusy={busy === "tools"}
         onLeaveClassroom={role === "member" ? leaveSession : undefined}
       />
 

@@ -14,7 +14,7 @@ import { withCollabServerTiming } from "@/lib/collab-diagnostics/server-timing";
 type RouteContext = { params: Promise<{ sessionId: string }> };
 
 /** Issue a short-lived Daily meeting token for an authorized VC participant. */
-export async function POST(_request: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
   return withCollabServerTiming("vc.daily_token", async (timer) => {
   const { sessionId } = await context.params;
   timer.setContext({ activity: "classroom", sessionId });
@@ -53,6 +53,13 @@ export async function POST(_request: Request, context: RouteContext) {
   }
 
   try {
+    // This affects the lobby and media choices only; account/session access was
+    // verified above. A returning browser never supplies an identity or token.
+    const body = await request.json().catch(() => null) as { resume?: boolean; audioOff?: boolean; videoOff?: boolean } | null;
+    const resume = body?.resume === true ? {
+      audioOff: body.audioOff !== false,
+      videoOff: body.videoOff !== false,
+    } : undefined;
     let roomName = session.dailyRoomName;
     let roomUrl = session.dailyRoomUrl;
     let roomExpiresAt = session.dailyRoomExpiresAt;
@@ -93,6 +100,7 @@ export async function POST(_request: Request, context: RouteContext) {
         userName: auth.displayName,
         role: auth.role,
         exp,
+        resume,
       }),
     );
 

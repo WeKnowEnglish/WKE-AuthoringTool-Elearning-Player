@@ -21,6 +21,7 @@ import { acceptPrimaryRewardReceipt } from "@/lib/primary-player/client";
 import { HomeworkCollectionLessonPlayerPartSurface } from "@/components/homework/HomeworkCollectionLessonPlayerPartSurface";
 import { HomeworkCollectionDocumentModulePartSurface } from "@/components/homework/HomeworkCollectionDocumentModulePartSurface";
 import { CreativePresentationPlayer } from "@/components/homework/CreativePresentationPlayer";
+import { MiniPlayPlayer } from "@/components/homework/MiniPlayPlayer";
 import type { AssessmentSpeakingRecording } from "@/lib/assessment";
 import { StudentActionFailureNotice } from "@/components/homework/StudentActionFailureNotice";
 import { useStudentActionAuthFailure } from "@/lib/auth/use-student-action-auth-failure";
@@ -446,6 +447,7 @@ export function HomeworkCollectionPlayer({
             />
           ) : null}
 
+          {part.kind === "mini_play" ? <MiniPlayPlayer key={part.id} part={part} answers={currentAnswers} onAnswer={setAnswer} readOnly={Boolean(!authoringPreview && (alreadyCompleted || initialAttempt?.status === "submitted"))} /> : null}
           {part.kind === "creative_presentation" ? (
             <CreativePresentationPlayer
               part={part}

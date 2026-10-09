@@ -2,6 +2,8 @@
 
 Date: 9 October 2026 (Asia/Ho_Chi_Minh).
 
+Follow-up: [refresh and network recovery hardening](./classroom-rejoin-recovery.md).
+
 ## Teacher and student experience
 
 The Grade 5–6 Online trial ran on the main website from approximately 20:51 to

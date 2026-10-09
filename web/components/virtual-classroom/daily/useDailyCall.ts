@@ -8,6 +8,7 @@ import { diagnosticFetch, recordAppDiagnostic, startAppDiagnosticSpan } from "@/
 
 export type DailyCallPhase = "idle" | "probing" | "ready" | "connecting" | "prejoin" | "joined" | "disabled" | "error";
 type TokenResponse = { token?: string; roomUrl?: string; role?: string; exp?: number; error?: string; code?: string };
+const SIGNALING_RECOVERY_GRACE_MS = 30_000;
 
 async function postAttendance(sessionId: string, event: "join" | "leave", dailyParticipantId?: string | null) {
   try {
@@ -32,6 +33,7 @@ export function useDailyCall(input: {
   const generationRef = useRef(0);
   const resumeRef = useRef<DailyResume | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const signalingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptRef = useRef(0);
   const connectRef = useRef<() => Promise<void>>(async () => {});
   const destroyPromiseRef = useRef<Promise<void>>(Promise.resolve());
@@ -48,6 +50,10 @@ export function useDailyCall(input: {
   const clearRetry = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = null;
+  }, []);
+  const clearSignalingWatchdog = useCallback(() => {
+    if (signalingTimerRef.current) clearTimeout(signalingTimerRef.current);
+    signalingTimerRef.current = null;
   }, []);
   const forgetResume = useCallback(() => {
     resumeRef.current = null;
@@ -81,18 +87,20 @@ export function useDailyCall(input: {
   }, []);
 
   const destroyCall = useCallback(async (reportLeave: boolean) => {
+    clearSignalingWatchdog();
     const call = frameRef.current;
     frameRef.current = null;
     if (joinedRef.current && reportLeave) void postAttendance(sessionId, "leave");
     joinedRef.current = false;
     if (!call) return destroyPromiseRef.current;
     const task = (async () => {
-      try { await call.leave(); } catch { /* Already left. */ }
+      // destroy also leaves the call. A separate leave can wait indefinitely on
+      // broken signaling before we ever release the old iframe.
       try { await call.destroy(); } catch { /* Already destroyed. */ }
     })();
     destroyPromiseRef.current = task;
     await task;
-  }, [sessionId]);
+  }, [sessionId, clearSignalingWatchdog]);
 
   useEffect(() => {
     activeRef.current = true;
@@ -102,7 +110,7 @@ export function useDailyCall(input: {
     const online = () => {
       if (stoppedRef.current) return;
       const state = frameRef.current?.meetingState();
-      if (state === "joined-meeting" || state === "joining-meeting") return;
+      if ((joinedRef.current && state === "joined-meeting") || (connectInFlight.current && state === "joining-meeting")) return;
       attemptRef.current = 0;
       scheduleRecovery();
     };
@@ -110,22 +118,22 @@ export function useDailyCall(input: {
     return () => {
       activeRef.current = false;
       generationRef.current++;
-      clearRetry();
+      clearRetry(); clearSignalingWatchdog();
       window.removeEventListener("online", online);
       // Refresh preserves join intent; explicit leave and session end clear it.
       void destroyCall(true);
     };
     // sessionEnded is handled separately without remounting a working call.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, userId, clearRetry, destroyCall, scheduleRecovery]);
+  }, [sessionId, userId, clearRetry, clearSignalingWatchdog, destroyCall, scheduleRecovery]);
 
   useEffect(() => {
     if (!sessionEnded) return;
     stoppedRef.current = true;
     generationRef.current++;
-    clearRetry(); forgetResume();
+    clearRetry(); clearSignalingWatchdog(); forgetResume();
     void destroyCall(true).then(() => { setPhase("ready"); setExpanded(false); setReconnecting(false); });
-  }, [sessionEnded, clearRetry, forgetResume, destroyCall]);
+  }, [sessionEnded, clearRetry, clearSignalingWatchdog, forgetResume, destroyCall]);
 
   useEffect(() => {
     const change = () => {
@@ -154,7 +162,7 @@ export function useDailyCall(input: {
       finishConnection?.();
       joinedRef.current = true;
       attemptRef.current = 0;
-      clearRetry(); interruptionsRef.current.clear(); rememberMedia(call);
+      clearRetry(); clearSignalingWatchdog(); interruptionsRef.current.clear(); rememberMedia(call);
       setPhase("joined"); setReconnecting(false); setError(null); setErrorCode(null);
       void postAttendance(sessionId, "join", call.participants()?.local?.session_id);
     });
@@ -163,6 +171,7 @@ export function useDailyCall(input: {
     });
     call.on("left-meeting", () => {
       if (!current()) return;
+      clearSignalingWatchdog();
       if (joinedRef.current) void postAttendance(sessionId, "leave");
       joinedRef.current = false;
       if (!stoppedRef.current) { setPhase("error"); scheduleRecovery(); }
@@ -171,8 +180,10 @@ export function useDailyCall(input: {
       if (!current()) return;
       finishConnection?.(undefined, new Error("Daily connection failed"));
       const type = event.error?.type as string | undefined;
+      recordAppDiagnostic(surface, "virtual-classroom-video", "daily_fatal_error", { sessionId, errorType: type });
       setError(event.errorMsg || "Video call error."); setErrorCode(type ?? "daily_error"); setPhase("error");
-      if (canRecoverDailyFatalError(type)) scheduleRecovery();
+      clearSignalingWatchdog();
+      if (canRecoverDailyFatalError(type)) { joinedRef.current = false; scheduleRecovery(); }
       else { stoppedRef.current = true; clearRetry(); forgetResume(); setReconnecting(false); }
     });
     call.on("network-connection", event => {
@@ -180,6 +191,21 @@ export function useDailyCall(input: {
       recordAppDiagnostic(surface, "virtual-classroom-video", "daily_network_connection", { sessionId, connectionType: event.type, connectionEvent: event.event });
       if (event.event === "interrupted") interruptionsRef.current.add(event.type);
       if (event.event === "connected") interruptionsRef.current.delete(event.type);
+      if (event.type === "signaling") {
+        if (event.event === "connected") clearSignalingWatchdog();
+        if (event.event === "interrupted" && joinedRef.current && !signalingTimerRef.current) {
+          signalingTimerRef.current = setTimeout(() => {
+            signalingTimerRef.current = null;
+            if (!current() || stoppedRef.current || !joinedRef.current || !interruptionsRef.current.has("signaling")) return;
+            // Some interrupted calls remain "joined" without a fatal error.
+            // Once the provider's repair grace has passed, authorize fresh entry.
+            rememberMedia(call);
+            recordAppDiagnostic(surface, "virtual-classroom-video", "daily_signaling_recovery", { sessionId });
+            joinedRef.current = false;
+            setPhase("error"); scheduleRecovery();
+          }, SIGNALING_RECOVERY_GRACE_MS);
+        }
+      }
       // Keep the iframe alive. Daily repairs brief interruptions itself.
       if (joinedRef.current) setReconnecting(interruptionsRef.current.size > 0);
     });
@@ -189,7 +215,7 @@ export function useDailyCall(input: {
     call.on("cpu-load-change", event => {
       if (current()) recordAppDiagnostic(surface, "virtual-classroom-video", "daily_cpu_load", { sessionId, cpuLoadState: event.cpuLoadState, reason: event.cpuLoadStateReason });
     });
-  }, [surface, sessionId, rememberMedia, forgetResume, clearRetry, scheduleRecovery]);
+  }, [surface, sessionId, rememberMedia, forgetResume, clearRetry, clearSignalingWatchdog, scheduleRecovery]);
 
   const connect = useCallback(async () => {
     if (!activeRef.current || sessionEnded || connectInFlight.current || joinedRef.current) return;
@@ -228,6 +254,7 @@ export function useDailyCall(input: {
         ...(themeRef.current ? { theme: themeRef.current } : {}),
       });
       frameRef.current = call; attachHandlers(call);
+      interruptionsRef.current.clear();
       setTokenExp(payload.exp ?? null); setPhase("prejoin");
       const finishJoin = startAppDiagnosticSpan(surface, "virtual-classroom-video", "daily_join", { sessionId });
       try { await call.join({ url: payload.roomUrl, token: payload.token }); finishJoin(); }
@@ -253,9 +280,9 @@ export function useDailyCall(input: {
     stoppedRef.current = false; attemptRef.current = 0; await connect();
   }, [connect, sessionEnded]);
   const cancelRecovery = useCallback(() => {
-    stoppedRef.current = true; generationRef.current++; clearRetry(); forgetResume(); setReconnecting(false);
+    stoppedRef.current = true; generationRef.current++; clearRetry(); clearSignalingWatchdog(); forgetResume(); setReconnecting(false);
     void destroyCall(true).then(() => setPhase("ready"));
-  }, [clearRetry, forgetResume, destroyCall]);
+  }, [clearRetry, clearSignalingWatchdog, forgetResume, destroyCall]);
   const requestFullscreen = useCallback(async () => {
     const root = containerRef.current?.closest<HTMLElement>("[data-classroom-shell]");
     if (!root?.requestFullscreen) return false;

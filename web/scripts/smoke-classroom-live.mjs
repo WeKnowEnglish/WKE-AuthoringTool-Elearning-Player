@@ -287,6 +287,7 @@ try {
     await current.page.waitForTimeout(30000);
     const restoredAt=Date.now(); current.network.dailyOffline=false;
     await expect.poll(async()=>(await diagnostics(current)).filter(e=>e.name==='daily_join'&&e.kind==='span').length,{timeout:90000}).toBeGreaterThan(joins);
+    await expect(current.page.getByRole('status').filter({hasText:'Reconnecting video'})).toHaveCount(0);
     await expect(editor(current)).toContainText('Our video lesson is ready.');
     for(const text of contributions)await expect(editor(current)).toContainText(text.trim());
     report.videoRecoveryMs=Date.now()-restoredAt;
@@ -324,6 +325,8 @@ try {
   report.passed = false;
   report.error = (/^(?:expect\(|locator\.)/.test(message) ? message.slice(0, 2000) : message.split("\n")[0]).replace(/(https?:\/\/[^\s"<>?]+)\?[^\s"<>]*/g, '$1?[redacted]');
   for (const [index, context] of contexts.entries()) {
+    report.failureDiagnostics ??= [];
+    report.failureDiagnostics.push({ index, events: await context.pages()[0]?.evaluate(() => JSON.parse(sessionStorage.getItem('wke:app-diagnostics:v1') ?? '[]')).catch(() => []) });
     await context.pages()[0]?.screenshot({ path: resolve(output, `failure-${index}.png`), fullPage: true }).catch(() => {});
   }
   throw new Error(report.error);

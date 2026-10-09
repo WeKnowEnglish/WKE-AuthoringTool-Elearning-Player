@@ -69,6 +69,33 @@ describe("Daily connection recovery lifecycle", () => {
     expect(hook.reconnecting).toBe(true);
     await act(async () => calls[0].emit("network-connection", { type: "signaling", event: "connected" }));
     expect(hook.reconnecting).toBe(false); expect(calls[0].leave).not.toHaveBeenCalled();
+    await act(async () => vi.advanceTimersByTimeAsync(60_000));
+    expect(mocks.fetch).toHaveBeenCalledOnce(); expect(calls[0].destroy).not.toHaveBeenCalled();
+  });
+  it("replaces a call stuck joined after prolonged signaling loss", async () => {
+    await join();
+    await act(async () => calls[0].emit("network-connection", { type: "signaling", event: "interrupted" }));
+    await act(async () => vi.advanceTimersByTimeAsync(29_000));
+    expect(mocks.fetch).toHaveBeenCalledOnce();
+    await act(async () => vi.advanceTimersByTimeAsync(2000)); await settle();
+    expect(calls[0].destroy).toHaveBeenCalledOnce();
+    expect(mocks.fetch).toHaveBeenCalledTimes(2); expect(hook.phase).toBe("joined"); expect(hook.reconnecting).toBe(false);
+  });
+  it("waits for online before replacing stale joined signaling", async () => {
+    await join(); Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    await act(async () => calls[0].emit("network-connection", { type: "signaling", event: "interrupted" }));
+    await act(async () => vi.advanceTimersByTimeAsync(60_000));
+    expect(mocks.fetch).toHaveBeenCalledOnce();
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+    await act(async () => window.dispatchEvent(new Event("online")));
+    await act(async () => vi.advanceTimersByTimeAsync(1000)); await settle();
+    expect(calls[0].destroy).toHaveBeenCalledOnce(); expect(hook.phase).toBe("joined");
+  });
+  it("does not restart a call for media quality interruptions alone", async () => {
+    await join();
+    await act(async () => calls[0].emit("network-connection", { type: "sfu", event: "interrupted" }));
+    await act(async () => vi.advanceTimersByTimeAsync(60_000));
+    expect(mocks.fetch).toHaveBeenCalledOnce(); expect(calls[0].destroy).not.toHaveBeenCalled();
   });
   it("automatically recovers a fatal network drop once online", async () => {
     await join(); Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
@@ -90,6 +117,7 @@ describe("Daily connection recovery lifecycle", () => {
   });
   it.each(["leave", "end", "ejected"])("does not auto-rejoin after %s", async reason => {
     await join();
+    await act(async () => calls[0].emit("network-connection", { type: "signaling", event: "interrupted" }));
     if (reason === "leave") await act(async () => { await hook.leave(); });
     if (reason === "end") { ended = true; await act(async () => root.render(createElement(Harness))); }
     if (reason === "ejected") await act(async () => { calls[0].emit("error", { error: { type: "ejected" }, errorMsg: "Removed" }); calls[0].emit("left-meeting"); });

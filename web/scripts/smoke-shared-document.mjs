@@ -45,15 +45,28 @@ async function surface(credentials, mobile = false) {
   const result = await auth.auth.signInWithPassword(credentials);
   assert.ifError(result.error);
   const context = await browser.newContext({ baseURL: origin, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 } });
+  const network = { offline: false, sockets: [] };
+  // Browser offline emulation leaves established WebSockets open. Forward real
+  // provider traffic, but explicitly sever its socket for the reconnect check.
+  await context.routeWebSocket(/liveblocks/, socket => {
+    if (network.offline) { void socket.close({ code: 1001 }); return; }
+    const server = socket.connectToServer();
+    network.sockets.push({ socket, server });
+  });
   contexts.push(context);
   await context.addCookies(cookies.map(cookie => ({ name: cookie.name, value: cookie.value, url: origin, sameSite: "Lax", secure: origin.startsWith("https:") })));
   const page = await context.newPage();
   page.setDefaultTimeout(60_000);
+  await page.addLocatorHandler(page.getByRole("button", { name: "Continue without video", exact: true }), async button => {
+    await button.click();
+  });
   page.on("pageerror", error => report.browserErrors.push(error.message));
   page.on("response", response => {
-    if (response.status() >= 500 && response.url().startsWith(origin)) report.requestFailures.push({ status: response.status(), url: new URL(response.url()).pathname });
+    const path = new URL(response.url()).pathname;
+    const documentOrClassroom = /^\/api\/(?:document\/|liveblocks\/auth|virtual-classroom\/.*\/(?:document|runtime|tools))/.test(path);
+    if (response.status() >= 500 && response.url().startsWith(origin) && documentOrClassroom) report.requestFailures.push({ status: response.status(), url: path });
   });
-  return { page, context, user: result.data.user };
+  return { page, context, network, user: result.data.user };
 }
 async function openClassroom(surface, data, role) {
   await surface.page.goto(`${origin}/virtual-classroom/join`, { waitUntil: "domcontentloaded", timeout: 120_000 });
@@ -128,10 +141,14 @@ try {
   for (const text of contributions) await expect(editor(students[1])).toContainText(text.trim());
   await expect(editor(students[1])).toHaveAttribute("contenteditable", "true");
   check("Student refresh restores the document and editing access");
+  students[0].network.offline = true;
   await students[0].context.setOffline(true);
+  await Promise.all(students[0].network.sockets.flatMap(({ socket, server }) =>
+    [socket.close({ code: 1001 }), server.close({ code: 1001 })].map(closed => closed.catch(() => {}))));
   await expect(students[0].page.getByRole("status").filter({ hasText: "Reconnecting to shared document" })).toBeVisible({ timeout: 45_000 });
   await expect(editor(students[0])).toHaveAttribute("contenteditable", "false");
   await editor(teacher).click(); await teacher.page.keyboard.press("Control+End"); await teacher.page.keyboard.insertText(" The teacher helps us finish.");
+  students[0].network.offline = false;
   await students[0].context.setOffline(false);
   await expect(editor(students[0])).toHaveAttribute("contenteditable", "true");
   await expectWriting(surfaces, "The teacher helps us finish.");

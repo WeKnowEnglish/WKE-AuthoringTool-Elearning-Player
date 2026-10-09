@@ -36,7 +36,10 @@ class DocumentErrorBoundary extends Component<{ children: ReactNode; onRetry: ()
 }
 
 /** Each classroom participant enters through current server authorization, including after refresh. */
-export function VirtualClassroomDocumentEmbed({ roundId }: { roundId: string }) {
+export function VirtualClassroomDocumentEmbed({ roundId, isolatedLiveblocksProvider = false }: {
+  roundId: string;
+  isolatedLiveblocksProvider?: boolean;
+}) {
   const [attempt, setAttempt] = useState(0);
   const [context, setContext] = useState<DocumentSessionContext | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -73,16 +76,19 @@ export function VirtualClassroomDocumentEmbed({ roundId }: { roundId: string }) 
     </div>
   );
   if (!context) return <p role="status" className="p-5">Opening shared document…</p>;
-  return (
-    <DocumentErrorBoundary key={attempt} onRetry={retry}>
-      <DocumentLiveProvider identity={context}>
+  const document = (
         <DocumentRoomShell roomId={context.roomId} roundId={roundId} vcSessionId={context.vcSessionId}
           role={context.role} displayName={context.displayName} hostUserId={context.userId} clientInstanceId={clientInstanceId}>
           <DocumentSyncStatus />
           <DocumentActivityShell roundId={roundId} vcSessionId={context.vcSessionId} role={context.role}
             userId={context.userId} displayName={context.displayName} embedded />
         </DocumentRoomShell>
-      </DocumentLiveProvider>
+  );
+  return (
+    <DocumentErrorBoundary key={attempt} onRetry={retry}>
+      {isolatedLiveblocksProvider
+        ? <DocumentLiveProvider identity={context}>{document}</DocumentLiveProvider>
+        : document}
     </DocumentErrorBoundary>
   );
 }

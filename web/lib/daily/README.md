@@ -53,7 +53,9 @@ One-off sessions and classes with no nearby slot keep the ad-hoc 4h room rules (
 - Daily `teacher` / owner tokens require a valid **HMAC-signed** host cookie (member cookies cannot forge owner).
 - VC member cookies are HMAC-signed with expiry (8h); unsigned/tampered cookies are rejected.
 - Prefer `VIRTUAL_CLASSROOM_COOKIE_SECRET` in production (falls back to `LIVEBLOCKS_SECRET_KEY`).
-- Token refresh leave/join does not inflate provisional attendance.
+- Successful joins remember per-tab, per-account, per-session recovery intent and mute choices; meeting tokens are never persisted.
+- Refresh obtains a freshly authorized token and skips the repeat lobby. First entry keeps the camera/microphone lobby.
+- Temporary network/provider errors retry with bounded backoff and resume when online. Brief SDK interruptions keep the existing iframe alive. Explicit leave, removal, lost access, and session end stop automatic recovery.
 - Webhook HMAC rejects timestamps outside ±5 minutes; failed event claims can be reclaimed on retry.
 - Rate limits use **Upstash Redis** when `UPSTASH_REDIS_REST_*` is set; otherwise in-memory per instance.
 
@@ -62,7 +64,8 @@ One-off sessions and classes with no nearby slot keep the ad-hoc 4h room rules (
 - If Daily is disabled/misconfigured, hosts and students see a dismissible **Class video unavailable** banner (not a missing control).
 - On mobile, the video dock sits above the host tool bar (`bottom-20`).
 - Hosts get a one-time auto-open of the Video panel per session (sessionStorage).
-- Meeting tokens refresh ~90s before expiry via leave/join on the **same** Prebuilt frame (dock does not remount).
+- A connected meeting is never deliberately left to renew its join token. Token expiry gates future entry; actual recovery obtains a fresh token. Room expiry and classroom end still apply.
+- If local classroom context is missing, the session URL restores current teacher ownership or student enrollment; one-off guests require their original signed membership. Waiting/prep access rules still apply.
 
 ## Verified attendance webhooks (Phase 2a)
 

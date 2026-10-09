@@ -45,7 +45,12 @@ async function surface(credentials, mobile = false) {
   const result = await auth.auth.signInWithPassword(credentials);
   assert.ifError(result.error);
   const context = await browser.newContext({ baseURL: origin, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 } });
-  const network = { offlineRoomId: null, sockets: [] };
+  const network = { offlineRoomId: null, sockets: [], dailyOffline: false, dailySockets: [] };
+  if (process.argv.includes('--require-recovery')) await context.routeWebSocket(/daily\.co/, socket => {
+    if (network.dailyOffline) { void socket.close({ code: 1001 }); return; }
+    const server = socket.connectToServer();
+    network.dailySockets.push({ socket, server });
+  });
   // Browser offline emulation leaves established WebSockets open. Forward real
   // provider traffic, but explicitly sever its socket for the reconnect check.
   await context.routeWebSocket(/liveblocks/, socket => {
@@ -250,6 +255,45 @@ try {
   }));
   for(const text of contributions)await expectWriting(surfaces,text.trim());
   check('All four participants write together while the same video call continues');
+  if (process.argv.includes('--require-recovery')) {
+    report.automaticRejoins=[];
+    for (const [current, loseContext] of [[students[0], false], [teacher, false], [students[1], true]]) {
+      await current.page.evaluate(clearContext => {
+        sessionStorage.removeItem('wke:app-diagnostics:v1');
+        if(clearContext) sessionStorage.removeItem('wke-vc-session-context');
+      }, loseContext);
+      const began=Date.now();
+      await current.page.reload({ waitUntil:'domcontentloaded',timeout:120000 });
+      // No Join click or class-code submission is allowed in this check.
+      await expect.poll(async()=>(await diagnostics(current)).some(e=>e.name==='daily_join'&&e.kind==='span'),{timeout:90000}).toBe(true);
+      await expect(editor(current)).toContainText('Our video lesson is ready.');
+      for(const text of contributions)await expect(editor(current)).toContainText(text.trim());
+      report.automaticRejoins.push({ role:current===teacher?'teacher':'student',contextRestored:loseContext,ms:Date.now()-began });
+      const index=surfaces.indexOf(current);
+      iframeHandles[index]=await current.page.locator('iframe').elementHandle();
+      joinsBefore[index]=(await diagnostics(current)).filter(e=>e.name==='daily_join_start').length;
+    }
+    check('Teacher and student refresh automatically rejoin video and restore the same writing; missing classroom context is recovered without a join code');
+
+    const current=students[2];
+    const index=surfaces.indexOf(current);
+    const joins=(await diagnostics(current)).filter(e=>e.name==='daily_join'&&e.kind==='span').length;
+    assert(current.network.dailySockets.length>0,'A real Daily signaling socket is required for the network-loss check.');
+    current.network.dailyOffline=true;
+    for(const pair of current.network.dailySockets) await Promise.all([pair.socket.close({code:1001}),pair.server.close({code:1001})].map(p=>p.catch(()=>{})));
+    await expect(current.page.getByRole('status').filter({hasText:'Reconnecting video'})).toBeVisible({timeout:30000});
+    // Beyond Daily's signaling grace: exercise application recovery, not only
+    // the provider's brief-interruption path. Only this fixture is disconnected.
+    await current.page.waitForTimeout(30000);
+    const restoredAt=Date.now(); current.network.dailyOffline=false;
+    await expect.poll(async()=>(await diagnostics(current)).filter(e=>e.name==='daily_join'&&e.kind==='span').length,{timeout:90000}).toBeGreaterThan(joins);
+    await expect(editor(current)).toContainText('Our video lesson is ready.');
+    for(const text of contributions)await expect(editor(current)).toContainText(text.trim());
+    report.videoRecoveryMs=Date.now()-restoredAt;
+    iframeHandles[index]=await current.page.locator('iframe').elementHandle();
+    joinsBefore[index]=(await diagnostics(current)).filter(e=>e.name==='daily_join_start').length;
+    check('A prolonged real video-signaling interruption automatically rejoins without resetting the shared document');
+  }
   const collectResponse=teacher.page.waitForResponse(r=>r.url().endsWith(`/api/document/${report.roundId}/commands`)&&r.request().postDataJSON()?.type==='COLLECT');
   await teacher.page.getByRole('button',{name:'Collect',exact:true}).click();
   await json(await collectResponse);

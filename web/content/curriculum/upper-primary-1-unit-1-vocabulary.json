@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "kind": "vocabulary-list",
+  "id": "up1-u01-who-am-i-core",
+  "name": "UP1 Unit 1 — Interests, strengths and routines",
+  "cefr": "A1-A2",
+  "entries": [
+    {
+      "id": "drawing-pictures",
+      "word": "drawing pictures",
+      "definitionEn": "Making pictures with a pencil or colours.",
+      "example": "I like drawing pictures.",
+      "notes": "Routine form: I draw pictures."
+    },
+    {
+      "id": "reading-stories",
+      "word": "reading stories",
+      "definitionEn": "Reading about characters and events.",
+      "example": "I usually read stories after school.",
+      "notes": "Interest form: I like reading stories."
+    },
+    {
+      "id": "playing-football",
+      "word": "playing football",
+      "definitionEn": "Playing a team game by kicking a ball.",
+      "example": "I sometimes play football.",
+      "notes": "Interest form: I like playing football."
+    },
+    {
+      "id": "making-models",
+      "word": "making models",
+      "definitionEn": "Making a small version of something, such as a house.",
+      "example": "I like making models.",
+      "notes": "Routine form: I make models."
+    },
+    {
+      "id": "solving-puzzles",
+      "word": "solving puzzles",
+      "definitionEn": "Finding the answers to a puzzle or problem.",
+      "example": "I am good at solving puzzles.",
+      "notes": "Routine form: I solve puzzles."
+    },
+    {
+      "id": "helping-a-friend",
+      "word": "helping a friend",
+      "definitionEn": "Doing something useful for a friend.",
+      "example": "I like helping a friend.",
+      "notes": "Routine form: I help a friend."
+    },
+    {
+      "id": "good-at",
+      "word": "good at",
+      "definitionEn": "Being able to do an activity well.",
+      "example": "I am good at drawing pictures.",
+      "notes": "Teach as a chunk: be good at + activity-ing. Do not rank classmates."
+    },
+    {
+      "id": "always",
+      "word": "always",
+      "definitionEn": "Every time in the situation being described.",
+      "example": "I always read before bed.",
+      "notes": "Introduce in grammar L4; position before the action verb in these models."
+    },
+    {
+      "id": "usually",
+      "word": "usually",
+      "definitionEn": "Most times in the situation being described.",
+      "example": "I usually draw after school.",
+      "notes": "Introduce in grammar L4; no fixed percentage is required."
+    },
+    {
+      "id": "often",
+      "word": "often",
+      "definitionEn": "Many times in the situation being described.",
+      "example": "I often solve puzzles.",
+      "notes": "Introduce in grammar L4; distinguish many times from every time."
+    },
+    {
+      "id": "sometimes",
+      "word": "sometimes",
+      "definitionEn": "On some occasions, but not every time.",
+      "example": "I sometimes make models.",
+      "notes": "Introduce in grammar L4."
+    },
+    {
+      "id": "never",
+      "word": "never",
+      "definitionEn": "Not at any time in the situation being described.",
+      "example": "I never play football before school.",
+      "notes": "Introduce in grammar L4; I never play, not I do not never play."
+    }
+  ]
+}

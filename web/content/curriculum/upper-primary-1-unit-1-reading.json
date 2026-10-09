@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "kind": "read-and-answer",
+  "id": "up1-u01-reading-practice",
+  "title": "UP1 Unit 1 — Read Linh’s learner profile",
+  "instructions": "Read Linh’s profile. Find the information and check it in the text. After the questions, suggest a shared activity using two facts.",
+  "passage": {
+    "title": "Meet Linh",
+    "text": "Hi! I'm Linh. I'm ten. I like reading stories and making models. I'm good at solving puzzles. After school, I usually read stories. I often draw pictures, but I never play football before school. I sometimes help a friend with a puzzle. Would you like to make a model with me?"
+  },
+  "shuffleOptions": true,
+  "questions": [
+    {
+      "id": "q1",
+      "prompt": "How old is Linh?",
+      "options": [
+        {
+          "id": "q1-1",
+          "text": "Nine"
+        },
+        {
+          "id": "q1-2",
+          "text": "Ten"
+        },
+        {
+          "id": "q1-3",
+          "text": "Eleven"
+        }
+      ],
+      "correctOptionId": "q1-2"
+    },
+    {
+      "id": "q2",
+      "prompt": "Which activity does Linh like?",
+      "options": [
+        {
+          "id": "q2-1",
+          "text": "Playing football"
+        },
+        {
+          "id": "q2-2",
+          "text": "Making models"
+        },
+        {
+          "id": "q2-3",
+          "text": "Swimming"
+        }
+      ],
+      "correctOptionId": "q2-2"
+    },
+    {
+      "id": "q3",
+      "prompt": "What is Linh good at?",
+      "options": [
+        {
+          "id": "q3-1",
+          "text": "Solving puzzles"
+        },
+        {
+          "id": "q3-2",
+          "text": "Playing football"
+        },
+        {
+          "id": "q3-3",
+          "text": "Singing"
+        }
+      ],
+      "correctOptionId": "q3-1"
+    },
+    {
+      "id": "q4",
+      "prompt": "What does Linh usually do after school?",
+      "options": [
+        {
+          "id": "q4-1",
+          "text": "Make models"
+        },
+        {
+          "id": "q4-2",
+          "text": "Read stories"
+        },
+        {
+          "id": "q4-3",
+          "text": "Play football"
+        }
+      ],
+      "correctOptionId": "q4-2"
+    },
+    {
+      "id": "q5",
+      "prompt": "What does Linh never do before school?",
+      "options": [
+        {
+          "id": "q5-1",
+          "text": "Draw pictures"
+        },
+        {
+          "id": "q5-2",
+          "text": "Read stories"
+        },
+        {
+          "id": "q5-3",
+          "text": "Play football"
+        }
+      ],
+      "correctOptionId": "q5-3"
+    }
+  ]
+}

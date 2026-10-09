@@ -1,0 +1,1381 @@
+{
+  "version": 1,
+  "code": "UP1.U01",
+  "title": "Who Am I?",
+  "guideVersion": "1.0",
+  "ageRange": [
+    9,
+    11
+  ],
+  "cefr": "A1 consolidation toward A2-oriented communication",
+  "purpose": "Help a new classmate discover a shared interest or activity through a useful learner profile and interview.",
+  "choices": "Use personal, local or fictional details; choose the interest, strength, activity and profile design. No family resources or personal disclosure are required.",
+  "entryCheck": "Use the original welcome objectives. Also sample familiar hobby meanings, a routine question and simple word decoding; route particular gaps to support while retaining the core path.",
+  "coreMinutes": 405,
+  "conditionalSupportMinutes": 50,
+  "optionalExtensionMinutes": 30,
+  "objectives": [
+    {
+      "code": "UP1.U01.V",
+      "statement": "Retrieve and use familiar interest and strength chunks for a learner profile.",
+      "learnerStatement": "I can remember useful words for my interests and strengths.",
+      "successCriteria": "Retrieve 6 of 7 selected hobby/strength chunks from meaning or picture cues, then use 2 in relevant personal or fictional statements; record cue support.",
+      "evidenceMode": "recall",
+      "standardCodes": [
+        "D"
+      ]
+    },
+    {
+      "code": "UP1.U01.L",
+      "statement": "Find useful identity, interest, strength and frequency information in a short spoken profile.",
+      "learnerStatement": "I can listen to a profile and find useful details.",
+      "successCriteria": "Identify 4 of 5 details in a fresh spoken profile, including an interest and frequency detail; use a fact to select a suitable shared activity. Record replays and visuals.",
+      "evidenceMode": "recognition",
+      "standardCodes": [
+        "L"
+      ]
+    },
+    {
+      "code": "UP1.U01.G",
+      "statement": "Interpret and use present-simple routine statements, frequency expressions and do questions.",
+      "learnerStatement": "I can say how often I do things and ask about routines.",
+      "successCriteria": "Interpret 4 of 5 meaning contrasts; communicate 3 relevant routine statements with 2 frequency expressions and ask one understandable do question. Record model use.",
+      "evidenceMode": "production",
+      "standardCodes": [
+        "I",
+        "D"
+      ]
+    },
+    {
+      "code": "UP1.U01.R",
+      "statement": "Use information from a short written learner profile to make a relevant choice.",
+      "learnerStatement": "I can read a profile and choose an activity that fits.",
+      "successCriteria": "Find 4 of 5 requested details in a fresh written profile; support a suitable activity choice with 2 text facts. Rereading is allowed; record glossary support.",
+      "evidenceMode": "recognition",
+      "standardCodes": [
+        "R",
+        "RO"
+      ]
+    },
+    {
+      "code": "UP1.U01.S",
+      "statement": "Interview a peer about interests, strengths and routines, taking both roles and checking meaning.",
+      "learnerStatement": "I can ask, answer and check information with a partner.",
+      "successCriteria": "Complete 4 relevant question-answer exchanges in both roles, communicate 2 interests/strengths and 2 frequency expressions, and check or clarify a detail when needed.",
+      "evidenceMode": "production",
+      "standardCodes": [
+        "I",
+        "Q"
+      ]
+    },
+    {
+      "code": "UP1.U01.W",
+      "statement": "Plan, write and revise an individual learner profile for a classmate.",
+      "learnerStatement": "I can write a useful profile and improve it for my reader.",
+      "successCriteria": "Write 6–8 linked sentences including an interest, a strength and 3 frequency expressions; improve 2 features after feedback. Record frames, word bank or scribing used.",
+      "evidenceMode": "production",
+      "standardCodes": [
+        "W",
+        "CW",
+        "CC"
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "code": "L1",
+      "title": "Hello, welcome to class!",
+      "path": "core",
+      "primaryFocus": "introduction",
+      "durationMinutes": 45,
+      "preserveExisting": true,
+      "objectiveCodes": [],
+      "prerequisiteCodes": [],
+      "steps": [
+        {
+          "minutes": 5,
+          "phase": "Entry",
+          "teacher": "Use the existing greeting/name/age prompts; note individual starting points.",
+          "student": "Greet and respond using known language.",
+          "evidence": "Existing welcome objectives."
+        },
+        {
+          "minutes": 8,
+          "phase": "Model",
+          "teacher": "Demonstrate one greeting choice and a name/age exchange.",
+          "student": "Notice the situation and practise a useful response.",
+          "evidence": ""
+        },
+        {
+          "minutes": 10,
+          "phase": "Guide",
+          "teacher": "Use the teacher-authored welcome lesson conversation.",
+          "student": "Take turns asking and answering with support.",
+          "evidence": ""
+        },
+        {
+          "minutes": 12,
+          "phase": "Apply",
+          "teacher": "Change partners/situations; observe each learner.",
+          "student": "Choose a greeting and exchange information.",
+          "evidence": ""
+        },
+        {
+          "minutes": 7,
+          "phase": "Check",
+          "teacher": "Use new situations and record support.",
+          "student": "Respond individually to greeting/name/age prompts.",
+          "evidence": "Use the existing three success criteria separately."
+        },
+        {
+          "minutes": 3,
+          "phase": "Purpose",
+          "teacher": "Preview a profile that helps classmates find something to do together.",
+          "student": "Choose a real or fictional identity for the unit.",
+          "evidence": ""
+        }
+      ],
+      "task": "The existing teacher-authored welcome lesson is preserved exactly. The teacher pack offers optional facilitation timings and an end-of-lesson preview; it does not replace the saved brief."
+    },
+    {
+      "code": "L2",
+      "title": "L2 Vocabulary — My interests and strengths",
+      "path": "core",
+      "primaryFocus": "vocabulary",
+      "durationMinutes": 45,
+      "objectiveCodes": [
+        "UP1.U01.V",
+        "UP1.U01.2"
+      ],
+      "prerequisiteCodes": [
+        "L1"
+      ],
+      "skills": [
+        "vocabulary",
+        "speaking",
+        "listening",
+        "pronunciation"
+      ],
+      "targetLanguage": "Core activity chunks: drawing pictures, reading stories, playing football, making models, solving puzzles, helping a friend; good at. I like drawing pictures. I am good at solving puzzles. Routine form: I draw pictures.",
+      "vocabEntryIds": [
+        "drawing-pictures",
+        "reading-stories",
+        "playing-football",
+        "making-models",
+        "solving-puzzles",
+        "helping-a-friend",
+        "good-at"
+      ],
+      "steps": [
+        {
+          "minutes": 5,
+          "phase": "Retrieve",
+          "teacher": "Hide models; retrieve welcome greetings and name/age.",
+          "student": "Exchange information; then check one model.",
+          "evidence": ""
+        },
+        {
+          "minutes": 8,
+          "phase": "Model",
+          "teacher": "Mime/draw the six activities; model like + activity-ing and good at as chunks.",
+          "student": "Match meaning, say each chunk and choose an interest.",
+          "evidence": ""
+        },
+        {
+          "minutes": 10,
+          "phase": "Guide",
+          "teacher": "Model two examples and sound–spelling links.",
+          "student": "Sort activity cards and pair a chunk with an example.",
+          "evidence": ""
+        },
+        {
+          "minutes": 12,
+          "phase": "Apply",
+          "teacher": "Offer personal/fictional choices and a short partner task.",
+          "student": "Choose an interest and strength; explain two useful choices.",
+          "evidence": ""
+        },
+        {
+          "minutes": 7,
+          "phase": "Check",
+          "teacher": "Use seven meaning/picture cues without the printed words.",
+          "student": "Retrieve chunks, then make two meaningful statements.",
+          "evidence": "6/7 chunks plus two relevant statements; record cues."
+        },
+        {
+          "minutes": 3,
+          "phase": "Reflect",
+          "teacher": "Name the next listening purpose and support route.",
+          "student": "Choose one chunk to retrieve next lesson.",
+          "evidence": ""
+        }
+      ],
+      "support": "Picture/mime cues, oral rehearsal, separated chunk cards. If several meanings/forms remain unavailable, use Support S1 and recheck different cues before L3.",
+      "extension": "Offer another familiar hobby with a teacher-supplied chunk; keep the seven-chunk core available to everyone.",
+      "task": "CORE L2 — vocabulary. 5m Retrieve: Hide models; retrieve welcome greetings and name/age. Exchange information; then check one model.\n8m Model: Mime/draw the six activities; model like + activity-ing and good at as chunks. Match meaning, say each chunk and choose an interest.\n10m Guide: Model two examples and sound–spelling links. Sort activity cards and pair a chunk with an example.\n12m Apply: Offer personal/fictional choices and a short partner task. Choose an interest and strength; explain two useful choices.\n7m Check: Use seven meaning/picture cues without the printed words. Retrieve chunks, then make two meaningful statements.\n3m Reflect: Name the next listening purpose and support route. Choose one chunk to retrieve next lesson."
+    },
+    {
+      "code": "S1",
+      "title": "SUPPORT S1 — Hobby meanings and sound–spelling",
+      "path": "support",
+      "primaryFocus": "vocabulary",
+      "durationMinutes": 25,
+      "objectiveCodes": [
+        "UP1.U01.V"
+      ],
+      "prerequisiteCodes": [
+        "L2"
+      ],
+      "skills": [
+        "vocabulary",
+        "pronunciation",
+        "reading"
+      ],
+      "targetLanguage": "The seven hobby/strength chunks from L2; oral chunks and their written forms.",
+      "vocabEntryIds": [
+        "drawing-pictures",
+        "reading-stories",
+        "playing-football",
+        "making-models",
+        "solving-puzzles",
+        "helping-a-friend",
+        "good-at"
+      ],
+      "trigger": "Use when L2 shows persistent meaning/form confusion, rather than one slip. For example, fewer than four chunks are accessible even after normal picture cues. This is a local routing cue, not a CEFR cut-score.",
+      "returnPoint": "Recheck four previously difficult chunks using changed cues. Return to L3 with a picture glossary; if still difficult, narrow the first listening selection and schedule another small-group check.",
+      "steps": [
+        {
+          "minutes": 3,
+          "phase": "Retrieve",
+          "teacher": "Identify the particular missing chunks.",
+          "student": "Attempt four cues.",
+          "evidence": ""
+        },
+        {
+          "minutes": 5,
+          "phase": "Model",
+          "teacher": "Connect meaning, spoken chunk and written form.",
+          "student": "Mime, listen and point.",
+          "evidence": ""
+        },
+        {
+          "minutes": 7,
+          "phase": "Guide",
+          "teacher": "Build and sort selected chunk cards.",
+          "student": "Say/read the chunks in supported examples.",
+          "evidence": ""
+        },
+        {
+          "minutes": 7,
+          "phase": "Apply",
+          "teacher": "Change the cue and remove the full model.",
+          "student": "Retrieve the four selected chunks and use two.",
+          "evidence": ""
+        },
+        {
+          "minutes": 3,
+          "phase": "Recheck",
+          "teacher": "Record what help remains.",
+          "student": "Choose a cue tool for L3.",
+          "evidence": ""
+        }
+      ],
+      "support": "Small-group workshop while others use familiar chunks in a profile game; no new core prerequisite.",
+      "extension": "If no support is needed, continue to L3; this slot is not an extra test for everyone.",
+      "task": "SUPPORT S1 — vocabulary. 3m Retrieve: Identify the particular missing chunks. Attempt four cues.\n5m Model: Connect meaning, spoken chunk and written form. Mime, listen and point.\n7m Guide: Build and sort selected chunk cards. Say/read the chunks in supported examples.\n7m Apply: Change the cue and remove the full model. Retrieve the four selected chunks and use two.\n3m Recheck: Record what help remains. Choose a cue tool for L3.\nRoute: Use when L2 shows persistent meaning/form confusion, rather than one slip. For example, fewer than four chunks are accessible even after normal picture cues. This is a local routing cue, not a CEFR cut-score."
+    },
+    {
+      "code": "L3",
+      "title": "L3 Listening — Find useful profile details",
+      "path": "core",
+      "primaryFocus": "listening",
+      "durationMinutes": 45,
+      "objectiveCodes": [
+        "UP1.U01.L",
+        "UP1.U01.1"
+      ],
+      "prerequisiteCodes": [
+        "L2"
+      ],
+      "skills": [
+        "listening",
+        "vocabulary",
+        "speaking"
+      ],
+      "targetLanguage": "Listen for age, interests, strengths and routine/frequency details. Recognise usually, sometimes, often and never in context; explicit form work follows in L4. Could you say that again, please?",
+      "vocabEntryIds": [
+        "drawing-pictures",
+        "reading-stories",
+        "playing-football",
+        "making-models",
+        "solving-puzzles",
+        "helping-a-friend",
+        "good-at"
+      ],
+      "steps": [
+        {
+          "minutes": 5,
+          "phase": "Retrieve",
+          "teacher": "Give changed meaning cues for three L2 chunks.",
+          "student": "Retrieve, then check meanings.",
+          "evidence": ""
+        },
+        {
+          "minutes": 8,
+          "phase": "Model",
+          "teacher": "Read listenModel naturally and clearly; model gist first, then one detail. Explain frequency meanings with everyday examples.",
+          "student": "Identify the purpose: meeting a classmate.",
+          "evidence": ""
+        },
+        {
+          "minutes": 10,
+          "phase": "Guide",
+          "teacher": "Read the same model again; use a five-box fact grid and model a repetition request.",
+          "student": "Find five details and check with the teacher.",
+          "evidence": ""
+        },
+        {
+          "minutes": 12,
+          "phase": "Apply",
+          "teacher": "Read listenCheck; provide no transcript. Allow a second clear reading and record it.",
+          "student": "Answer five checks by pointing/brief notes and suggest a shared activity.",
+          "evidence": ""
+        },
+        {
+          "minutes": 7,
+          "phase": "Check",
+          "teacher": "Collect individual responses and ask which fact supports the suggestion.",
+          "student": "Use a heard detail to justify the choice.",
+          "evidence": "4/5 details plus a source-based shared activity; record replay/visuals."
+        },
+        {
+          "minutes": 3,
+          "phase": "Reflect",
+          "teacher": "After the check, allow transcript review and clarify an error.",
+          "student": "Name a useful listening strategy.",
+          "evidence": ""
+        }
+      ],
+      "support": "Live teacher reading is the listening source; teacher-only scripts and answer keys are in the teacher pack. Do not show scripts during the check. Pointing/short responses avoid confounding writing.",
+      "extension": "Ask a relevant follow-up about the profile using familiar language, without increasing speech speed.",
+      "task": "CORE L3 — listening. 5m Retrieve: Give changed meaning cues for three L2 chunks. Retrieve, then check meanings.\n8m Model: Read listenModel naturally and clearly; model gist first, then one detail. Explain frequency meanings with everyday examples. Identify the purpose: meeting a classmate.\n10m Guide: Read the same model again; use a five-box fact grid and model a repetition request. Find five details and check with the teacher.\n12m Apply: Read listenCheck; provide no transcript. Allow a second clear reading and record it. Answer five checks by pointing/brief notes and suggest a shared activity.\n7m Check: Collect individual responses and ask which fact supports the suggestion. Use a heard detail to justify the choice.\n3m Reflect: After the check, allow transcript review and clarify an error. Name a useful listening strategy."
+    },
+    {
+      "code": "L4",
+      "title": "L4 Grammar — How often do you do it?",
+      "path": "core",
+      "primaryFocus": "grammar",
+      "durationMinutes": 45,
+      "objectiveCodes": [
+        "UP1.U01.G",
+        "UP1.U01.2"
+      ],
+      "prerequisiteCodes": [
+        "L3"
+      ],
+      "skills": [
+        "grammar",
+        "speaking",
+        "listening",
+        "vocabulary"
+      ],
+      "targetLanguage": "I usually read stories. I sometimes make models. I never play football before school. Do you often draw pictures? Yes, I do. / No, I don’t. Frequency meanings: always, usually, often, sometimes, never. I am good at solving puzzles is a separate learned chunk.",
+      "vocabEntryIds": [
+        "always",
+        "usually",
+        "often",
+        "sometimes",
+        "never"
+      ],
+      "steps": [
+        {
+          "minutes": 5,
+          "phase": "Retrieve",
+          "teacher": "Recall one heard profile detail without a transcript.",
+          "student": "Say the activity/frequency and check it.",
+          "evidence": ""
+        },
+        {
+          "minutes": 8,
+          "phase": "Model",
+          "teacher": "Contrast frequency meanings and place the adverb before an action verb; model do questions.",
+          "student": "Notice meaning and the familiar routine pattern.",
+          "evidence": ""
+        },
+        {
+          "minutes": 10,
+          "phase": "Guide",
+          "teacher": "Use the five meaning items and the two model question/answer strips in the teacher pack.",
+          "student": "Choose meanings, build statements and ask a question.",
+          "evidence": ""
+        },
+        {
+          "minutes": 12,
+          "phase": "Apply",
+          "teacher": "Give a real or fictional routine grid; fade full frames to keywords.",
+          "student": "Create three statements using two frequencies, then ask a partner.",
+          "evidence": ""
+        },
+        {
+          "minutes": 7,
+          "phase": "Check",
+          "teacher": "Use the fresh five meaning checks, plus individual statements/question.",
+          "student": "Interpret and communicate without copying a full model.",
+          "evidence": "4/5 meaning checks; three statements, two frequencies and one do question."
+        },
+        {
+          "minutes": 3,
+          "phase": "Reflect",
+          "teacher": "Identify a specific support need.",
+          "student": "Choose S2 if the pattern remains inaccessible.",
+          "evidence": ""
+        }
+      ],
+      "support": "Frequency line, colour-coded do/question strips and a small word bank. Avoid fixed percentages or requiring third-person -s. Use Support S2 for persistent form/meaning confusion.",
+      "extension": "Add one because reason if already accessible; do not make it an assessed core requirement.",
+      "task": "CORE L4 — grammar. 5m Retrieve: Recall one heard profile detail without a transcript. Say the activity/frequency and check it.\n8m Model: Contrast frequency meanings and place the adverb before an action verb; model do questions. Notice meaning and the familiar routine pattern.\n10m Guide: Use the five meaning items and the two model question/answer strips in the teacher pack. Choose meanings, build statements and ask a question.\n12m Apply: Give a real or fictional routine grid; fade full frames to keywords. Create three statements using two frequencies, then ask a partner.\n7m Check: Use the fresh five meaning checks, plus individual statements/question. Interpret and communicate without copying a full model.\n3m Reflect: Identify a specific support need. Choose S2 if the pattern remains inaccessible."
+    },
+    {
+      "code": "S2",
+      "title": "SUPPORT S2 — Routine questions and frequency meaning",
+      "path": "support",
+      "primaryFocus": "grammar",
+      "durationMinutes": 25,
+      "objectiveCodes": [
+        "UP1.U01.G"
+      ],
+      "prerequisiteCodes": [
+        "L4"
+      ],
+      "skills": [
+        "grammar",
+        "speaking",
+        "listening"
+      ],
+      "targetLanguage": "Do you usually ...? Yes, I do. / No, I don’t. I sometimes ... . I never ... .",
+      "vocabEntryIds": [
+        "always",
+        "usually",
+        "often",
+        "sometimes",
+        "never"
+      ],
+      "trigger": "Use when meaning is confused (for example never/often) or learners cannot build an understandable routine question after ordinary frames and feedback.",
+      "returnPoint": "Check three changed meaning examples, two own routine statements and a new do question. Return to L5 with partial cues; schedule another brief practice if needed rather than repeating the whole unit.",
+      "steps": [
+        {
+          "minutes": 3,
+          "phase": "Retrieve",
+          "teacher": "Locate the particular confusion.",
+          "student": "Choose meaning or attempt a question.",
+          "evidence": ""
+        },
+        {
+          "minutes": 5,
+          "phase": "Model",
+          "teacher": "Contrast two meanings with a concrete routine; rebuild one do question.",
+          "student": "Explain by pointing/acting.",
+          "evidence": ""
+        },
+        {
+          "minutes": 7,
+          "phase": "Guide",
+          "teacher": "Use movable word strips, then remove a strip.",
+          "student": "Build and ask meaningful questions.",
+          "evidence": ""
+        },
+        {
+          "minutes": 7,
+          "phase": "Apply",
+          "teacher": "Change the routine and reduce cues.",
+          "student": "Make two statements and ask a new question.",
+          "evidence": ""
+        },
+        {
+          "minutes": 3,
+          "phase": "Recheck",
+          "teacher": "Check three meaning items and record remaining support.",
+          "student": "Select a useful cue for the core path.",
+          "evidence": ""
+        }
+      ],
+      "support": "Small group or whole class only when evidence warrants it. Core progression never depends on attending this slot.",
+      "extension": "Ready learners proceed to reading or work on a familiar information gap; no new grammar is introduced here.",
+      "task": "SUPPORT S2 — grammar. 3m Retrieve: Locate the particular confusion. Choose meaning or attempt a question.\n5m Model: Contrast two meanings with a concrete routine; rebuild one do question. Explain by pointing/acting.\n7m Guide: Use movable word strips, then remove a strip. Build and ask meaningful questions.\n7m Apply: Change the routine and reduce cues. Make two statements and ask a new question.\n3m Recheck: Check three meaning items and record remaining support. Select a useful cue for the core path.\nRoute: Use when meaning is confused (for example never/often) or learners cannot build an understandable routine question after ordinary frames and feedback."
+    },
+    {
+      "code": "L5",
+      "title": "L5 Reading — Read a profile and choose an activity",
+      "path": "core",
+      "primaryFocus": "reading",
+      "durationMinutes": 45,
+      "objectiveCodes": [
+        "UP1.U01.R",
+        "UP1.U01.1"
+      ],
+      "prerequisiteCodes": [
+        "L4"
+      ],
+      "skills": [
+        "reading",
+        "vocabulary",
+        "speaking"
+      ],
+      "targetLanguage": "Short first-person profiles; likes, strengths and routines. Read for purpose, locate a detail and check it against the text. Recycle frequency and hobby chunks.",
+      "vocabEntryIds": [
+        "drawing-pictures",
+        "reading-stories",
+        "playing-football",
+        "making-models",
+        "solving-puzzles",
+        "helping-a-friend",
+        "good-at",
+        "always",
+        "usually",
+        "often",
+        "sometimes",
+        "never"
+      ],
+      "steps": [
+        {
+          "minutes": 5,
+          "phase": "Retrieve",
+          "teacher": "Retrieve two frequency meanings and a hobby from earlier lessons.",
+          "student": "Use them in a short routine statement.",
+          "evidence": ""
+        },
+        {
+          "minutes": 8,
+          "phase": "Model",
+          "teacher": "Show readPractice; think aloud about locating one fact and checking a pronoun/reference.",
+          "student": "Read for the purpose of finding a shared activity.",
+          "evidence": ""
+        },
+        {
+          "minutes": 10,
+          "phase": "Guide",
+          "teacher": "Use the linked Linh reading activity or its paper version.",
+          "student": "Find five details; point to the supporting words.",
+          "evidence": ""
+        },
+        {
+          "minutes": 12,
+          "phase": "Apply",
+          "teacher": "Provide readCheck, not the final checkpoint text.",
+          "student": "Find five details independently with rereading and choose a shared activity.",
+          "evidence": ""
+        },
+        {
+          "minutes": 7,
+          "phase": "Check",
+          "teacher": "Ask for two facts that support the activity choice; accept brief oral/pointed evidence.",
+          "student": "Show the facts in the text.",
+          "evidence": "4/5 requested details plus two relevant text facts; record glossary use."
+        },
+        {
+          "minutes": 3,
+          "phase": "Reflect",
+          "teacher": "Give one locating/checking tip after the check.",
+          "student": "Correct one response and explain the useful strategy.",
+          "evidence": ""
+        }
+      ],
+      "support": "Chunked print, picture glossary and rereading. Reading aloud is optional support and must be recorded; avoid requiring lengthy writing to prove reading.",
+      "extension": "Name a different possible shared activity and explain it with the same text, without a longer or harder passage.",
+      "task": "CORE L5 — reading. 5m Retrieve: Retrieve two frequency meanings and a hobby from earlier lessons. Use them in a short routine statement.\n8m Model: Show readPractice; think aloud about locating one fact and checking a pronoun/reference. Read for the purpose of finding a shared activity.\n10m Guide: Use the linked Linh reading activity or its paper version. Find five details; point to the supporting words.\n12m Apply: Provide readCheck, not the final checkpoint text. Find five details independently with rereading and choose a shared activity.\n7m Check: Ask for two facts that support the activity choice; accept brief oral/pointed evidence. Show the facts in the text.\n3m Reflect: Give one locating/checking tip after the check. Correct one response and explain the useful strategy."
+    },
+    {
+      "code": "L6",
+      "title": "L6 Speaking — Interview, listen and clarify",
+      "path": "core",
+      "primaryFocus": "speaking",
+      "durationMinutes": 45,
+      "objectiveCodes": [
+        "UP1.U01.S",
+        "UP1.U01.2"
+      ],
+      "prerequisiteCodes": [
+        "L5"
+      ],
+      "skills": [
+        "speaking",
+        "listening",
+        "pronunciation"
+      ],
+      "targetLanguage": "What do you like doing? What are you good at? What do you usually do after school? Do you often ...? Could you say that again, please? So, you usually ...?",
+      "vocabEntryIds": [
+        "drawing-pictures",
+        "reading-stories",
+        "playing-football",
+        "making-models",
+        "solving-puzzles",
+        "helping-a-friend",
+        "good-at",
+        "always",
+        "usually",
+        "often",
+        "sometimes",
+        "never"
+      ],
+      "steps": [
+        {
+          "minutes": 5,
+          "phase": "Retrieve",
+          "teacher": "Retrieve two questions from earlier oral practice without full models.",
+          "student": "Ask and answer a familiar question.",
+          "evidence": ""
+        },
+        {
+          "minutes": 8,
+          "phase": "Model",
+          "teacher": "Demonstrate the four-question interview, both roles and one clarification/confirmation.",
+          "student": "Notice turn-taking and checking a detail.",
+          "evidence": ""
+        },
+        {
+          "minutes": 10,
+          "phase": "Guide",
+          "teacher": "Provide role cards and one rehearsal with full frames.",
+          "student": "Interview with support and note keywords, not a full script.",
+          "evidence": ""
+        },
+        {
+          "minutes": 12,
+          "phase": "Apply",
+          "teacher": "Change partners or fictional cards; reduce to keyword prompts.",
+          "student": "Take both roles and check one genuinely unclear or deliberately missed detail.",
+          "evidence": ""
+        },
+        {
+          "minutes": 7,
+          "phase": "Check",
+          "teacher": "Observe individual turns and use a new question/detail. Finish observations in the next lesson if class size requires it.",
+          "student": "Complete four exchanges and confirm/clarify a detail.",
+          "evidence": "Four exchanges, two interests/strengths and two frequency expressions; record frames."
+        },
+        {
+          "minutes": 3,
+          "phase": "Reflect",
+          "teacher": "Give one meaningful communication improvement.",
+          "student": "Retry one response and retain useful notes for writing.",
+          "evidence": ""
+        }
+      ],
+      "support": "Rehearsal, keyword cards, wait time and a supportive partner. Teacher records each learner separately; fluent repetition of the same script is insufficient.",
+      "extension": "Ask an extra relevant question or offer a shared activity using familiar chunks.",
+      "task": "CORE L6 — speaking. 5m Retrieve: Retrieve two questions from earlier oral practice without full models. Ask and answer a familiar question.\n8m Model: Demonstrate the four-question interview, both roles and one clarification/confirmation. Notice turn-taking and checking a detail.\n10m Guide: Provide role cards and one rehearsal with full frames. Interview with support and note keywords, not a full script.\n12m Apply: Change partners or fictional cards; reduce to keyword prompts. Take both roles and check one genuinely unclear or deliberately missed detail.\n7m Check: Observe individual turns and use a new question/detail. Finish observations in the next lesson if class size requires it. Complete four exchanges and confirm/clarify a detail.\n3m Reflect: Give one meaningful communication improvement. Retry one response and retain useful notes for writing."
+    },
+    {
+      "code": "L7",
+      "title": "L7 Writing — Create and improve my learner profile",
+      "path": "core",
+      "primaryFocus": "writing",
+      "durationMinutes": 45,
+      "objectiveCodes": [
+        "UP1.U01.W",
+        "UP1.U01.3"
+      ],
+      "prerequisiteCodes": [
+        "L6"
+      ],
+      "skills": [
+        "writing",
+        "reading",
+        "speaking"
+      ],
+      "targetLanguage": "A personal or fictional 6–8-sentence profile: greeting/name; interest; strength; three routine/frequency statements; a reader-friendly final question. Basic and/but linking with familiar language.",
+      "vocabEntryIds": [
+        "drawing-pictures",
+        "reading-stories",
+        "playing-football",
+        "making-models",
+        "solving-puzzles",
+        "helping-a-friend",
+        "good-at",
+        "always",
+        "usually",
+        "often",
+        "sometimes",
+        "never"
+      ],
+      "steps": [
+        {
+          "minutes": 5,
+          "phase": "Retrieve",
+          "teacher": "Retrieve one routine and one strength chunk.",
+          "student": "Orally rehearse without copying the model.",
+          "evidence": ""
+        },
+        {
+          "minutes": 8,
+          "phase": "Model",
+          "teacher": "Use the short profile model and think aloud about audience and sentence order.",
+          "student": "Identify interest, strength and three frequency expressions.",
+          "evidence": ""
+        },
+        {
+          "minutes": 10,
+          "phase": "Guide",
+          "teacher": "Use the profile planner, then replace full frames with keywords where possible.",
+          "student": "Plan own or fictional details and rehearse with a partner.",
+          "evidence": ""
+        },
+        {
+          "minutes": 12,
+          "phase": "Apply",
+          "teacher": "Remove the complete model while keeping agreed word/access tools.",
+          "student": "Write an individual 6–8-sentence profile.",
+          "evidence": ""
+        },
+        {
+          "minutes": 7,
+          "phase": "Check",
+          "teacher": "Use the revision checklist and give focused feedback.",
+          "student": "Improve two features and keep the first draft.",
+          "evidence": "Interest, strength, three frequencies, understandable linking and two improvements."
+        },
+        {
+          "minutes": 3,
+          "phase": "Reflect",
+          "teacher": "Record actual help and one next step.",
+          "student": "Select one useful change for the final profile.",
+          "evidence": ""
+        }
+      ],
+      "support": "Planning grid, word bank, oral rehearsal and accessible writing tools. Record scribing/frames; distinguish authored meaning from copied or dictated sentences.",
+      "extension": "Add a relevant reason or invitation while preserving the core length and clarity.",
+      "task": "CORE L7 — writing. 5m Retrieve: Retrieve one routine and one strength chunk. Orally rehearse without copying the model.\n8m Model: Use the short profile model and think aloud about audience and sentence order. Identify interest, strength and three frequency expressions.\n10m Guide: Use the profile planner, then replace full frames with keywords where possible. Plan own or fictional details and rehearse with a partner.\n12m Apply: Remove the complete model while keeping agreed word/access tools. Write an individual 6–8-sentence profile.\n7m Check: Use the revision checklist and give focused feedback. Improve two features and keep the first draft.\n3m Reflect: Record actual help and one next step. Select one useful change for the final profile."
+    },
+    {
+      "code": "L8",
+      "title": "L8 Review — Retrieve, apply and improve",
+      "path": "core",
+      "primaryFocus": "review",
+      "durationMinutes": 45,
+      "objectiveCodes": [
+        "UP1.U01.V",
+        "UP1.U01.G",
+        "UP1.U01.2"
+      ],
+      "prerequisiteCodes": [
+        "L7"
+      ],
+      "skills": [
+        "vocabulary",
+        "grammar",
+        "listening",
+        "reading",
+        "speaking",
+        "writing"
+      ],
+      "targetLanguage": "Cumulative retrieval: welcome greetings/name/age/feelings; hobby/strength chunks; frequency meanings and do questions. Apply familiar language to Jo’s new profile and revise an earlier response.",
+      "vocabEntryIds": [
+        "drawing-pictures",
+        "reading-stories",
+        "playing-football",
+        "making-models",
+        "solving-puzzles",
+        "helping-a-friend",
+        "good-at",
+        "always",
+        "usually",
+        "often",
+        "sometimes",
+        "never"
+      ],
+      "steps": [
+        {
+          "minutes": 5,
+          "phase": "Retrieve",
+          "teacher": "Use welcome prompts plus three changed meaning cues; show models only after attempts.",
+          "student": "Retrieve and self-check.",
+          "evidence": ""
+        },
+        {
+          "minutes": 8,
+          "phase": "Model",
+          "teacher": "Address one shared misconception with a contrasting example.",
+          "student": "Explain its meaning rather than copy it.",
+          "evidence": ""
+        },
+        {
+          "minutes": 10,
+          "phase": "Guide",
+          "teacher": "Run three short stations: vocabulary retrieval, frequency/meaning choice, interview repair.",
+          "student": "Attempt each, receive feedback and try a changed example.",
+          "evidence": ""
+        },
+        {
+          "minutes": 12,
+          "phase": "Apply",
+          "teacher": "Use review profile Jo and new questions, keeping final texts unseen.",
+          "student": "Find useful facts and suggest a shared activity in a fresh exchange.",
+          "evidence": ""
+        },
+        {
+          "minutes": 7,
+          "phase": "Check",
+          "teacher": "Recheck each learner’s priority gap using a different cue/task.",
+          "student": "Revise one earlier oral/written response.",
+          "evidence": "Record retrieval and actual support; this is feedback, not a CEFR score."
+        },
+        {
+          "minutes": 3,
+          "phase": "Reflect",
+          "teacher": "Prepare learners for the final conditions and arrange targeted follow-up.",
+          "student": "Name one strength and a next step.",
+          "evidence": ""
+        }
+      ],
+      "support": "Choose a targeted station rather than repeating every exercise. Provide an in-class return for learners without homework access.",
+      "extension": "Use a less familiar partner or an extra follow-up; keep language load stable.",
+      "task": "CORE L8 — review. 5m Retrieve: Use welcome prompts plus three changed meaning cues; show models only after attempts. Retrieve and self-check.\n8m Model: Address one shared misconception with a contrasting example. Explain its meaning rather than copy it.\n10m Guide: Run three short stations: vocabulary retrieval, frequency/meaning choice, interview repair. Attempt each, receive feedback and try a changed example.\n12m Apply: Use review profile Jo and new questions, keeping final texts unseen. Find useful facts and suggest a shared activity in a fresh exchange.\n7m Check: Recheck each learner’s priority gap using a different cue/task. Revise one earlier oral/written response.\n3m Reflect: Prepare learners for the final conditions and arrange targeted follow-up. Name one strength and a next step."
+    },
+    {
+      "code": "L9",
+      "title": "L9 Checkpoint — My learner profile and Unit 2 bridge",
+      "path": "core",
+      "primaryFocus": "checkpoint",
+      "durationMinutes": 45,
+      "objectiveCodes": [
+        "UP1.U01.1",
+        "UP1.U01.2",
+        "UP1.U01.3",
+        "UP1.U01.L",
+        "UP1.U01.R"
+      ],
+      "prerequisiteCodes": [
+        "L8"
+      ],
+      "skills": [
+        "listening",
+        "reading",
+        "speaking",
+        "writing"
+      ],
+      "targetLanguage": "Integrate familiar profile language. Use fresh short listening/reading sources, a 6–8-sentence profile and a four-exchange partner interview. Bridge: familiar school routines, simple subject/time phrases; no comparative forms required yet.",
+      "vocabEntryIds": [
+        "drawing-pictures",
+        "reading-stories",
+        "playing-football",
+        "making-models",
+        "solving-puzzles",
+        "helping-a-friend",
+        "good-at",
+        "always",
+        "usually",
+        "often",
+        "sometimes",
+        "never"
+      ],
+      "steps": [
+        {
+          "minutes": 4,
+          "phase": "Orient",
+          "teacher": "Greet and exchange names/ages/feelings; explain support and keep final sources unseen.",
+          "student": "Prepare a fact grid and keyword card.",
+          "evidence": ""
+        },
+        {
+          "minutes": 6,
+          "phase": "Listen",
+          "teacher": "Read finalListen clearly twice; record any further replay.",
+          "student": "Answer five short/listen-and-point checks.",
+          "evidence": "Use the listening focus criterion separately."
+        },
+        {
+          "minutes": 7,
+          "phase": "Read",
+          "teacher": "Provide finalRead; permit rereading.",
+          "student": "Answer five checks and choose a shared activity with two text facts.",
+          "evidence": "Use the reading focus criterion separately."
+        },
+        {
+          "minutes": 10,
+          "phase": "Write",
+          "teacher": "Collect the L7 draft and allow an individual final revision.",
+          "student": "Submit a 6–8-sentence profile with two noted improvements.",
+          "evidence": "Record the writing criterion and support."
+        },
+        {
+          "minutes": 12,
+          "phase": "Speak",
+          "teacher": "Observe each learner’s brief profile and four-exchange interview; use observation stations or continue next lesson for unobserved learners.",
+          "student": "Share from keywords, take both roles and check a detail.",
+          "evidence": "Record individual speaking and unit production evidence; do not infer it from partner performance."
+        },
+        {
+          "minutes": 6,
+          "phase": "Bridge",
+          "teacher": "Reflect on one strength/next step; use the school-routine bridge card.",
+          "student": "Read a simple school-day card and say one familiar routine; note time/subject gaps for Unit 2.",
+          "evidence": ""
+        }
+      ],
+      "support": "Use permitted visuals, word bank, replay/rereading and preparation; record full frames or formulation help. Do not mark an unobserved learner achieved. Recheck Kim/Lee after feedback and a delay.",
+      "extension": "An extra familiar follow-up is optional; do not require a memorised speech, a comparison or an overall CEFR award.",
+      "task": "CORE L9 — checkpoint. 4m Orient: Greet and exchange names/ages/feelings; explain support and keep final sources unseen. Prepare a fact grid and keyword card.\n6m Listen: Read finalListen clearly twice; record any further replay. Answer five short/listen-and-point checks.\n7m Read: Provide finalRead; permit rereading. Answer five checks and choose a shared activity with two text facts.\n10m Write: Collect the L7 draft and allow an individual final revision. Submit a 6–8-sentence profile with two noted improvements.\n12m Speak: Observe each learner’s brief profile and four-exchange interview; use observation stations or continue next lesson for unobserved learners. Share from keywords, take both roles and check a detail.\n6m Bridge: Reflect on one strength/next step; use the school-routine bridge card. Read a simple school-day card and say one familiar routine; note time/subject gaps for Unit 2."
+    },
+    {
+      "code": "E1",
+      "title": "OPTIONAL E1 — A class interests gallery",
+      "path": "extension",
+      "primaryFocus": "integration",
+      "durationMinutes": 30,
+      "objectiveCodes": [
+        "UP1.U01.2",
+        "UP1.U01.3"
+      ],
+      "prerequisiteCodes": [
+        "L9"
+      ],
+      "skills": [
+        "speaking",
+        "reading",
+        "writing",
+        "listening"
+      ],
+      "targetLanguage": "Use existing profile language for a new audience; invite a shared activity and respond to a follow-up. No new core grammar.",
+      "vocabEntryIds": [
+        "drawing-pictures",
+        "reading-stories",
+        "playing-football",
+        "making-models",
+        "solving-puzzles",
+        "helping-a-friend",
+        "good-at",
+        "always",
+        "usually",
+        "often",
+        "sometimes",
+        "never"
+      ],
+      "trigger": "Offer after the core outcome is accessible and learners want a wider audience. Provide an equivalent private/fictional display option; sharing personal work is a choice.",
+      "returnPoint": "No next unit depends on this lesson. Learners who need follow-up use targeted feedback/rechecks instead.",
+      "steps": [
+        {
+          "minutes": 4,
+          "phase": "Retrieve",
+          "teacher": "Recall useful invitation/profile language.",
+          "student": "Prepare a keyword response.",
+          "evidence": ""
+        },
+        {
+          "minutes": 6,
+          "phase": "Plan",
+          "teacher": "Set a small gallery purpose and privacy choices.",
+          "student": "Choose two profile details and a display format.",
+          "evidence": ""
+        },
+        {
+          "minutes": 12,
+          "phase": "Apply",
+          "teacher": "Use a new partner/audience with familiar language.",
+          "student": "Read a profile, invite a shared activity and ask/answer a follow-up.",
+          "evidence": ""
+        },
+        {
+          "minutes": 5,
+          "phase": "Feedback",
+          "teacher": "Observe individual communication and give one suggestion.",
+          "student": "Improve a short message or response.",
+          "evidence": ""
+        },
+        {
+          "minutes": 3,
+          "phase": "Reflect",
+          "teacher": "Record an optional stretch achievement without replacing core evidence.",
+          "student": "Choose one future use of the language.",
+          "evidence": ""
+        }
+      ],
+      "support": "Personal, fictional or private versions; avoid ranking interests, strengths or profile design.",
+      "extension": "Change the audience or add a question, not a hidden requirement for Unit 2.",
+      "task": "EXTENSION E1 — integration. 4m Retrieve: Recall useful invitation/profile language. Prepare a keyword response.\n6m Plan: Set a small gallery purpose and privacy choices. Choose two profile details and a display format.\n12m Apply: Use a new partner/audience with familiar language. Read a profile, invite a shared activity and ask/answer a follow-up.\n5m Feedback: Observe individual communication and give one suggestion. Improve a short message or response.\n3m Reflect: Record an optional stretch achievement without replacing core evidence. Choose one future use of the language.\nRoute: Offer after the core outcome is accessible and learners want a wider audience. Provide an equivalent private/fictional display option; sharing personal work is a choice."
+    }
+  ],
+  "vocabulary": {
+    "version": 1,
+    "kind": "vocabulary-list",
+    "id": "up1-u01-who-am-i-core",
+    "name": "UP1 Unit 1 — Interests, strengths and routines",
+    "cefr": "A1-A2",
+    "entries": [
+      {
+        "id": "drawing-pictures",
+        "word": "drawing pictures",
+        "definitionEn": "Making pictures with a pencil or colours.",
+        "example": "I like drawing pictures.",
+        "notes": "Routine form: I draw pictures."
+      },
+      {
+        "id": "reading-stories",
+        "word": "reading stories",
+        "definitionEn": "Reading about characters and events.",
+        "example": "I usually read stories after school.",
+        "notes": "Interest form: I like reading stories."
+      },
+      {
+        "id": "playing-football",
+        "word": "playing football",
+        "definitionEn": "Playing a team game by kicking a ball.",
+        "example": "I sometimes play football.",
+        "notes": "Interest form: I like playing football."
+      },
+      {
+        "id": "making-models",
+        "word": "making models",
+        "definitionEn": "Making a small version of something, such as a house.",
+        "example": "I like making models.",
+        "notes": "Routine form: I make models."
+      },
+      {
+        "id": "solving-puzzles",
+        "word": "solving puzzles",
+        "definitionEn": "Finding the answers to a puzzle or problem.",
+        "example": "I am good at solving puzzles.",
+        "notes": "Routine form: I solve puzzles."
+      },
+      {
+        "id": "helping-a-friend",
+        "word": "helping a friend",
+        "definitionEn": "Doing something useful for a friend.",
+        "example": "I like helping a friend.",
+        "notes": "Routine form: I help a friend."
+      },
+      {
+        "id": "good-at",
+        "word": "good at",
+        "definitionEn": "Being able to do an activity well.",
+        "example": "I am good at drawing pictures.",
+        "notes": "Teach as a chunk: be good at + activity-ing. Do not rank classmates."
+      },
+      {
+        "id": "always",
+        "word": "always",
+        "definitionEn": "Every time in the situation being described.",
+        "example": "I always read before bed.",
+        "notes": "Introduce in grammar L4; position before the action verb in these models."
+      },
+      {
+        "id": "usually",
+        "word": "usually",
+        "definitionEn": "Most times in the situation being described.",
+        "example": "I usually draw after school.",
+        "notes": "Introduce in grammar L4; no fixed percentage is required."
+      },
+      {
+        "id": "often",
+        "word": "often",
+        "definitionEn": "Many times in the situation being described.",
+        "example": "I often solve puzzles.",
+        "notes": "Introduce in grammar L4; distinguish many times from every time."
+      },
+      {
+        "id": "sometimes",
+        "word": "sometimes",
+        "definitionEn": "On some occasions, but not every time.",
+        "example": "I sometimes make models.",
+        "notes": "Introduce in grammar L4."
+      },
+      {
+        "id": "never",
+        "word": "never",
+        "definitionEn": "Not at any time in the situation being described.",
+        "example": "I never play football before school.",
+        "notes": "Introduce in grammar L4; I never play, not I do not never play."
+      }
+    ]
+  },
+  "texts": {
+    "listenModel": "Hi! I'm Mina. I'm ten. I like drawing pictures. I'm good at solving puzzles. After school, I usually read stories. I sometimes play football. I never make models on school days.",
+    "listenCheck": "Hello! My name is Kai. I'm eleven. I like making models. I'm good at drawing pictures. I often solve puzzles after school. I sometimes read stories. I never play football before school.",
+    "readPractice": "Hi! I'm Linh. I'm ten. I like reading stories and making models. I'm good at solving puzzles. After school, I usually read stories. I often draw pictures, but I never play football before school. I sometimes help a friend with a puzzle. Would you like to make a model with me?",
+    "readCheck": "Hello! I'm Sam. I'm nine. I like drawing pictures and playing football. I'm good at making models. I usually draw after school. I sometimes play football with a friend. I never read stories before school. Would you like to draw with me?",
+    "review": "I'm Jo. I'm ten. I like playing football. I'm good at helping a friend with puzzles. I often read stories after school, and I sometimes make models. I never play football before school.",
+    "finalListen": "Hi! I'm Alex. I'm ten. I like solving puzzles. I'm good at making models. I usually read stories after school. I sometimes draw pictures. I never play football before school.",
+    "finalRead": "Hello! I'm Bo. I'm eleven. I like drawing pictures and reading stories. I'm good at solving puzzles. I often draw after school. I sometimes make models with a friend. I never play football before school. Would you like to draw with me?",
+    "recheckListen": "Hello! I'm Kim. I'm nine. I like playing football. I'm good at drawing pictures. I often read stories after school. I sometimes solve puzzles. I never make models before school.",
+    "recheckRead": "Hi! I'm Lee. I'm ten. I like making models and reading stories. I'm good at helping a friend with puzzles. I usually make models after school. I sometimes draw pictures. I never play football before school. Would you like to make a model with me?"
+  },
+  "questions": {
+    "listenModel": [
+      "How old is Mina?",
+      "What does Mina like?",
+      "What is Mina good at?",
+      "What does Mina usually do after school?",
+      "What does Mina never do on school days?"
+    ],
+    "listenCheck": [
+      "How old is Kai?",
+      "What does Kai like?",
+      "What is Kai good at?",
+      "How often does Kai solve puzzles after school?",
+      "What does Kai never do before school?"
+    ],
+    "readPractice": [
+      "How old is Linh?",
+      "Name one activity Linh likes.",
+      "What is Linh good at?",
+      "What does Linh usually do after school?",
+      "What does Linh never do before school?"
+    ],
+    "readCheck": [
+      "How old is Sam?",
+      "Name one activity Sam likes.",
+      "What is Sam good at?",
+      "How often does Sam draw after school?",
+      "What does Sam never do before school?"
+    ],
+    "finalListen": [
+      "How old is Alex?",
+      "What does Alex like?",
+      "What is Alex good at?",
+      "What does Alex usually do after school?",
+      "What does Alex never do before school?"
+    ],
+    "finalRead": [
+      "How old is Bo?",
+      "Name one activity Bo likes.",
+      "What is Bo good at?",
+      "How often does Bo draw after school?",
+      "What does Bo never do before school?"
+    ],
+    "recheckListen": [
+      "How old is Kim?",
+      "What does Kim like?",
+      "What is Kim good at?",
+      "How often does Kim read stories after school?",
+      "What does Kim never do before school?"
+    ],
+    "recheckRead": [
+      "How old is Lee?",
+      "Name one activity Lee likes.",
+      "What is Lee good at?",
+      "How often does Lee make models after school?",
+      "What does Lee never do before school?"
+    ]
+  },
+  "answers": {
+    "listenModel": [
+      "10",
+      "drawing pictures",
+      "solving puzzles",
+      "read stories",
+      "make models"
+    ],
+    "listenCheck": [
+      "11",
+      "making models",
+      "drawing pictures",
+      "often",
+      "play football"
+    ],
+    "readPractice": [
+      "10",
+      "reading stories OR making models",
+      "solving puzzles",
+      "read stories",
+      "play football"
+    ],
+    "readCheck": [
+      "9",
+      "drawing pictures OR playing football",
+      "making models",
+      "usually",
+      "read stories"
+    ],
+    "finalListen": [
+      "10",
+      "solving puzzles",
+      "making models",
+      "read stories",
+      "play football"
+    ],
+    "finalRead": [
+      "11",
+      "drawing pictures OR reading stories",
+      "solving puzzles",
+      "often",
+      "play football"
+    ],
+    "recheckListen": [
+      "9",
+      "playing football",
+      "drawing pictures",
+      "often",
+      "make models"
+    ],
+    "recheckRead": [
+      "10",
+      "making models OR reading stories",
+      "helping a friend with puzzles",
+      "usually",
+      "play football"
+    ]
+  },
+  "reading": {
+    "version": 1,
+    "kind": "read-and-answer",
+    "id": "up1-u01-reading-practice",
+    "title": "UP1 Unit 1 — Read Linh’s learner profile",
+    "instructions": "Read Linh’s profile. Find the information and check it in the text. After the questions, suggest a shared activity using two facts.",
+    "passage": {
+      "title": "Meet Linh",
+      "text": "Hi! I'm Linh. I'm ten. I like reading stories and making models. I'm good at solving puzzles. After school, I usually read stories. I often draw pictures, but I never play football before school. I sometimes help a friend with a puzzle. Would you like to make a model with me?"
+    },
+    "shuffleOptions": true,
+    "questions": [
+      {
+        "id": "q1",
+        "prompt": "How old is Linh?",
+        "options": [
+          {
+            "id": "q1-1",
+            "text": "Nine"
+          },
+          {
+            "id": "q1-2",
+            "text": "Ten"
+          },
+          {
+            "id": "q1-3",
+            "text": "Eleven"
+          }
+        ],
+        "correctOptionId": "q1-2"
+      },
+      {
+        "id": "q2",
+        "prompt": "Which activity does Linh like?",
+        "options": [
+          {
+            "id": "q2-1",
+            "text": "Playing football"
+          },
+          {
+            "id": "q2-2",
+            "text": "Making models"
+          },
+          {
+            "id": "q2-3",
+            "text": "Swimming"
+          }
+        ],
+        "correctOptionId": "q2-2"
+      },
+      {
+        "id": "q3",
+        "prompt": "What is Linh good at?",
+        "options": [
+          {
+            "id": "q3-1",
+            "text": "Solving puzzles"
+          },
+          {
+            "id": "q3-2",
+            "text": "Playing football"
+          },
+          {
+            "id": "q3-3",
+            "text": "Singing"
+          }
+        ],
+        "correctOptionId": "q3-1"
+      },
+      {
+        "id": "q4",
+        "prompt": "What does Linh usually do after school?",
+        "options": [
+          {
+            "id": "q4-1",
+            "text": "Make models"
+          },
+          {
+            "id": "q4-2",
+            "text": "Read stories"
+          },
+          {
+            "id": "q4-3",
+            "text": "Play football"
+          }
+        ],
+        "correctOptionId": "q4-2"
+      },
+      {
+        "id": "q5",
+        "prompt": "What does Linh never do before school?",
+        "options": [
+          {
+            "id": "q5-1",
+            "text": "Draw pictures"
+          },
+          {
+            "id": "q5-2",
+            "text": "Read stories"
+          },
+          {
+            "id": "q5-3",
+            "text": "Play football"
+          }
+        ],
+        "correctOptionId": "q5-3"
+      }
+    ]
+  },
+  "retrieval": [
+    {
+      "target": "Welcome greetings/name/age/feelings",
+      "introduce": "L1 (existing lesson)",
+      "within": "L2 starter; L8 mixed retrieval; L9 interview",
+      "later": "U2 L1 opening exchange, already in its brief; U7 L1 returns to welcome numbers.",
+      "dates": "Schedule after actual teaching; next lesson and later unit."
+    },
+    {
+      "target": "Six hobby chunks and good at",
+      "introduce": "L2; guided L3–L7",
+      "within": "L3 changed cues; L5 delayed use; L8 retrieval; L9 profile",
+      "later": "U2 L1 teacher-planned 3-minute school-interest starter; U4 L1 activity/habit log starter; U10 L1 already revisits strengths.",
+      "dates": "Next lesson; 2–3 lessons later; following unit; later cumulative return."
+    },
+    {
+      "target": "Present simple routines",
+      "introduce": "L3 input/L4 explicit form, consolidate prior A1 knowledge",
+      "within": "L5 text; L6 interview; L8 new profile; L9 performance",
+      "later": "U2 L2 timetable exchange and U4 L1 wellbeing logs already revisit routines.",
+      "dates": "Within unit after a delay; following unit; about 3–6 weeks later as pacing permits."
+    },
+    {
+      "target": "Frequency expressions",
+      "introduce": "L3 recognition; L4 meaning/form",
+      "within": "L5 retrieval; L6–L7 meaningful use; L8 revisit; L9 check",
+      "later": "U2 L2 schedules; U3 L1 routines; U4 L1 logs, already explicit in the course.",
+      "dates": "Next lesson; later unit and cumulative return."
+    },
+    {
+      "target": "Clarification/confirmation",
+      "introduce": "L3 model and L6 explicit strategy",
+      "within": "L6 changed partner; L8 repair; L9 interview",
+      "later": "U2 L1 ask a partner to confirm a detail; U7 L2 unclear price exchange.",
+      "dates": "Plan across successive tasks and after a delay."
+    },
+    {
+      "target": "Basic and/but linking",
+      "introduce": "L5 text/L7 writing model; consolidate prior A1 linking",
+      "within": "L8 profile response; L9 revised writing",
+      "later": "U2 L3 school-day message; U10 L2 explicit narrative/linking work.",
+      "dates": "Following unit and a later cumulative return."
+    }
+  ],
+  "bridge": "Use a school-day card: I read stories at school. Art: 9:00; Reading: 10:00. Ask learners to locate Reading at ten and say a familiar school routine. Record subject/clock gaps for U2 L1; teach a missing phrase briefly. Do not require earlier/later/than yet.",
+  "notes": [
+    "Task counts and timings are local planning decisions, not CEFR cut-scores.",
+    "Six dedicated lessons have distinct primary focuses; secondary skills remain integrated.",
+    "Conditional slots have manual labels and triggers; the website does not automatically branch or exclude them from lesson totals.",
+    "Lesson links use core prerequisites only; support/extension never becomes a hidden core dependency.",
+    "Listening uses supplied live-reading scripts. Recordings, illustrations and homework assignments are not required to use this classroom exemplar.",
+    "Teacher-only scripts, final sources and keys stay in the teacher pack. Student materials contain practice texts/prompts only.",
+    "The checkpoint provides separate listening/reading/writing/speaking evidence. Continued observation is required when class size exceeds the time available.",
+    "The nine core lessons are adjustable; do not generalise their count to other units."
+  ]
+}

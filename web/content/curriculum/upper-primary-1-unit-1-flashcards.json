@@ -1,0 +1,225 @@
+{
+  "version": 1,
+  "kind": "activity-authoring",
+  "id": "up1-unit-1-interests-strengths-and-routines-flashcards",
+  "name": "UP1 Unit 1 — Interests, strengths and routines · Flashcards",
+  "educationalIntent": {
+    "objective": "Retrieve an interest, strength or frequency chunk from its meaning, then use it in a relevant message.",
+    "successCriteria": "Attempt recall before flipping, check the word/example and retry a changed cue. Teacher observes meaningful use separately; flipping/completion alone does not establish mastery.",
+    "cefr": "A1-A2",
+    "vocabulary": [
+      "drawing pictures",
+      "reading stories",
+      "playing football",
+      "making models",
+      "solving puzzles",
+      "helping a friend",
+      "good at",
+      "always",
+      "usually",
+      "often",
+      "sometimes",
+      "never"
+    ]
+  },
+  "content": {
+    "instruction": "Read the meaning. Try to recall the chunk before flipping. Check, then use it in a message. L2 uses cards 1–7; L4 uses cards 8–12.",
+    "completionMessage": "Nice studying!"
+  },
+  "interaction": {
+    "type": "games",
+    "format": "flashcards",
+    "quizGroupId": "up1-unit-1-interests-strengths-and-routines-flashcards",
+    "quizGroupTitle": "UP1 Unit 1 — Interests, strengths and routines · Flashcards",
+    "shuffleCardsDefault": false,
+    "defaultFrontFaces": [
+      "definition"
+    ],
+    "defaultBackFaces": [
+      "word",
+      "example"
+    ],
+    "cards": [
+      {
+        "id": "c1",
+        "faces": {
+          "word": "drawing pictures",
+          "definition": "Making pictures with a pencil or colours.",
+          "example": "I like drawing pictures."
+        },
+        "frontFaces": [
+          "definition"
+        ],
+        "backFaces": [
+          "word",
+          "example"
+        ]
+      },
+      {
+        "id": "c2",
+        "faces": {
+          "word": "reading stories",
+          "definition": "Reading about characters and events.",
+          "example": "I usually read stories after school."
+        },
+        "frontFaces": [
+          "definition"
+        ],
+        "backFaces": [
+          "word",
+          "example"
+        ]
+      },
+      {
+        "id": "c3",
+        "faces": {
+          "word": "playing football",
+          "definition": "Playing a team game by kicking a ball.",
+          "example": "I sometimes play football."
+        },
+        "frontFaces": [
+          "definition"
+        ],
+        "backFaces": [
+          "word",
+          "example"
+        ]
+      },
+      {
+        "id": "c4",
+        "faces": {
+          "word": "making models",
+          "definition": "Making a small version of something, such as a house.",
+          "example": "I like making models."
+        },
+        "frontFaces": [
+          "definition"
+        ],
+        "backFaces": [
+          "word",
+          "example"
+        ]
+      },
+      {
+        "id": "c5",
+        "faces": {
+          "word": "solving puzzles",
+          "definition": "Finding the answers to a puzzle or problem.",
+          "example": "I am good at solving puzzles."
+        },
+        "frontFaces": [
+          "definition"
+        ],
+        "backFaces": [
+          "word",
+          "example"
+        ]
+      },
+      {
+        "id": "c6",
+        "faces": {
+          "word": "helping a friend",
+          "definition": "Doing something useful for a friend.",
+          "example": "I like helping a friend."
+        },
+        "frontFaces": [
+          "definition"
+        ],
+        "backFaces": [
+          "word",
+          "example"
+        ]
+      },
+      {
+        "id": "c7",
+        "faces": {
+          "word": "good at",
+          "definition": "Being able to do an activity well.",
+          "example": "I am good at drawing pictures."
+        },
+        "frontFaces": [
+          "definition"
+        ],
+        "backFaces": [
+          "word",
+          "example"
+        ]
+      },
+      {
+        "id": "c8",
+        "faces": {
+          "word": "always",
+          "definition": "Every time in the situation being described.",
+          "example": "I always read before bed."
+        },
+        "frontFaces": [
+          "definition"
+        ],
+        "backFaces": [
+          "word",
+          "example"
+        ]
+      },
+      {
+        "id": "c9",
+        "faces": {
+          "word": "usually",
+          "definition": "Most times in the situation being described.",
+          "example": "I usually draw after school."
+        },
+        "frontFaces": [
+          "definition"
+        ],
+        "backFaces": [
+          "word",
+          "example"
+        ]
+      },
+      {
+        "id": "c10",
+        "faces": {
+          "word": "often",
+          "definition": "Many times in the situation being described.",
+          "example": "I often solve puzzles."
+        },
+        "frontFaces": [
+          "definition"
+        ],
+        "backFaces": [
+          "word",
+          "example"
+        ]
+      },
+      {
+        "id": "c11",
+        "faces": {
+          "word": "sometimes",
+          "definition": "On some occasions, but not every time.",
+          "example": "I sometimes make models."
+        },
+        "frontFaces": [
+          "definition"
+        ],
+        "backFaces": [
+          "word",
+          "example"
+        ]
+      },
+      {
+        "id": "c12",
+        "faces": {
+          "word": "never",
+          "definition": "Not at any time in the situation being described.",
+          "example": "I never play football before school."
+        },
+        "frontFaces": [
+          "definition"
+        ],
+        "backFaces": [
+          "word",
+          "example"
+        ]
+      }
+    ]
+  }
+}

@@ -201,7 +201,7 @@ The current map does **not** automatically enforce the six-lesson rule, choose s
 
 ### Applying this to Upper Primary 1
 
-The current [scope and sequence](./upper-primary-1-scope-and-sequence.md) contains 12 themes and four provisional slots per unit. Those slots remain a useful outcome/task sketch, but **they are not complete units under this guide**. Re-plan each unit's length and dedicated focuses before full lesson authoring; preserve the existing welcome lesson and useful objectives. The two example paths above show how different units can expand differently. This guide does not change the live course or its saved revision.
+The current [scope and sequence](./upper-primary-1-scope-and-sequence.md) contains 12 themes. [Unit 1 is now a worked exemplar](./upper-primary-1-unit-1-exemplar.md): nine core lessons, two conditional support workshops and one optional extension, with teacher/student materials and linked library resources. It preserves the existing welcome lesson and useful objectives. Units 2–12 still have four-slot sketches and **are not complete units under this guide**. Re-plan their lengths and dedicated focuses from learner needs; the two example paths above show how units can differ. The guide itself is a manual authoring standard, not automatic course-map enforcement.
 
 ## 11. Review a unit before calling it ready to teach
 

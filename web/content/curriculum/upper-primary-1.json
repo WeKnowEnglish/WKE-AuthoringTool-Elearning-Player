@@ -8,7 +8,7 @@
   ],
   "gradeRange": "Grade 3-5",
   "cefr": "A1–A2: A1 consolidation toward A2 communication",
-  "entryExpectations": "Broad A1 familiarity: exchange basic personal information; follow simple classroom instructions; recognise familiar everyday words; read and write short simple sentences with support. Use the existing welcome lesson as an entry diagnostic. Revisit gaps in question forms, sound–spelling links, everyday verbs and numbers before increasing task demands. A1 entry to A2-oriented outcomes is a planning target, not a guarantee from age or course completion. Provisional allocation: four 45-minute slots per unit (48 slots including the existing welcome lesson); adjust after piloting, learner evidence and timetable decisions.",
+  "entryExpectations": "Broad A1 familiarity: exchange basic personal information; follow simple classroom instructions; recognise familiar everyday words; read and write short simple sentences with support. Use the existing welcome lesson as an entry diagnostic. Revisit gaps in question forms, sound–spelling links, everyday verbs and numbers before increasing task demands. A1 entry to A2-oriented outcomes is a planning target, not a guarantee from age or course completion. Pacing: Unit 1 has nine core 45-minute lessons plus conditional support/extension; later units remain provisional sketches. Adjust after entry evidence, classroom piloting and timetable decisions.",
   "provisionalMinutes": 45,
   "sources": [
     {
@@ -240,7 +240,7 @@
         "UP1.C06"
       ],
       "reviewUnits": [],
-      "assessmentTask": "My learner profile: respond to a new peer profile, interview a partner, then share a short profile of yourself or a fictional learner.",
+      "assessmentTask": "Help a new classmate find a shared activity through an individual learner profile and interview; collect fresh listening and reading evidence separately, plus revised writing and individual speaking.",
       "support": "Picture profiles, hobby/strength cards, a frequency line and question frames; fade full sentence models before the checkpoint. Fictional profiles are acceptable.",
       "extension": "Add a relevant reason with because and one unscripted follow-up question; compare two routines without making this a core requirement.",
       "objectives": [
@@ -281,47 +281,235 @@
       ],
       "lessons": [
         {
+          "code": "L1",
           "title": "Hello, welcome to class!",
-          "preserveExisting": true
+          "path": "core",
+          "primaryFocus": "introduction",
+          "durationMinutes": 45,
+          "preserveExisting": true,
+          "detailSource": "upper-primary-1-unit-1.json",
+          "detailCode": "L1"
         },
         {
-          "title": "My interests, strengths and weekly routines",
+          "code": "L2",
+          "title": "L2 Vocabulary — My interests and strengths",
+          "path": "core",
+          "primaryFocus": "vocabulary",
+          "durationMinutes": 45,
+          "objectiveCodes": [
+            "UP1.U01.V",
+            "UP1.U01.2"
+          ],
+          "objectiveIndexes": [
+            1
+          ],
+          "courseCodes": [],
+          "skills": [
+            "vocabulary",
+            "speaking",
+            "listening",
+            "pronunciation"
+          ],
+          "task": "CORE L2 — vocabulary. 5m Retrieve: Hide models; retrieve welcome greetings and name/age. Exchange information; then check one model.\n8m Model: Mime/draw the six activities; model like + activity-ing and good at as chunks. Match meaning, say each chunk and choose an interest.\n10m Guide: Model two examples and sound–spelling links. Sort activity cards and pair a chunk with an example.\n12m Apply: Offer personal/fictional choices and a short partner task. Choose an interest and strength; explain two useful choices.\n7m Check: Use seven meaning/picture cues without the printed words. Retrieve chunks, then make two meaningful statements.\n3m Reflect: Name the next listening purpose and support route. Choose one chunk to retrieve next lesson.",
+          "detailSource": "upper-primary-1-unit-1.json",
+          "detailCode": "L2"
+        },
+        {
+          "code": "S1",
+          "title": "SUPPORT S1 — Hobby meanings and sound–spelling",
+          "path": "support",
+          "primaryFocus": "vocabulary",
+          "durationMinutes": 25,
+          "objectiveCodes": [
+            "UP1.U01.V"
+          ],
+          "objectiveIndexes": [],
+          "courseCodes": [],
+          "skills": [
+            "vocabulary",
+            "pronunciation",
+            "reading"
+          ],
+          "task": "SUPPORT S1 — vocabulary. 3m Retrieve: Identify the particular missing chunks. Attempt four cues.\n5m Model: Connect meaning, spoken chunk and written form. Mime, listen and point.\n7m Guide: Build and sort selected chunk cards. Say/read the chunks in supported examples.\n7m Apply: Change the cue and remove the full model. Retrieve the four selected chunks and use two.\n3m Recheck: Record what help remains. Choose a cue tool for L3.\nRoute: Use when L2 shows persistent meaning/form confusion, rather than one slip. For example, fewer than four chunks are accessible even after normal picture cues. This is a local routing cue, not a CEFR cut-score.",
+          "detailSource": "upper-primary-1-unit-1.json",
+          "detailCode": "S1"
+        },
+        {
+          "code": "L3",
+          "title": "L3 Listening — Find useful profile details",
+          "path": "core",
+          "primaryFocus": "listening",
+          "durationMinutes": 45,
+          "objectiveCodes": [
+            "UP1.U01.L",
+            "UP1.U01.1"
+          ],
           "objectiveIndexes": [
             0
           ],
-          "courseCodes": [
-            "UP1.C01",
-            "UP1.C04"
-          ],
+          "courseCodes": [],
           "skills": [
+            "listening",
+            "vocabulary",
+            "speaking"
+          ],
+          "task": "CORE L3 — listening. 5m Retrieve: Give changed meaning cues for three L2 chunks. Retrieve, then check meanings.\n8m Model: Read listenModel naturally and clearly; model gist first, then one detail. Explain frequency meanings with everyday examples. Identify the purpose: meeting a classmate.\n10m Guide: Read the same model again; use a five-box fact grid and model a repetition request. Find five details and check with the teacher.\n12m Apply: Read listenCheck; provide no transcript. Allow a second clear reading and record it. Answer five checks by pointing/brief notes and suggest a shared activity.\n7m Check: Collect individual responses and ask which fact supports the suggestion. Use a heard detail to justify the choice.\n3m Reflect: After the check, allow transcript review and clarify an error. Name a useful listening strategy.",
+          "detailSource": "upper-primary-1-unit-1.json",
+          "detailCode": "L3"
+        },
+        {
+          "code": "L4",
+          "title": "L4 Grammar — How often do you do it?",
+          "path": "core",
+          "primaryFocus": "grammar",
+          "durationMinutes": 45,
+          "objectiveCodes": [
+            "UP1.U01.G",
+            "UP1.U01.2"
+          ],
+          "objectiveIndexes": [
+            1
+          ],
+          "courseCodes": [],
+          "skills": [
+            "grammar",
+            "speaking",
+            "listening",
+            "vocabulary"
+          ],
+          "task": "CORE L4 — grammar. 5m Retrieve: Recall one heard profile detail without a transcript. Say the activity/frequency and check it.\n8m Model: Contrast frequency meanings and place the adverb before an action verb; model do questions. Notice meaning and the familiar routine pattern.\n10m Guide: Use the five meaning items and the two model question/answer strips in the teacher pack. Choose meanings, build statements and ask a question.\n12m Apply: Give a real or fictional routine grid; fade full frames to keywords. Create three statements using two frequencies, then ask a partner.\n7m Check: Use the fresh five meaning checks, plus individual statements/question. Interpret and communicate without copying a full model.\n3m Reflect: Identify a specific support need. Choose S2 if the pattern remains inaccessible.",
+          "detailSource": "upper-primary-1-unit-1.json",
+          "detailCode": "L4"
+        },
+        {
+          "code": "S2",
+          "title": "SUPPORT S2 — Routine questions and frequency meaning",
+          "path": "support",
+          "primaryFocus": "grammar",
+          "durationMinutes": 25,
+          "objectiveCodes": [
+            "UP1.U01.G"
+          ],
+          "objectiveIndexes": [],
+          "courseCodes": [],
+          "skills": [
+            "grammar",
+            "speaking",
+            "listening"
+          ],
+          "task": "SUPPORT S2 — grammar. 3m Retrieve: Locate the particular confusion. Choose meaning or attempt a question.\n5m Model: Contrast two meanings with a concrete routine; rebuild one do question. Explain by pointing/acting.\n7m Guide: Use movable word strips, then remove a strip. Build and ask meaningful questions.\n7m Apply: Change the routine and reduce cues. Make two statements and ask a new question.\n3m Recheck: Check three meaning items and record remaining support. Select a useful cue for the core path.\nRoute: Use when meaning is confused (for example never/often) or learners cannot build an understandable routine question after ordinary frames and feedback.",
+          "detailSource": "upper-primary-1-unit-1.json",
+          "detailCode": "S2"
+        },
+        {
+          "code": "L5",
+          "title": "L5 Reading — Read a profile and choose an activity",
+          "path": "core",
+          "primaryFocus": "reading",
+          "durationMinutes": 45,
+          "objectiveCodes": [
+            "UP1.U01.R",
+            "UP1.U01.1"
+          ],
+          "objectiveIndexes": [
+            0
+          ],
+          "courseCodes": [],
+          "skills": [
+            "reading",
+            "vocabulary",
+            "speaking"
+          ],
+          "task": "CORE L5 — reading. 5m Retrieve: Retrieve two frequency meanings and a hobby from earlier lessons. Use them in a short routine statement.\n8m Model: Show readPractice; think aloud about locating one fact and checking a pronoun/reference. Read for the purpose of finding a shared activity.\n10m Guide: Use the linked Linh reading activity or its paper version. Find five details; point to the supporting words.\n12m Apply: Provide readCheck, not the final checkpoint text. Find five details independently with rereading and choose a shared activity.\n7m Check: Ask for two facts that support the activity choice; accept brief oral/pointed evidence. Show the facts in the text.\n3m Reflect: Give one locating/checking tip after the check. Correct one response and explain the useful strategy.",
+          "detailSource": "upper-primary-1-unit-1.json",
+          "detailCode": "L5"
+        },
+        {
+          "code": "L6",
+          "title": "L6 Speaking — Interview, listen and clarify",
+          "path": "core",
+          "primaryFocus": "speaking",
+          "durationMinutes": 45,
+          "objectiveCodes": [
+            "UP1.U01.S",
+            "UP1.U01.2"
+          ],
+          "objectiveIndexes": [
+            1
+          ],
+          "courseCodes": [],
+          "skills": [
+            "speaking",
+            "listening",
+            "pronunciation"
+          ],
+          "task": "CORE L6 — speaking. 5m Retrieve: Retrieve two questions from earlier oral practice without full models. Ask and answer a familiar question.\n8m Model: Demonstrate the four-question interview, both roles and one clarification/confirmation. Notice turn-taking and checking a detail.\n10m Guide: Provide role cards and one rehearsal with full frames. Interview with support and note keywords, not a full script.\n12m Apply: Change partners or fictional cards; reduce to keyword prompts. Take both roles and check one genuinely unclear or deliberately missed detail.\n7m Check: Observe individual turns and use a new question/detail. Finish observations in the next lesson if class size requires it. Complete four exchanges and confirm/clarify a detail.\n3m Reflect: Give one meaningful communication improvement. Retry one response and retain useful notes for writing.",
+          "detailSource": "upper-primary-1-unit-1.json",
+          "detailCode": "L6"
+        },
+        {
+          "code": "L7",
+          "title": "L7 Writing — Create and improve my learner profile",
+          "path": "core",
+          "primaryFocus": "writing",
+          "durationMinutes": 45,
+          "objectiveCodes": [
+            "UP1.U01.W",
+            "UP1.U01.3"
+          ],
+          "objectiveIndexes": [
+            2
+          ],
+          "courseCodes": [],
+          "skills": [
+            "writing",
+            "reading",
+            "speaking"
+          ],
+          "task": "CORE L7 — writing. 5m Retrieve: Retrieve one routine and one strength chunk. Orally rehearse without copying the model.\n8m Model: Use the short profile model and think aloud about audience and sentence order. Identify interest, strength and three frequency expressions.\n10m Guide: Use the profile planner, then replace full frames with keywords where possible. Plan own or fictional details and rehearse with a partner.\n12m Apply: Remove the complete model while keeping agreed word/access tools. Write an individual 6–8-sentence profile.\n7m Check: Use the revision checklist and give focused feedback. Improve two features and keep the first draft.\n3m Reflect: Record actual help and one next step. Select one useful change for the final profile.",
+          "detailSource": "upper-primary-1-unit-1.json",
+          "detailCode": "L7"
+        },
+        {
+          "code": "L8",
+          "title": "L8 Review — Retrieve, apply and improve",
+          "path": "core",
+          "primaryFocus": "review",
+          "durationMinutes": 45,
+          "objectiveCodes": [
+            "UP1.U01.V",
+            "UP1.U01.G",
+            "UP1.U01.2"
+          ],
+          "objectiveIndexes": [
+            1
+          ],
+          "courseCodes": [],
+          "skills": [
+            "vocabulary",
+            "grammar",
             "listening",
             "reading",
             "speaking",
-            "grammar",
-            "vocabulary"
+            "writing"
           ],
-          "task": "Use two short fictional learner profiles with pictures. Identify names, interests, strengths and routine/frequency details. Model present-simple questions and frequency placement; learners sort examples on a frequency line and make three true or fictional statements. Teach a simple request for repetition, then check comprehension with a fresh profile."
+          "task": "CORE L8 — review. 5m Retrieve: Use welcome prompts plus three changed meaning cues; show models only after attempts. Retrieve and self-check.\n8m Model: Address one shared misconception with a contrasting example. Explain its meaning rather than copy it.\n10m Guide: Run three short stations: vocabulary retrieval, frequency/meaning choice, interview repair. Attempt each, receive feedback and try a changed example.\n12m Apply: Use review profile Jo and new questions, keeping final texts unseen. Find useful facts and suggest a shared activity in a fresh exchange.\n7m Check: Recheck each learner’s priority gap using a different cue/task. Revise one earlier oral/written response.\n3m Reflect: Prepare learners for the final conditions and arrange targeted follow-up. Name one strength and a next step.",
+          "detailSource": "upper-primary-1-unit-1.json",
+          "detailCode": "L8"
         },
         {
-          "title": "Find someone who: strengths and interests",
-          "objectiveIndexes": [
-            1,
-            2
+          "code": "L9",
+          "title": "L9 Checkpoint — My learner profile and Unit 2 bridge",
+          "path": "core",
+          "primaryFocus": "checkpoint",
+          "durationMinutes": 45,
+          "objectiveCodes": [
+            "UP1.U01.1",
+            "UP1.U01.2",
+            "UP1.U01.3",
+            "UP1.U01.L",
+            "UP1.U01.R"
           ],
-          "courseCodes": [
-            "UP1.C03"
-          ],
-          "skills": [
-            "speaking",
-            "listening",
-            "writing",
-            "pronunciation"
-          ],
-          "task": "Learners interview partners using interest, strength and routine prompts, taking both roles. Each records facts rather than copying the question card, then drafts a 6–8-sentence learner profile. Give brief feedback on question formation and frequency placement, and let learners improve their profile. Practise clarification when a detail is unclear."
-        },
-        {
-          "title": "My learner profile: unit checkpoint",
-          "checkpoint": true,
           "objectiveIndexes": [
             0,
             1,
@@ -334,7 +522,128 @@
             "speaking",
             "writing"
           ],
-          "task": "Use a fresh short profile for five comprehension checks. Each learner greets a partner, exchanges names/ages/feelings, then asks and answers four interest/routine questions. Collect the revised profile and a brief oral introduction. Use the three unit criteria separately; record prompts and repetitions, give feedback, and plan a later recheck for gaps."
+          "task": "CORE L9 — checkpoint. 4m Orient: Greet and exchange names/ages/feelings; explain support and keep final sources unseen. Prepare a fact grid and keyword card.\n6m Listen: Read finalListen clearly twice; record any further replay. Answer five short/listen-and-point checks.\n7m Read: Provide finalRead; permit rereading. Answer five checks and choose a shared activity with two text facts.\n10m Write: Collect the L7 draft and allow an individual final revision. Submit a 6–8-sentence profile with two noted improvements.\n12m Speak: Observe each learner’s brief profile and four-exchange interview; use observation stations or continue next lesson for unobserved learners. Share from keywords, take both roles and check a detail.\n6m Bridge: Reflect on one strength/next step; use the school-routine bridge card. Read a simple school-day card and say one familiar routine; note time/subject gaps for Unit 2.",
+          "detailSource": "upper-primary-1-unit-1.json",
+          "detailCode": "L9"
+        },
+        {
+          "code": "E1",
+          "title": "OPTIONAL E1 — A class interests gallery",
+          "path": "extension",
+          "primaryFocus": "integration",
+          "durationMinutes": 30,
+          "objectiveCodes": [
+            "UP1.U01.2",
+            "UP1.U01.3"
+          ],
+          "objectiveIndexes": [
+            1,
+            2
+          ],
+          "courseCodes": [],
+          "skills": [
+            "speaking",
+            "reading",
+            "writing",
+            "listening"
+          ],
+          "task": "EXTENSION E1 — integration. 4m Retrieve: Recall useful invitation/profile language. Prepare a keyword response.\n6m Plan: Set a small gallery purpose and privacy choices. Choose two profile details and a display format.\n12m Apply: Use a new partner/audience with familiar language. Read a profile, invite a shared activity and ask/answer a follow-up.\n5m Feedback: Observe individual communication and give one suggestion. Improve a short message or response.\n3m Reflect: Record an optional stretch achievement without replacing core evidence. Choose one future use of the language.\nRoute: Offer after the core outcome is accessible and learners want a wider audience. Provide an equivalent private/fictional display option; sharing personal work is a choice.",
+          "detailSource": "upper-primary-1-unit-1.json",
+          "detailCode": "E1"
+        }
+      ],
+      "guideStatus": "Exemplar: 9 core lessons, 2 conditional support workshops and 1 optional extension; classroom pacing to be piloted.",
+      "exemplarSource": "upper-primary-1-unit-1.json",
+      "focusObjectives": [
+        {
+          "code": "UP1.U01.V",
+          "statement": "Retrieve and use familiar interest and strength chunks for a learner profile.",
+          "learnerStatement": "I can remember useful words for my interests and strengths.",
+          "successCriteria": "Retrieve 6 of 7 selected hobby/strength chunks from meaning or picture cues, then use 2 in relevant personal or fictional statements; record cue support.",
+          "evidenceMode": "recall",
+          "standardCodes": [
+            "D"
+          ]
+        },
+        {
+          "code": "UP1.U01.L",
+          "statement": "Find useful identity, interest, strength and frequency information in a short spoken profile.",
+          "learnerStatement": "I can listen to a profile and find useful details.",
+          "successCriteria": "Identify 4 of 5 details in a fresh spoken profile, including an interest and frequency detail; use a fact to select a suitable shared activity. Record replays and visuals.",
+          "evidenceMode": "recognition",
+          "standardCodes": [
+            "L"
+          ]
+        },
+        {
+          "code": "UP1.U01.G",
+          "statement": "Interpret and use present-simple routine statements, frequency expressions and do questions.",
+          "learnerStatement": "I can say how often I do things and ask about routines.",
+          "successCriteria": "Interpret 4 of 5 meaning contrasts; communicate 3 relevant routine statements with 2 frequency expressions and ask one understandable do question. Record model use.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "I",
+            "D"
+          ]
+        },
+        {
+          "code": "UP1.U01.R",
+          "statement": "Use information from a short written learner profile to make a relevant choice.",
+          "learnerStatement": "I can read a profile and choose an activity that fits.",
+          "successCriteria": "Find 4 of 5 requested details in a fresh written profile; support a suitable activity choice with 2 text facts. Rereading is allowed; record glossary support.",
+          "evidenceMode": "recognition",
+          "standardCodes": [
+            "R",
+            "RO"
+          ]
+        },
+        {
+          "code": "UP1.U01.S",
+          "statement": "Interview a peer about interests, strengths and routines, taking both roles and checking meaning.",
+          "learnerStatement": "I can ask, answer and check information with a partner.",
+          "successCriteria": "Complete 4 relevant question-answer exchanges in both roles, communicate 2 interests/strengths and 2 frequency expressions, and check or clarify a detail when needed.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "I",
+            "Q"
+          ]
+        },
+        {
+          "code": "UP1.U01.W",
+          "statement": "Plan, write and revise an individual learner profile for a classmate.",
+          "learnerStatement": "I can write a useful profile and improve it for my reader.",
+          "successCriteria": "Write 6–8 linked sentences including an interest, a strength and 3 frequency expressions; improve 2 features after feedback. Record frames, word bank or scribing used.",
+          "evidenceMode": "production",
+          "standardCodes": [
+            "W",
+            "CW",
+            "CC"
+          ]
+        }
+      ],
+      "coreMinutes": 405,
+      "nextUnitBridge": "Use a school-day card: I read stories at school. Art: 9:00; Reading: 10:00. Ask learners to locate Reading at ten and say a familiar school routine. Record subject/clock gaps for U2 L1; teach a missing phrase briefly. Do not require earlier/later/than yet.",
+      "libraryResources": [
+        {
+          "key": "vocabulary",
+          "id": "b0f2ee15-4e3d-473c-8be9-65ed5c3165d8",
+          "title": "UP1 Unit 1 — Interests, strengths and routines",
+          "playPath": "/teacher/activity-builder/vocabulary-lists?activity=b0f2ee15-4e3d-473c-8be9-65ed5c3165d8",
+          "purpose": "Editable 12-entry language source; select the first seven in L2 and frequency words in L4."
+        },
+        {
+          "key": "flashcards",
+          "id": "ab2b5818-1b87-49cc-ac14-c7c3860a559c",
+          "title": "UP1 Unit 1 — Meaning-to-chunk retrieval cards",
+          "playPath": "/pilots/games-flashcards?activity=ab2b5818-1b87-49cc-ac14-c7c3860a559c",
+          "purpose": "12 text-only retrieval cards, definition on front and word/example on back; supported practice."
+        },
+        {
+          "key": "reading",
+          "id": "407e3e56-ce96-4f05-a841-2d0ffcccf418",
+          "title": "UP1 Unit 1 — Read Linh’s learner profile",
+          "playPath": "/pilots/read-and-answer?activity=407e3e56-ce96-4f05-a841-2d0ffcccf418",
+          "purpose": "Linh practice passage and five validated questions; follow with a source-based activity choice."
         }
       ]
     },
@@ -1928,5 +2237,6 @@
     "Assess communicative success and intelligibility alongside target-language meaning. Minor grammar or accent differences do not automatically invalidate successful A2-oriented communication.",
     "Recheck weak objectives on a different but familiar task after feedback and a delay. Use the later-unit retrieval plan rather than massed revision only at the end.",
     "Resources remain to be selected/created in Libraries; no unverified media, vocabulary packs or activity links are invented by this mapping pass."
-  ]
+  ],
+  "pacingSummary": "Unit 1: 9 core × 45 minutes, two conditional 25-minute workshops, one optional 30-minute extension. Units 2–12 remain four-slot provisional sketches. The live map has 56 total slots including conditional/optional lessons."
 }

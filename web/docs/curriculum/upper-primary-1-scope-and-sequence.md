@@ -4,13 +4,13 @@ Ages **9–11** · **Grade 3–5** · **A1 consolidation toward A2 communication
 
 Original WKE course objectives aligned to the cited CEFR scales and age-adapted using the young-learner collections. The twelve themes and grammar order are the school's curriculum choices; CEFR does not prescribe this grammar syllabus. Printed page numbers refer to the 2020 Companion Volume.
 
-Provisional sequence: **4 × 45-minute slots per unit; 48 slots total**, including the teacher's existing welcome lesson. These are adjustable planning slots, not a claim that a fixed number of hours produces A2 proficiency.
+Current sequence: **Unit 1 has nine core 45-minute lessons, two conditional 25-minute support workshops and one optional 30-minute extension. Units 2–12 retain four-slot provisional sketches.** The live map contains 56 total slots including support/optional lessons; this is not a fixed teaching entitlement or a proficiency-hours claim.
 
-**Authoring update — 10 October 2026:** Use the [unit-builder guide](./unit-builder-guide.md) when developing these sketches into complete units. The four-slot drafts do not yet meet its requirement for six distinct reading, writing, listening, speaking, vocabulary and grammar lessons. Unit lengths and sequences must be adapted accordingly, with introduction, review, spaced retrieval and independent application. This note changes the authoring guidance, not the live course data.
+**Authoring update — 10 October 2026:** [Unit 1 is now the worked exemplar](./upper-primary-1-unit-1-exemplar.md) following the [unit-builder guide](./unit-builder-guide.md). The four-slot drafts in Units 2–12 still need six distinct dedicated focus lessons, introduction, review, spaced retrieval and independent application. Their lengths should vary with learner needs.
 
 ## Entry expectations
 
-Broad A1 familiarity: exchange basic personal information; follow simple classroom instructions; recognise familiar everyday words; read and write short simple sentences with support. Use the existing welcome lesson as an entry diagnostic. Revisit gaps in question forms, sound–spelling links, everyday verbs and numbers before increasing task demands. A1 entry to A2-oriented outcomes is a planning target, not a guarantee from age or course completion. Provisional allocation: four 45-minute slots per unit (48 slots including the existing welcome lesson); adjust after piloting, learner evidence and timetable decisions.
+Broad A1 familiarity: exchange basic personal information; follow simple classroom instructions; recognise familiar everyday words; read and write short simple sentences with support. Use the existing welcome lesson as an entry diagnostic. Revisit gaps in question forms, sound–spelling links, everyday verbs and numbers before increasing task demands. A1 entry to A2-oriented outcomes is a planning target, not a guarantee from age or course completion. Pacing: Unit 1 has nine core 45-minute lessons plus conditional support/extension; later units remain provisional sketches. Adjust after entry evidence, classroom piloting and timetable decisions.
 
 ## Course objectives
 
@@ -80,15 +80,15 @@ Broad A1 familiarity: exchange basic personal information; follow simple classro
 
 ## Using this map in the website
 
-[Open Upper Primary 1](https://preview.weknowenglish.online/teacher/libraries/course-map/4937763f-782a-4197-b7ad-3f7a6f528a50). The teacher's original welcome lesson, its three objectives and eight targets are preserved. The remaining lessons are provisional learning briefs, not fully authored activity packs.
+[Open Upper Primary 1](https://preview.weknowenglish.online/teacher/libraries/course-map/4937763f-782a-4197-b7ad-3f7a6f528a50). The teacher's original welcome lesson, its three objectives and eight targets are preserved. Unit 1 has an authored teacher/student classroom pack and three linked library resources; the remaining units are provisional learning briefs.
 
 Start in Libraries → Course map, choose a lesson and use it to create a class lesson draft. The existing import carries the learning objectives, success criteria, target language, expected minutes, teacher-led learning task and support/extension notes into the planner. It records the course revision used so later map changes do not silently rewrite an existing class plan.
 
-Select or create vocabulary lists, grammar, activities and media in Libraries, link them to the relevant map lesson, and save before importing resources into a class plan. No resource links were invented for this first pass. Teachers still break each brief into timed lesson steps, prepare the source texts/cards and choose appropriate practice activities before teaching.
+Select or create vocabulary lists, grammar, activities and media in Libraries, link them to the relevant map lesson, and save before importing resources into a class plan. Unit 1 links real saved vocabulary, retrieval cards and a reading activity. Later units still need their resources selected or authored. Teachers still break each brief into timed lesson steps, prepare the source texts/cards and choose appropriate practice activities before teaching.
 
 Use Target coverage to inspect introduce/practise/assess/revisit opportunities. Prerequisites currently express the provisional order within each unit; they are planning links rather than learner-access locks. Student mastery, parent progress summaries and mascot adaptation require actual student evidence linked to these objectives; this map does not create achievement records.
 
-Course objectives are reusable across units. Each lesson links its unit objectives and selected course objectives. Use the four-slot sequence as input/model → guided communication → creation/revision → checkpoint, with the welcome diagnostic occupying Unit 1's first slot. Adjust the number of lessons to suit the class.
+Course objectives are reusable across units. Unit 1 links its three umbrella objectives and six dedicated focus objectives to the relevant course outcomes. Later units retain their selected course-objective links. Use the unit-builder guide to plan distinct focuses and a guided-to-independent journey; adjust lesson count and support from learner evidence.
 
 ## Twelve-unit overview
 
@@ -111,37 +111,36 @@ Course objectives are reusable across units. Each lesson links its unit objectiv
 
 ### Unit 1 — Who Am I?
 
-**Focus:** Identity, strengths and interests. **Example:** I usually draw after school. I am good at solving puzzles.
+**Worked exemplar:** [teacher edition, full plans and keys](./upper-primary-1-unit-1-exemplar.md) · [student practice handouts](./upper-primary-1-unit-1-student-pack.md) · [saved verification](./upper-primary-1-unit-1-verification.md).
 
-**End-of-unit task:** My learner profile: respond to a new peer profile, interview a partner, then share a short profile of yourself or a fictional learner.
+**Purpose:** Help a new classmate discover a shared interest or activity through a useful learner profile and interview.
 
-**Course objective links:** UP1.C01, UP1.C03, UP1.C04, UP1.C06. **Earlier-unit retrieval:** Entry diagnostic / prior learning.
+**Umbrella objectives retained:** understand profiles; exchange interests/strengths/routines; create a learner profile. Six focus objectives (UP1.U01.V/L/G/R/S/W) provide distinct lesson checks.
 
-- **UP1.U01.1:** Find personal details, interests and routine information in short spoken or written learner profiles.
-  Learner goal: I can understand a short profile.
-  Check: Identify 4 of 5 details across a new short profile, including an interest and a frequency detail; record replay or picture support.
-  Evidence: recognition. Alignment: A2: Overall oral comprehension (pp. 48); A2: Overall reading comprehension (pp. 54).
-- **UP1.U01.2:** Exchange information about interests, strengths and routines with a partner.
-  Learner goal: I can ask about interests and say what I often do.
-  Check: Ask and answer 4 relevant questions; communicate 2 interests/strengths and use 2 frequency expressions appropriately. Clarify if needed.
-  Evidence: production. Alignment: A2: Information exchange (pp. 78–79); A2: Sustained monologue: describing experience (pp. 62–63); A2: Asking for clarification (pp. 89–90).
-- **UP1.U01.3:** Create a short learner profile describing strengths, interests and weekly routines.
-  Learner goal: I can tell others about myself and my routines.
-  Check: Produce 6–8 understandable linked sentences covering strengths, interests and routines, including 3 frequency expressions; share a brief oral version from keywords.
-  Evidence: production. Alignment: A2: Sustained monologue: describing experience (pp. 62–63); A2: Overall written production (pp. 66).
+| Slot | Focus / path | Minutes |
+| --- | --- | --- |
+| L1: Hello, welcome to class! | introduction / core | 45 |
+| L2: L2 Vocabulary — My interests and strengths | vocabulary / core | 45 |
+| S1: SUPPORT S1 — Hobby meanings and sound–spelling | vocabulary / support | 25 |
+| L3: L3 Listening — Find useful profile details | listening / core | 45 |
+| L4: L4 Grammar — How often do you do it? | grammar / core | 45 |
+| S2: SUPPORT S2 — Routine questions and frequency meaning | grammar / support | 25 |
+| L5: L5 Reading — Read a profile and choose an activity | reading / core | 45 |
+| L6: L6 Speaking — Interview, listen and clarify | speaking / core | 45 |
+| L7: L7 Writing — Create and improve my learner profile | writing / core | 45 |
+| L8: L8 Review — Retrieve, apply and improve | review / core | 45 |
+| L9: L9 Checkpoint — My learner profile and Unit 2 bridge | checkpoint / core | 45 |
+| E1: OPTIONAL E1 — A class interests gallery | integration / extension | 30 |
 
-**Provisional lesson sequence**
+**Assessment:** Help a new classmate find a shared activity through an individual learner profile and interview; collect fresh listening and reading evidence separately, plus revised writing and individual speaking.
 
-1. **Hello, welcome to class!** — preserve the existing teacher-authored lesson unchanged. 
-2. **My interests, strengths and weekly routines** — Use two short fictional learner profiles with pictures. Identify names, interests, strengths and routine/frequency details. Model present-simple questions and frequency placement; learners sort examples on a frequency line and make three true or fictional statements. Teach a simple request for repetition, then check comprehension with a fresh profile. 
-3. **Find someone who: strengths and interests** — Learners interview partners using interest, strength and routine prompts, taking both roles. Each records facts rather than copying the question card, then drafts a 6–8-sentence learner profile. Give brief feedback on question formation and frequency placement, and let learners improve their profile. Practise clarification when a detail is unclear. 
-4. **My learner profile: unit checkpoint** — Use a fresh short profile for five comprehension checks. Each learner greets a partner, exchanges names/ages/feelings, then asks and answers four interest/routine questions. Collect the revised profile and a brief oral introduction. Use the three unit criteria separately; record prompts and repetitions, give feedback, and plan a later recheck for gaps. 
+**Progression:** model and guided meaning → supported choices and rehearsal → individual profile/interview with recorded support. The final listening/reading sources differ from practice; the teacher edition keeps scripts and keys separate from student handouts.
 
-**Support:** Picture profiles, hobby/strength cards, a frequency line and question frames; fade full sentence models before the checkpoint. Fictional profiles are acceptable.
+**Adaptation:** conditional S1 vocabulary/decoding and S2 grammar workshops have specific triggers and return points; E1 is an optional audience extension with no hidden core dependency.
 
-**Optional extension:** Add a relevant reason with because and one unscripted follow-up question; compare two routines without making this a core requirement.
+**Retrieval:** changed hobby cues in L3, delayed reading use in L5, cumulative return in L8 and integrated L9 evidence; named returns in Unit 2 schedules, Unit 4 habit logs and Unit 10 strengths. Extra teacher-planned starters are identified in the exemplar ledger.
 
-**Resource strands to author/select:** interests and hobbies; personal strengths; daily/weekly routines; frequency.
+**Unit 2 bridge:** Use a school-day card: I read stories at school. Art: 9:00; Reading: 10:00. Ask learners to locate Reading at ten and say a familiar school routine. Record subject/clock gaps for U2 L1; teach a missing phrase briefly. Do not require earlier/later/than yet.
 
 ### Unit 2 — School Life Around the World
 

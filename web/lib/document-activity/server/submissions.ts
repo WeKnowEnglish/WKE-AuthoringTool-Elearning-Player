@@ -18,12 +18,13 @@ export async function persistDocumentSubmission(input: {
   contentJson: unknown;
   plainText: string;
   wordCount: number;
+  submittedAt?: string;
 }): Promise<void> {
   const supabase = createServiceRoleSupabase();
-  if (!supabase) return;
+  if (!supabase) throw new Error("Document submission storage is unavailable.");
 
-  const submittedAt = new Date().toISOString();
-  await supabase.from("document_submissions").upsert(
+  const submittedAt = input.submittedAt ?? new Date().toISOString();
+  const { error } = await supabase.from("document_submissions").upsert(
     {
       id: submissionSnapshotId(input.roundId, input.documentId, input.revision),
       round_id: input.roundId,
@@ -38,15 +39,17 @@ export async function persistDocumentSubmission(input: {
       word_count: input.wordCount,
       submitted_at: submittedAt,
     },
-    { onConflict: "round_id,document_id,revision" },
+    // A retry must preserve the originally recorded work, credit, and time.
+    { onConflict: "round_id,document_id,revision", ignoreDuplicates: true },
   );
+  if (error) throw new Error("Could not save this document submission. Please retry.");
 }
 
 export async function listDocumentSubmissions(
   roundId: string,
 ): Promise<DocumentSubmissionSnapshot[]> {
   const supabase = createServiceRoleSupabase();
-  if (!supabase) return [];
+  if (!supabase) throw new Error("Document submission storage is unavailable.");
 
   const { data, error } = await supabase
     .from("document_submissions")
@@ -56,9 +59,9 @@ export async function listDocumentSubmissions(
     .eq("round_id", roundId)
     .order("submitted_at", { ascending: false });
 
-  if (error || !data) return [];
+  if (error) throw new Error("Could not load document submissions. Please retry.");
 
-  return data.map((row) => ({
+  return (data ?? []).map((row) => ({
     roundId: row.round_id as string,
     documentId: row.document_id as string,
     ownerType: row.owner_type as DocumentSubmissionSnapshot["ownerType"],

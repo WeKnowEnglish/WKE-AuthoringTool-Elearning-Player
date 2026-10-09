@@ -1,6 +1,7 @@
 import "server-only";
 
 import { LiveObject } from "@liveblocks/client";
+import { confirmRoundStateSaved } from "@/lib/activity-runtime/server/round-save-state";
 import { getLiveblocksServerClient } from "@/lib/live-game/server/liveblocks-client";
 import {
   documentIdForGroup,
@@ -15,6 +16,11 @@ import type { DocumentRuntimePhase, DocumentWorkStatus } from "@/lib/document-ac
 import { upsertDocumentRoundMeta } from "@/lib/document-activity/server/persistence";
 import { persistDocumentSubmission } from "@/lib/document-activity/server/submissions";
 import { readDocumentYjsContent } from "@/lib/document-activity/server/yjs-content";
+import {
+  assertDocumentSubmissionRecoveryConfigured,
+  readPendingDocumentSubmission,
+  sealPendingDocumentSubmission,
+} from "@/lib/document-activity/server/pending-submission";
 import {
   canPushDocumentForReview,
   createDocumentCompareReview,
@@ -170,6 +176,7 @@ function forEachDocument(
 
 export type DocumentTeacherCommand =
   | { type: "OPEN" }
+  | { type: "SYNC_STATE" }
   | { type: "COLLECT" }
   | { type: "ASSIGN_GROUPS"; groups: AssignGroupsInput["groups"] }
   | {
@@ -387,7 +394,27 @@ type PendingSnapshot = {
   contentJson?: unknown;
   plainText?: string;
   wordCount?: number;
+  submittedBy?: string;
+  submittedAt?: string;
 };
+
+function pendingSnapshotOf(doc: DocLive, documentId: string, context: { roomId: string; roundId: string }): PendingSnapshot | null {
+  const value = readPendingDocumentSubmission(doc.get("pendingSubmission"), context);
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const snapshot = value as PendingSnapshot;
+  if (
+    snapshot.documentId !== documentId ||
+    snapshot.ownerType !== doc.get("ownerType") ||
+    snapshot.ownerId !== doc.get("ownerId") ||
+    snapshot.revision !== doc.get("revision") ||
+    !Number.isSafeInteger(snapshot.revision) ||
+    snapshot.revision < 1 ||
+    !Array.isArray(snapshot.contributorIds) ||
+    !snapshot.contributorIds.every((id) => typeof id === "string") ||
+    !["manual", "resubmission", "teacher_collect", "timer_expiry"].includes(snapshot.submissionType)
+  ) return null;
+  return snapshot;
+}
 
 async function persistPendingSnapshots(input: {
   roomId: string;
@@ -397,9 +424,9 @@ async function persistPendingSnapshots(input: {
   for (const item of input.pending) {
     let contentJson: unknown = item.contentJson ?? {};
     let plainText = item.plainText ?? "";
-    let wordCount = item.wordCount ?? countWords(plainText);
+    let wordCount = countWords(plainText);
 
-    if (!item.plainText && !item.contentJson) {
+    if (item.plainText === undefined && item.contentJson === undefined) {
       const fromYjs = await readDocumentYjsContent({
         roomId: input.roomId,
         documentId: item.documentId,
@@ -408,6 +435,15 @@ async function persistPendingSnapshots(input: {
       plainText = fromYjs.plainText;
       wordCount = fromYjs.wordCount;
     }
+
+    // Freeze a successful document read before the database request. A retry
+    // after a database outage must use the same work, including empty work.
+    await getLiveblocksServerClient().mutateStorage(input.roomId, ({ root }) => {
+      const doc = documentsOf(root as unknown as StorageRoot).get(item.documentId);
+      if (doc && Number(doc.get("revision")) === item.revision) {
+        doc.set("pendingSubmission", sealPendingDocumentSubmission({ ...item, contentJson, plainText, wordCount }, input));
+      }
+    });
 
     await persistDocumentSubmission({
       roundId: input.roundId,
@@ -420,7 +456,15 @@ async function persistPendingSnapshots(input: {
       contentJson,
       plainText,
       wordCount,
-    }).catch(() => undefined);
+      submittedAt: item.submittedAt,
+    });
+
+    await getLiveblocksServerClient().mutateStorage(input.roomId, ({ root }) => {
+      const doc = documentsOf(root as unknown as StorageRoot).get(item.documentId);
+      if (doc && Number(doc.get("revision")) === item.revision) {
+        doc.set("submissionSavePending", false);
+      }
+    });
   }
 }
 
@@ -449,7 +493,7 @@ async function syncRoundMeta(input: {
     openedAt: input.openedAt ? new Date(input.openedAt).toISOString() : undefined,
     collectedAt: input.collectedAt ? new Date(input.collectedAt).toISOString() : undefined,
     completedAt: input.completedAt ? new Date(input.completedAt).toISOString() : undefined,
-  }).catch(() => undefined);
+  });
 }
 
 export async function applyDocumentTeacherCommand(input: {
@@ -458,8 +502,11 @@ export async function applyDocumentTeacherCommand(input: {
   sessionId: string;
   hostUserId: string;
   command: DocumentTeacherCommand;
+  /** API completion also needs to return the classroom before acknowledging. */
+  deferCompletionConfirmation?: boolean;
 }): Promise<{ phase: DocumentRuntimePhase }> {
   const liveblocks = getLiveblocksServerClient();
+  if (input.command.type === "COLLECT") assertDocumentSubmissionRecoveryConfigured();
   let phase: DocumentRuntimePhase = "waiting";
   let openedAt: number | null = null;
   let collectedAt: number | null = null;
@@ -477,8 +524,30 @@ export async function applyDocumentTeacherCommand(input: {
     templateType = String(runtime.get("templateType") ?? "paragraph");
     settings = runtime.get("settings") ?? {};
     const documents = documentsOf(storageRoot);
+    openedAt = Number(runtime.get("openedAt")) || null;
+    collectedAt = Number(runtime.get("collectedAt")) || null;
+    completedAt = Number(runtime.get("completedAt")) || null;
+
+    if (runtime.get("roundSavePending") === true && input.command.type !== "SYNC_STATE"
+      && runtime.get("collectionSavePending") !== true) {
+      throw new Error("Activity state is waiting to save. Retry saving activity state before continuing.");
+    }
+
+    if (runtime.get("collectionSavePending") === true && input.command.type !== "COLLECT") {
+      throw new Error("Some collected work is waiting to save. Retry Collect before continuing.");
+    }
+    if (input.command.type !== "COLLECT" && input.command.type !== "SYNC_STATE") {
+      forEachDocument(documents, (_id, doc) => {
+        if (doc.get("submissionSavePending") === true) {
+          throw new Error("Student work is waiting to save. Retry saving or Collect before continuing.");
+        }
+      });
+    }
 
     switch (input.command.type) {
+      case "SYNC_STATE":
+        // Reconcile the already-applied state without repeating the teacher action.
+        break;
       case "OPEN": {
         if (phase !== "waiting") throw new Error("Open is only available while Waiting.");
         const now = Date.now();
@@ -505,15 +574,17 @@ export async function applyDocumentTeacherCommand(input: {
         break;
       }
       case "COLLECT": {
-        if (phase !== "active" && phase !== "revision") {
+        const isRetry = phase === "collected" && runtime.get("collectionSavePending") === true;
+        if (phase !== "active" && phase !== "revision" && !isRetry) {
           throw new Error("Collect is only available during Active or Revision.");
         }
         const now = Date.now();
+        runtime.set("collectionSavePending", true);
         runtime.set("phase", "collected");
-        runtime.set("collectedAt", now);
+        if (!isRetry) runtime.set("collectedAt", now);
         runtime.set("review", null);
         phase = "collected";
-        collectedAt = now;
+        collectedAt = Number(runtime.get("collectedAt")) || now;
         const classContributors = playerParticipantIds(storageRoot);
 
         forEachDocument(documents, (id, doc) => {
@@ -524,6 +595,15 @@ export async function applyDocumentTeacherCommand(input: {
             | "class";
           const ownerId = String(doc.get("ownerId") ?? "");
           let revision = Number(doc.get("revision") ?? 1);
+
+          if (isRetry) {
+            const snapshot = pendingSnapshotOf(doc, id, input);
+            if (doc.get("submissionSavePending") === true) {
+              if (!snapshot) throw new Error("Could not recover collected work. Please contact support.");
+              pendingSnapshots.push(snapshot);
+            }
+            return;
+          }
 
           if (
             status === "active" ||
@@ -545,16 +625,25 @@ export async function applyDocumentTeacherCommand(input: {
                     ? classContributors
                     : ["class"]
                   : [ownerId];
-            pendingSnapshots.push({
+            const snapshot: PendingSnapshot = {
               documentId: id,
               ownerType,
               ownerId,
               contributorIds,
               revision,
               submissionType: "teacher_collect",
-            });
+              submittedAt: new Date(now).toISOString(),
+            };
+            doc.set("pendingSubmission", sealPendingDocumentSubmission(snapshot, input));
+            doc.set("submissionSavePending", true);
+            pendingSnapshots.push(snapshot);
           } else if (status === "submitted") {
             doc.set("status", "locked");
+            const snapshot = pendingSnapshotOf(doc, id, input);
+            if (doc.get("submissionSavePending") === true) {
+              if (!snapshot) throw new Error("Could not recover submitted work. Please contact support.");
+              pendingSnapshots.push(snapshot);
+            }
           }
         });
         break;
@@ -667,6 +756,9 @@ export async function applyDocumentTeacherCommand(input: {
       }
       case "COMPLETE": {
         if (phase === "completed") break;
+        if (phase !== "collected" && phase !== "review") {
+          throw new Error("Collect the document before completing so the class writing is saved.");
+        }
         const now = Date.now();
         runtime.set("phase", "completed");
         runtime.set("completedAt", now);
@@ -678,6 +770,7 @@ export async function applyDocumentTeacherCommand(input: {
       default:
         throw new Error("Unknown command.");
     }
+    runtime.set("roundSavePending", true);
   });
 
   await persistPendingSnapshots({
@@ -685,6 +778,12 @@ export async function applyDocumentTeacherCommand(input: {
     roundId: input.roundId,
     pending: pendingSnapshots,
   });
+
+  if (input.command.type === "COLLECT") {
+    await liveblocks.mutateStorage(input.roomId, ({ root }) => {
+      runtimeOf(root as unknown as StorageRoot).set("collectionSavePending", false);
+    });
+  }
 
   await syncRoundMeta({
     roomId: input.roomId,
@@ -699,6 +798,9 @@ export async function applyDocumentTeacherCommand(input: {
     templateType,
     settings,
   });
+  if ((phase as DocumentRuntimePhase) !== "completed" || !input.deferCompletionConfirmation) {
+    await confirmRoundStateSaved(input.roomId);
+  }
 
   try {
     await liveblocks.broadcastEvent(input.roomId, {
@@ -770,6 +872,11 @@ export async function applyDocumentStudentCommand(input: {
   }
 
   const submitCommand = input.command;
+  assertDocumentSubmissionRecoveryConfigured();
+  if (submitCommand.plainText !== undefined && typeof submitCommand.plainText !== "string") {
+    throw new Error("Document text must be a string.");
+  }
+  const submittedText = (submitCommand.plainText ?? "").trim();
   let pending: PendingSnapshot | null = null;
   let status: DocumentWorkStatus | null = null;
 
@@ -790,6 +897,11 @@ export async function applyDocumentStudentCommand(input: {
     const groupRecords = readGroupRecords(storageRoot);
     const settingsObj = (runtime.get("settings") as DocumentRoundSettings | null) ?? null;
     const policy = (settingsObj?.groupSubmitPolicy ?? "any_member") as GroupSubmitPolicy;
+    const savedSnapshot = pendingSnapshotOf(doc, documentId, input);
+    const currentStatus = String(doc.get("status") ?? "") as DocumentWorkStatus;
+    const isRetry =
+      (currentStatus === "submitted" || currentStatus === "locked") &&
+      savedSnapshot?.submittedBy === input.userId;
 
     const participants = participantsOf(storageRoot);
     const readyMemberIds: string[] = [];
@@ -810,12 +922,21 @@ export async function applyDocumentStudentCommand(input: {
       documentOwnerType: ownerType,
       documentOwnerId: ownerId,
       groups: groupRecords,
-      groupSubmitPolicy: policy,
+      // Ready flags reset after the original submit. The original submitter
+      // can retry that frozen snapshot while they remain a member of the group.
+      groupSubmitPolicy: isRetry ? "any_member" : policy,
       readyMemberIds,
     });
     if (!gate.ok) throw new Error(gate.reason ?? "Cannot submit.");
 
-    const currentStatus = String(doc.get("status") ?? "") as DocumentWorkStatus;
+    if (isRetry && savedSnapshot) {
+      if (phase !== "active" && phase !== "revision" && phase !== "collected") {
+        throw new Error("Submission retries are only available before class review.");
+      }
+      pending = savedSnapshot;
+      status = currentStatus;
+      return;
+    }
     if (phase !== "active" && phase !== "revision") {
       throw new Error("Submit is only available during Active or Revision.");
     }
@@ -840,20 +961,7 @@ export async function applyDocumentStudentCommand(input: {
       phase === "revision" || currentStatus === "returned" || currentStatus === "revising";
     if (isResubmit) revision += 1;
 
-    doc.set("revision", revision);
-    doc.set("status", "submitted");
-    doc.set("submittedAt", now);
-    status = "submitted";
-
-    // Reset group Ready flags after submit so the next cycle starts clean.
-    if (ownerType === "group" && group) {
-      for (const memberId of group.memberIds) {
-        const p = participants.get(memberId);
-        if (p) p.set("ready", false);
-      }
-    }
-
-    const plainText = (submitCommand.plainText ?? "").trim();
+    const plainText = submittedText;
     const snapshotOwnerType =
       ownerType === "group" || ownerType === "class" ? ownerType : "student";
     pending = {
@@ -867,10 +975,27 @@ export async function applyDocumentStudentCommand(input: {
       contentJson: submitCommand.contentJson ?? {},
       plainText,
       wordCount:
-        typeof submitCommand.wordCount === "number"
-          ? submitCommand.wordCount
-          : countWords(plainText),
+        countWords(plainText),
+      submittedBy: input.userId,
+      submittedAt: new Date(now).toISOString(),
     };
+    // Validate/serialize recovery data before changing editable work or Ready flags.
+    const sealed = sealPendingDocumentSubmission(pending, input);
+    doc.set("revision", revision);
+    doc.set("status", "submitted");
+    doc.set("submittedAt", now);
+    status = "submitted";
+    doc.set("pendingSubmission", sealed);
+    doc.set("pendingSubmittedBy", input.userId);
+    doc.set("submissionSavePending", true);
+
+    // Reset group Ready flags after submit so the next cycle starts clean.
+    if (ownerType === "group" && group) {
+      for (const memberId of group.memberIds) {
+        const p = participants.get(memberId);
+        if (p) p.set("ready", false);
+      }
+    }
   });
 
   if (pending) {

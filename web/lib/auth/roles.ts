@@ -58,6 +58,8 @@ export function isTeacherEmailAllowlisted(email: string | null | undefined): boo
 
 export function getAppRole(user: AuthUserLike): AppRole | null {
   const raw = user?.app_metadata?.role;
+  const access = user?.app_metadata?.teacher_access_status;
+  if ((raw === "teacher" || isTeacherEmailAllowlisted(user?.email)) && access != null && access !== "approved") return null;
   if (raw === "teacher") return "teacher";
   if (isTeacherEmailAllowlisted(user?.email)) return "teacher";
   if (raw === "student") return "student";

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { useDailyCall } from "@/components/virtual-classroom/daily/useDailyCall";
+import { dailyResumeKey, parseDailyResume } from "@/lib/daily/recovery";
 import { dailyThemeFromTeacherTheme } from "@/lib/daily/theme-from-teacher";
 import {
   resolveTeacherThemeCssVars,
@@ -10,10 +11,13 @@ import {
 
 type Props = {
   sessionId: string;
+  userId: string;
   isHost: boolean;
   sessionEnded: boolean;
   /** dock = Learn (full-height left video rail); stage = Meeting (viewport-filling video). */
   layout?: "dock" | "stage";
+  /** Shared writing needs the phone's full width; keep the call mounted behind a video toggle. */
+  mobileDocumentMode?: boolean;
   /** Host: leave Meeting layout for Learn (materials + dock). */
   onExitToLearn?: () => void;
   /** Host: enter Meeting layout from Learn. */
@@ -21,6 +25,8 @@ type Props = {
   /** Host: end the VC for everyone. */
   onEndSession?: () => void;
   endSessionBusy?: boolean;
+  /** Prevent duplicate navigation requests while the class changes view. */
+  navigationBusy?: boolean;
   /** Student: leave the classroom entirely. */
   onLeaveClassroom?: () => void;
 };
@@ -41,16 +47,20 @@ function entrySkipKey(sessionId: string) {
  */
 export function DailyVideoDock({
   sessionId,
+  userId,
   isHost,
   sessionEnded,
   layout = "dock",
+  mobileDocumentMode = false,
   onExitToLearn,
   onEnterMeeting,
   onEndSession,
   endSessionBusy = false,
+  navigationBusy = false,
   onLeaveClassroom,
 }: Props) {
   const isStage = layout === "stage";
+  const [mobileVideoOpen, setMobileVideoOpen] = useState(false);
   const teacherTheme = useSyncExternalStore(
     teacherThemeStore.subscribe,
     teacherThemeStore.getSnapshot,
@@ -73,8 +83,11 @@ export function DailyVideoDock({
     connect,
     requestFullscreen,
     retryProbe,
+    reconnecting,
+    cancelRecovery,
   } = useDailyCall({
     sessionId,
+    userId,
     isHost,
     sessionEnded,
     theme: dailyTheme,
@@ -83,6 +96,7 @@ export function DailyVideoDock({
   const [disabledDismissed, setDisabledDismissed] = useState(false);
   const [entrySkipped, setEntrySkipped] = useState(false);
   const [entryStarted, setEntryStarted] = useState(false);
+  const [entryPreferencesReady, setEntryPreferencesReady] = useState(false);
   const [hasCompletedEntry, setHasCompletedEntry] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [transcriptBusy, setTranscriptBusy] = useState(false);
@@ -101,11 +115,13 @@ export function DailyVideoDock({
       const skipped = sessionStorage.getItem(entrySkipKey(sessionId)) === "1";
       setEntrySkipped(skipped);
       if (skipped) setHasCompletedEntry(true);
+      if (parseDailyResume(sessionStorage.getItem(dailyResumeKey(sessionId, userId)))) setHasCompletedEntry(true);
     } catch {
       setDisabledDismissed(false);
       setEntrySkipped(false);
     }
-  }, [sessionId]);
+    setEntryPreferencesReady(true);
+  }, [sessionId, userId]);
 
   const busy = phase === "connecting" || phase === "probing";
   const joined = phase === "joined";
@@ -134,7 +150,7 @@ export function DailyVideoDock({
 
   // Everyone: probe then connect once on entry (layout switches stay joined).
   useEffect(() => {
-    if (sessionEnded || entrySkipped || entryStarted) return;
+    if (!entryPreferencesReady || sessionEnded || entrySkipped || entryStarted) return;
     if (phase === "joined") {
       setEntryStarted(true);
       return;
@@ -143,14 +159,17 @@ export function DailyVideoDock({
     setEntryStarted(true);
     setExpanded(true);
     setPendingConnect(true);
-  }, [sessionEnded, entrySkipped, entryStarted, phase, setExpanded]);
+  }, [entryPreferencesReady, sessionEnded, entrySkipped, entryStarted, phase, setExpanded]);
 
   const requestConnect = () => {
+    setEntrySkipped(false);
+    try { sessionStorage.removeItem(entrySkipKey(sessionId)); } catch { /* Storage unavailable. */ }
     setExpanded(true);
     setPendingConnect(true);
   };
 
   const skipEntry = () => {
+    cancelRecovery();
     setEntrySkipped(true);
     try {
       sessionStorage.setItem(entrySkipKey(sessionId), "1");
@@ -346,6 +365,8 @@ export function DailyVideoDock({
         <button
           type="button"
           onClick={onEnterMeeting}
+          disabled={navigationBusy}
+          aria-busy={navigationBusy}
           className="rounded-md border px-2.5 py-1 text-xs font-bold"
           style={{
             borderColor: "var(--teacher-accent-border)",
@@ -359,6 +380,8 @@ export function DailyVideoDock({
         <button
           type="button"
           onClick={onExitToLearn}
+          disabled={navigationBusy}
+          aria-busy={navigationBusy}
           className="rounded-md border px-2.5 py-1 text-xs font-bold"
           style={{
             borderColor: "var(--teacher-accent-border)",
@@ -401,9 +424,14 @@ export function DailyVideoDock({
   // Single shell + containerRef — Learn = in-flow full-height left rail; Meeting = fixed stage.
   const shellClass = isStage
     ? "pointer-events-auto fixed inset-0 z-40 flex flex-col overflow-hidden"
-    : "pointer-events-auto relative z-20 flex h-dvh w-[min(42vw,400px)] min-w-[240px] max-w-[420px] shrink-0 flex-col overflow-hidden border-r";
+    : "pointer-events-auto relative z-20 flex h-dvh w-[min(42vw,400px)] min-w-[240px] max-w-[420px] shrink-0 flex-col overflow-hidden border-r" +
+      (mobileDocumentMode
+        ? mobileVideoOpen
+          ? " max-sm:fixed max-sm:inset-x-3 max-sm:top-16 max-sm:z-40 max-sm:h-[65dvh] max-sm:w-auto max-sm:min-w-0 max-sm:max-w-none max-sm:rounded-xl max-sm:border max-sm:shadow-xl"
+          : " max-sm:hidden"
+        : "");
 
-  const frameHeightClass = "min-h-0 w-full flex-1";
+  const frameHeightClass = "relative min-h-0 w-full flex-1 overflow-hidden";
 
   const shellStyle = {
     ...themeVars,
@@ -414,6 +442,13 @@ export function DailyVideoDock({
 
   return (
     <>
+      {mobileDocumentMode && !isStage ? (
+        <button type="button" aria-expanded={mobileVideoOpen}
+          onClick={() => setMobileVideoOpen(value => !value)}
+          className="fixed bottom-20 right-3 z-40 rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800 shadow-md sm:hidden">
+          {mobileVideoOpen ? "Hide class video" : "Show class video"}
+        </button>
+      ) : null}
       {showEntryGate ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-6"
@@ -576,6 +611,11 @@ export function DailyVideoDock({
         style={shellStyle}
         aria-hidden={showEntryGate}
       >
+        {showDockChrome && reconnecting ? (
+          <p role="status" className="shrink-0 border-b border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+            Reconnecting video… Your lesson stays open.
+          </p>
+        ) : null}
         {showDockChrome ? (
           <div
             className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-3 py-2"

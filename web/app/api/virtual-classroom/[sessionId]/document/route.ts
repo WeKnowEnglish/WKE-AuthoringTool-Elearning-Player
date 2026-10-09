@@ -3,6 +3,8 @@ import { requireVirtualClassroomSessionHost } from "@/lib/virtual-classroom/serv
 import { getVirtualClassroomSessionById } from "@/lib/virtual-classroom/server/session";
 import type { DocumentGroupSubmitPolicy } from "@/lib/document-activity/domain";
 import { launchDocumentRound } from "@/lib/document-activity/server/launch";
+import { applyDocumentTeacherCommand } from "@/lib/document-activity/server/commands";
+import { getDocumentRoundById } from "@/lib/document-activity/server/persistence";
 import type {
   DocumentParticipationMode,
   DocumentTemplateType,
@@ -21,6 +23,7 @@ type Body = {
   timerMinutes?: number;
   wordBank?: string[];
   sentenceStarters?: string[];
+  startOpen?: boolean;
 };
 
 /** Launch a document activity from Virtual Classroom (single active round). */
@@ -64,6 +67,15 @@ export async function POST(request: Request, context: RouteContext) {
       wordBank: body.wordBank,
       sentenceStarters: body.sentenceStarters,
     });
+
+    // Retrying launch reuses the durable round without resetting existing writing.
+    if (body.startOpen === true) {
+      const round = await getDocumentRoundById(launched.roundId);
+      if (!round) throw new Error("Could not restore the document round. Please retry.");
+      await applyDocumentTeacherCommand({ roomId: launched.roomId, roundId: launched.roundId,
+        sessionId: session.id, hostUserId: teacher.userId,
+        command: { type: round.phase === "waiting" ? "OPEN" : "SYNC_STATE" } });
+    }
 
     return NextResponse.json({
       roundId: launched.roundId,

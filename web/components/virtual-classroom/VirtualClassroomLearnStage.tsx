@@ -1,11 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { useEffect, useState } from "react";
-import { VirtualClassroomActivityEmbed } from "@/components/virtual-classroom/VirtualClassroomActivityEmbed";
-import { VirtualClassroomWhiteboardEmbed } from "@/components/virtual-classroom/VirtualClassroomWhiteboardEmbed";
-import { VirtualClassroomPresentationStage } from "@/components/virtual-classroom/VirtualClassroomPresentationStage";
-import { SecretRolesLaunchPanel } from "@/components/secret-roles/SecretRolesLaunchPanel";
-import { SecretRolesSessionView } from "@/components/secret-roles/SecretRolesSessionView";
 import type { ActiveActivityRef } from "@/lib/activity-runtime/active-activity-routing";
 import type { ClassLesson } from "@/lib/class-lessons/types";
 import { playPathForStudioActivity } from "@/lib/studio-activities/paths";
@@ -16,6 +13,46 @@ import type {
 } from "@/lib/virtual-classroom/liveblocks/initial-storage";
 import type { WhiteboardSessionContext } from "@/lib/whiteboard/liveblocks/identity";
 import type { VirtualClassroomPresentation } from "@/lib/virtual-classroom/presentation";
+
+// Load learning tools only when their view is opened; keep video entry light.
+const VirtualClassroomActivityEmbed = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomActivityEmbed").then((module) => module.VirtualClassroomActivityEmbed),
+  { ssr: false, loading: () => <ToolLoading /> },
+);
+
+const VirtualClassroomWhiteboardEmbed = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomWhiteboardEmbed").then((module) => module.VirtualClassroomWhiteboardEmbed),
+  { ssr: false, loading: () => <ToolLoading /> },
+);
+
+const VirtualClassroomPresentationStage = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomPresentationStage").then((module) => module.VirtualClassroomPresentationStage),
+  { ssr: false, loading: () => <ToolLoading /> },
+);
+
+const SecretRolesLaunchPanel = dynamic(
+  () => import("@/components/secret-roles/SecretRolesLaunchPanel").then((module) => module.SecretRolesLaunchPanel),
+  { ssr: false, loading: () => <ToolLoading /> },
+);
+
+const SecretRolesSessionView = dynamic(
+  () => import("@/components/secret-roles/SecretRolesSessionView").then((module) => module.SecretRolesSessionView),
+  { ssr: false, loading: () => <ToolLoading /> },
+);
+
+const SharedDocumentLaunchPanel = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomDocumentEmbed").then((module) => module.SharedDocumentLaunchPanel),
+  { ssr: false, loading: () => <ToolLoading /> },
+);
+
+const VirtualClassroomDocumentEmbed = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomDocumentEmbed").then((module) => module.VirtualClassroomDocumentEmbed),
+  { ssr: false, loading: () => <ToolLoading /> },
+);
+
+function ToolLoading() {
+  return <p role="status" className="p-4 text-sm text-slate-600">Opening learning tool…</p>;
+}
 
 type BankItem = {
   id: string;
@@ -80,6 +117,7 @@ export function VirtualClassroomLearnStage({
   const [bankLoading, setBankLoading] = useState(false);
   const [bankError, setBankError] = useState<string | null>(null);
   const [secretRolesLaunchOpen, setSecretRolesLaunchOpen] = useState(false);
+  const [documentLaunchOpen, setDocumentLaunchOpen] = useState(false);
   const [launchedSecretRoundId, setLaunchedSecretRoundId] = useState<string | null>(null);
   const secretRolesRoundId =
     activeActivity?.kind === "secret_roles"
@@ -163,6 +201,7 @@ export function VirtualClassroomLearnStage({
     setSecretRolesLaunchOpen(false);
     setLaunchedSecretRoundId(null);
     setPickerOpen(false);
+    setDocumentLaunchOpen(false);
   };
 
   return (
@@ -187,7 +226,7 @@ export function VirtualClassroomLearnStage({
                 type="button"
                 role="tab"
                 aria-selected={active}
-                disabled={!isHost}
+                disabled={!isHost || busy}
                 onClick={() => {
                   if (isHost) onSetStage(tab.id);
                 }}
@@ -204,8 +243,20 @@ export function VirtualClassroomLearnStage({
             );
           })}
         </div>
-        {isHost && learnStage === "activity" ? (
+        {isHost ? (
           <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={busy}
+              onClick={() => {
+                setPickerOpen(false);
+                setSecretRolesLaunchOpen(false);
+                setLaunchedSecretRoundId(null);
+                setDocumentLaunchOpen(activeActivity?.kind !== "document");
+                onSetStage("activity");
+              }}
+              className="rounded-lg border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-900 hover:bg-sky-100 disabled:opacity-50">
+              Shared document
+            </button>
+            {learnStage === "activity" && <>
             <button
               type="button"
               onClick={() => {
@@ -220,6 +271,7 @@ export function VirtualClassroomLearnStage({
               type="button"
               onClick={() => {
                 setPickerOpen(false);
+                setDocumentLaunchOpen(false);
                 setSecretRolesLaunchOpen((value) => !value);
               }}
               className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-900 hover:bg-violet-100"
@@ -234,6 +286,7 @@ export function VirtualClassroomLearnStage({
             >
               Start new track
             </a>
+            </>}
           </div>
         ) : null}
       </div>
@@ -311,7 +364,17 @@ export function VirtualClassroomLearnStage({
       ) : null}
 
       <div className="min-h-0 flex-1">
-        {learnStage === "activity" && secretRolesRoundId ? (
+        {learnStage === "activity" && activeActivity?.kind === "document" && (activeActivity.roundId || activeActivity.joinCode) ? (
+          <div className="h-full overflow-y-auto rounded-xl border border-sky-200 bg-white">
+            <VirtualClassroomDocumentEmbed key={activeActivity.roundId ?? activeActivity.joinCode}
+              roundId={(activeActivity.roundId ?? activeActivity.joinCode)!}
+              isolatedLiveblocksProvider={isolatedWhiteboardProvider} />
+          </div>
+        ) : learnStage === "activity" && isHost && documentLaunchOpen ? (
+          <div className="h-full overflow-y-auto">
+            <SharedDocumentLaunchPanel sessionId={sessionId} onLaunched={() => setDocumentLaunchOpen(false)} />
+          </div>
+        ) : learnStage === "activity" && secretRolesRoundId ? (
           <SecretRolesSessionView
             roundId={secretRolesRoundId}
             role={role}

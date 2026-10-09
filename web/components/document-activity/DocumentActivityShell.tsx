@@ -9,10 +9,10 @@ import {
 } from "@/components/document-activity/DocumentCollaborativeEditor";
 import { DocumentReviewPanel } from "@/components/document-activity/DocumentReviewPanel";
 import {
-  canEditActivityWork,
   canSubmitActivityWork,
 } from "@/lib/activity-runtime/activity-permissions";
 import { studentFacingState } from "@/lib/activity-runtime/activity-phases";
+import { canEditDocumentWork } from "@/lib/document-activity/edit-permissions";
 import { teacherControlLabel } from "@/lib/activity-runtime/activity-commands";
 import { clearDocumentSessionContext } from "@/lib/document-activity/client-context";
 import {
@@ -37,6 +37,7 @@ type Props = {
   userId: string;
   displayName: string;
   vcSessionId: string;
+  embedded?: boolean;
 };
 
 type RosterRow = {
@@ -64,11 +65,15 @@ function readRuntime<T>(root: unknown, key: string): T | null {
 function readDocField(
   documents: unknown,
   docId: string,
-): { status: string | null; returnNote: string | null; ownerType: string | null; ownerId: string | null; displayName: string | null } | null {
+): { status: string | null; returnNote: string | null; ownerType: string | null; ownerId: string | null; displayName: string | null; savePending: boolean; submittedBy: string | null } | null {
   if (!documents || typeof documents !== "object") return null;
   const read = (raw: unknown) => {
     if (!raw) return null;
-    const d = raw as DocumentFields & { get?: (k: string) => unknown };
+    const d = raw as DocumentFields & {
+      get?: (k: string) => unknown;
+      submissionSavePending?: boolean;
+      pendingSubmittedBy?: string;
+    };
     if (typeof d.get === "function") {
       return {
         status: (d.get("status") as string) ?? null,
@@ -76,6 +81,8 @@ function readDocField(
         ownerType: (d.get("ownerType") as string) ?? null,
         ownerId: (d.get("ownerId") as string) ?? null,
         displayName: (d.get("displayName") as string) ?? null,
+        savePending: d.get("submissionSavePending") === true,
+        submittedBy: (d.get("pendingSubmittedBy") as string | null) ?? null,
       };
     }
     return {
@@ -84,6 +91,8 @@ function readDocField(
       ownerType: d.ownerType ?? null,
       ownerId: d.ownerId ?? null,
       displayName: d.displayName ?? null,
+      savePending: d.submissionSavePending === true,
+      submittedBy: d.pendingSubmittedBy ?? null,
     };
   };
   if (typeof (documents as { get?: unknown }).get === "function") {
@@ -98,6 +107,7 @@ export function DocumentActivityShell({
   userId,
   displayName,
   vcSessionId,
+  embedded = false,
 }: Props) {
   const router = useRouter();
   const editorRef = useRef<DocumentEditorHandle>(null);
@@ -108,6 +118,10 @@ export function DocumentActivityShell({
   const [inspectId, setInspectId] = useState<string | null>(null);
 
   const phase = useStorage((root) => readRuntime<string>(root, "phase") ?? "waiting");
+  const collectionSavePending = useStorage(
+    (root) => readRuntime<boolean>(root, "collectionSavePending") === true,
+  );
+  const roundSavePending = useStorage((root) => readRuntime<boolean>(root, "roundSavePending") === true);
   const participationMode = useStorage(
     (root) => readRuntime<string>(root, "participationMode") ?? "individual",
   );
@@ -328,15 +342,19 @@ export function DocumentActivityShell({
         ? myDoc?.ownerId === userId
         : Boolean(myGroup && myDoc?.ownerId === myGroup.id));
 
-  const facing = studentFacingState({
+  const facing = roundSavePending ? "Activity state is waiting to save" : (role === "host" && collectionSavePending) || myDoc?.savePending
+    ? "Work is waiting to save"
+    : studentFacingState({
     phase,
     workStatus: myStatus,
     hasReviewPush,
   });
 
-  const canEdit = canEditActivityWork({
+  const canEdit = canEditDocumentWork({
+    participationMode,
     phase,
-    workStatus: myStatus,
+    workStatus: role === "host" && participationMode === "whole_class"
+      ? visibleRoster.find(row => row.ownerType === "class")?.status ?? null : myStatus,
     role,
     isOwner: isMemberOwner,
     hasReviewPush,
@@ -347,6 +365,13 @@ export function DocumentActivityShell({
     return myGroup.memberIds.filter((id) => participants[id]?.ready);
   }, [myGroup, participants]);
 
+  const canRetrySubmit = Boolean(
+    myDoc?.savePending &&
+    myDoc.submittedBy === userId &&
+    (myStatus === "submitted" || myStatus === "locked") &&
+    (phase === "active" || phase === "revision" || phase === "collected"),
+  );
+
   const submitGate = useMemo(() => {
     if (!myDocId || !myDoc) return { ok: false as const, reason: "No document yet." };
     return canSubmitDocumentAsUser({
@@ -355,20 +380,20 @@ export function DocumentActivityShell({
       documentOwnerType: myDoc.ownerType ?? "student",
       documentOwnerId: myDoc.ownerId ?? "",
       groups,
-      groupSubmitPolicy: settings.groupSubmitPolicy ?? "any_member",
+      groupSubmitPolicy: canRetrySubmit ? "any_member" : settings.groupSubmitPolicy ?? "any_member",
       readyMemberIds,
     });
-  }, [groups, myDoc, myDocId, participationMode, readyMemberIds, settings.groupSubmitPolicy, userId]);
+  }, [canRetrySubmit, groups, myDoc, myDocId, participationMode, readyMemberIds, settings.groupSubmitPolicy, userId]);
 
   const canSubmit =
     !hasReviewPush &&
     isMemberOwner &&
     submitGate.ok &&
-    canSubmitActivityWork({
+    (canRetrySubmit || canSubmitActivityWork({
       phase,
       workStatus: myStatus,
       isOwner: true,
-    });
+    }));
 
   const editorField = useMemo(() => {
     if (hasReviewPush) return null;
@@ -394,7 +419,7 @@ export function DocumentActivityShell({
         if (!res.ok) throw new Error(payload.error ?? "Command failed.");
         if (command.type === "COMPLETE") {
           clearDocumentSessionContext();
-          router.push(`/teacher/virtual-classroom/${vcSessionId}`);
+          if (!embedded) router.push(`/teacher/virtual-classroom/${vcSessionId}`);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed.");
@@ -402,7 +427,7 @@ export function DocumentActivityShell({
         setBusy(null);
       }
     },
-    [roundId, router, vcSessionId],
+    [embedded, roundId, router, vcSessionId],
   );
 
   const submitWork = useCallback(async () => {
@@ -410,11 +435,8 @@ export function DocumentActivityShell({
     setBusy("SUBMIT");
     setError(null);
     try {
-      const payload = editorRef.current?.getPayload() ?? {
-        contentJson: {},
-        plainText: "",
-        wordCount: 0,
-      };
+      const payload = canRetrySubmit ? {} : editorRef.current?.getPayload();
+      if (!payload) throw new Error("Your editor is still loading. Please try again when your work appears.");
       const res = await fetch(`/api/document/${roundId}/commands`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -431,7 +453,7 @@ export function DocumentActivityShell({
     } finally {
       setBusy(null);
     }
-  }, [myDocId, roundId]);
+  }, [canRetrySubmit, myDocId, roundId]);
 
   const toggleReady = useCallback(async () => {
     setBusy("SET_READY");
@@ -465,17 +487,17 @@ export function DocumentActivityShell({
 
   // Teacher Complete → completed; send host + students back to the classroom.
   useEffect(() => {
-    if (phase !== "completed" || !vcSessionId) return;
+    if (embedded || phase !== "completed" || roundSavePending || !vcSessionId) return;
     clearDocumentSessionContext();
     router.push(
       role === "host"
         ? `/teacher/virtual-classroom/${vcSessionId}`
         : `/virtual-classroom/${vcSessionId}`,
     );
-  }, [phase, vcSessionId, role, router]);
+  }, [embedded, phase, roundSavePending, vcSessionId, role, router]);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-gradient-to-b from-sky-50 to-slate-100">
+    <div className={`flex flex-col bg-gradient-to-b from-sky-50 to-slate-100 ${embedded ? "min-h-full" : "min-h-dvh"}`}>
       {hasReviewPush && (
         <DocumentReviewPanel
           roundId={roundId}
@@ -503,6 +525,12 @@ export function DocumentActivityShell({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {role === "host" && roundSavePending && !collectionSavePending && (
+            <button type="button" disabled={Boolean(busy)} onClick={() => void runTeacher({ type: "SYNC_STATE" })}
+              className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+              {busy === "SYNC_STATE" ? "Saving activity state…" : "Retry saving activity state"}
+            </button>
+          )}
           {role === "host" && phase === "waiting" && (
             <button
               type="button"
@@ -513,30 +541,30 @@ export function DocumentActivityShell({
               {busy === "OPEN" ? "Opening…" : teacherControlLabel("OPEN")}
             </button>
           )}
-          {role === "host" && (phase === "active" || phase === "revision") && (
+          {role === "host" && (phase === "active" || phase === "revision" || collectionSavePending) && (
             <button
               type="button"
-              disabled={Boolean(busy)}
+              disabled={Boolean(busy) || (roundSavePending && !collectionSavePending)}
               onClick={() => void runTeacher({ type: "COLLECT" })}
               className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
             >
-              {busy === "COLLECT" ? "Collecting…" : teacherControlLabel("COLLECT")}
+              {busy === "COLLECT" ? "Saving work…" : collectionSavePending ? "Retry saving collected work" : teacherControlLabel("COLLECT")}
             </button>
           )}
           {role === "host" && (phase === "collected" || phase === "review") && (
             <button
               type="button"
-              disabled={Boolean(busy)}
+              disabled={Boolean(busy) || collectionSavePending || roundSavePending}
               onClick={() => void runTeacher({ type: "REVISE" })}
               className="rounded-lg bg-indigo-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
             >
               {busy === "REVISE" ? "Starting…" : teacherControlLabel("REVISE")}
             </button>
           )}
-          {role === "host" && phase !== "completed" && phase !== "waiting" && (
+          {role === "host" && (phase === "collected" || phase === "review") && (
             <button
               type="button"
-              disabled={Boolean(busy)}
+              disabled={Boolean(busy) || collectionSavePending || roundSavePending}
               onClick={() => {
                 if (window.confirm("Complete this document round? Students return to the classroom.")) {
                   void runTeacher({ type: "COMPLETE" });
@@ -568,22 +596,28 @@ export function DocumentActivityShell({
               onClick={() => void submitWork()}
               className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
             >
-              {busy === "SUBMIT" ? "Submitting…" : "Submit"}
+              {busy === "SUBMIT" ? "Saving work…" : canRetrySubmit ? "Retry saving my work" : "Submit"}
             </button>
           )}
-          <button
+          {!embedded && <button
             type="button"
             onClick={backToClassroom}
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800"
           >
             Back to classroom
-          </button>
+          </button>}
         </div>
       </header>
 
       {error && (
         <div className="mx-4 mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           {error}
+        </div>
+      )}
+
+      {role === "host" && collectionSavePending && (
+        <div role="status" className="mx-4 mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          Some collected work is waiting to save. Use “Retry saving collected work” before starting review or completing this activity.
         </div>
       )}
 
@@ -707,7 +741,7 @@ export function DocumentActivityShell({
                 key={editorField}
                 ref={role === "player" ? editorRef : undefined}
                 field={editorField}
-                editable={role === "player" && canEdit}
+                editable={canEdit}
               />
               {role === "player" &&
                 !canSubmit &&

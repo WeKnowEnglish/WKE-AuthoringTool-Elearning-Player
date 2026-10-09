@@ -1,4 +1,5 @@
-import { cookies } from "next/headers";
+import { authorizeClassroomActivity } from "@/lib/virtual-classroom/server/activity-access";
+import { confirmRoundStateSaved } from "@/lib/activity-runtime/server/round-save-state";
 import { NextResponse } from "next/server";
 import {
   applyDocumentStudentCommand,
@@ -8,18 +9,13 @@ import {
 } from "@/lib/document-activity/server/commands";
 import { getDocumentRoundById } from "@/lib/document-activity/server/persistence";
 import { setVcActiveActivity } from "@/lib/virtual-classroom/server/liveblocks-session";
-import {
-  decodeVcMemberToken,
-  vcHostMatchesJoinCode,
-  VC_HOST_COOKIE,
-  VC_MEMBER_COOKIE,
-} from "@/lib/virtual-classroom/session-cookie";
 import { getVirtualClassroomSessionById } from "@/lib/virtual-classroom/server/session";
 
 type RouteContext = { params: Promise<{ roundId: string }> };
 
 const TEACHER_TYPES = new Set([
   "OPEN",
+  "SYNC_STATE",
   "COLLECT",
   "ASSIGN_GROUPS",
   "SHOW",
@@ -46,13 +42,6 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Classroom not found." }, { status: 404 });
   }
 
-  const cookieStore = await cookies();
-  const hostCookie = cookieStore.get(VC_HOST_COOKIE)?.value ?? null;
-  const member = decodeVcMemberToken(cookieStore.get(VC_MEMBER_COOKIE)?.value);
-  const isHost =
-    vcHostMatchesJoinCode(hostCookie, session.joinCode) ||
-    (member?.sessionId === session.id && member.role === "host");
-
   let body: { type?: string };
   try {
     body = (await request.json()) as { type?: string };
@@ -64,43 +53,48 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Missing command type." }, { status: 400 });
   }
 
+  const participant = await authorizeClassroomActivity({ session, round, allowCompleted: body.type === "COMPLETE" || body.type === "SYNC_STATE" });
+  if (!participant) {
+    return NextResponse.json({ error: "Current classroom access is required." }, { status: 403 });
+  }
+
   try {
     if (TEACHER_TYPES.has(body.type)) {
-      if (!isHost) {
+      if (participant.role !== "host") {
         return NextResponse.json({ error: "Teacher only." }, { status: 403 });
       }
       const result = await applyDocumentTeacherCommand({
         roomId: round.liveblocksRoomId,
         roundId: round.id,
         sessionId: session.id,
-        hostUserId: round.createdBy,
+        hostUserId: participant.userId,
         command: body as DocumentTeacherCommand,
+        deferCompletionConfirmation: true,
       });
 
-      if (body.type === "COMPLETE") {
+      if (result.phase === "completed") {
         await setVcActiveActivity({
           roomId: session.liveblocksRoomId,
           sessionId: session.id,
-          actorUserId: round.createdBy,
+          classId: session.classId,
+          actorUserId: participant.userId,
           kind: null,
           joinCode: null,
           label: null,
           roundId: null,
           activityRoomId: null,
-        }).catch(() => undefined);
+        });
+        await confirmRoundStateSaved(round.liveblocksRoomId);
       }
 
       return NextResponse.json({ ok: true, phase: result.phase });
     }
 
     if (STUDENT_TYPES.has(body.type)) {
-      const userId = member?.userId;
-      if (!userId || member?.sessionId !== session.id) {
-        return NextResponse.json({ error: "Join the classroom first." }, { status: 403 });
-      }
-      if (isHost && member.role === "host") {
+      if (participant.role !== "member") {
         return NextResponse.json({ error: "Students submit their own work." }, { status: 403 });
       }
+      const userId = participant.userId;
 
       const result = await applyDocumentStudentCommand({
         roomId: round.liveblocksRoomId,

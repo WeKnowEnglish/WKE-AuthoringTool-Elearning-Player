@@ -8,6 +8,8 @@ import type {
 } from "@/lib/document-activity/types";
 
 export async function upsertDocumentRoundMeta(input: {
+  /** Only authenticated launch may establish round ownership. */
+  create?: boolean;
   roundId: string;
   sessionId: string;
   liveblocksRoomId: string;
@@ -21,13 +23,9 @@ export async function upsertDocumentRoundMeta(input: {
   completedAt?: string | null;
 }): Promise<void> {
   const supabase = createServiceRoleSupabase();
-  if (!supabase) return;
+  if (!supabase) throw new Error("Document round storage is unavailable.");
 
   const row: Record<string, unknown> = {
-    id: input.roundId,
-    session_id: input.sessionId,
-    liveblocks_room_id: input.liveblocksRoomId,
-    created_by: input.createdBy,
     participation_mode: input.participationMode,
     template_type: input.templateType,
     phase: input.phase,
@@ -38,7 +36,15 @@ export async function upsertDocumentRoundMeta(input: {
   if (input.collectedAt !== undefined) row.collected_at = input.collectedAt;
   if (input.completedAt !== undefined) row.completed_at = input.completedAt;
 
-  await supabase.from("document_rounds").upsert(row, { onConflict: "id" });
+  const { data, error } = input.create
+    ? await supabase.from("document_rounds").insert({ ...row, id: input.roundId,
+      session_id: input.sessionId, liveblocks_room_id: input.liveblocksRoomId,
+      created_by: input.createdBy }).select("id").single()
+    : await supabase.from("document_rounds").update(row)
+      .eq("id", input.roundId).eq("session_id", input.sessionId)
+      .eq("liveblocks_room_id", input.liveblocksRoomId).eq("created_by", input.createdBy)
+      .select("id").single();
+  if (error || !data) throw new Error("Could not save the document round. Please retry.");
 }
 
 export async function getDocumentRoundById(roundId: string): Promise<{
@@ -52,7 +58,7 @@ export async function getDocumentRoundById(roundId: string): Promise<{
   settings: unknown;
 } | null> {
   const supabase = createServiceRoleSupabase();
-  if (!supabase) return null;
+  if (!supabase) throw new Error("Document round storage is unavailable.");
 
   const { data, error } = await supabase
     .from("document_rounds")
@@ -62,7 +68,8 @@ export async function getDocumentRoundById(roundId: string): Promise<{
     .eq("id", roundId)
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (error) throw new Error("Could not load the document round. Please retry.");
+  if (!data) return null;
 
   return {
     id: data.id as string,
@@ -80,23 +87,28 @@ export async function getActiveDocumentRoundForSession(sessionId: string): Promi
   id: string;
   liveblocksRoomId: string;
   phase: DocumentRuntimePhase;
+  createdBy: string;
+  participationMode: DocumentParticipationMode;
 } | null> {
   const supabase = createServiceRoleSupabase();
-  if (!supabase) return null;
+  if (!supabase) throw new Error("Document round storage is unavailable.");
 
   const { data, error } = await supabase
     .from("document_rounds")
-    .select("id, liveblocks_room_id, phase")
+    .select("id, liveblocks_room_id, phase, created_by, participation_mode")
     .eq("session_id", sessionId)
     .neq("phase", "completed")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (error) throw new Error("Could not load the active document round. Please retry.");
+  if (!data) return null;
   return {
     id: data.id as string,
     liveblocksRoomId: data.liveblocks_room_id as string,
     phase: data.phase as DocumentRuntimePhase,
+    createdBy: data.created_by as string,
+    participationMode: data.participation_mode as DocumentParticipationMode,
   };
 }

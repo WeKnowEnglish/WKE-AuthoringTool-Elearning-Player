@@ -14,9 +14,11 @@ import {
   VC_HOST_COOKIE,
   VC_MEMBER_COOKIE,
 } from "@/lib/virtual-classroom/session-cookie";
-import { getVirtualClassroomSessionByJoinCode } from "@/lib/virtual-classroom/server/session";
+import { getVirtualClassroomSessionById, getVirtualClassroomSessionByJoinCode } from "@/lib/virtual-classroom/server/session";
 import { joinCodeFromVirtualClassroomRoom } from "@/lib/virtual-classroom/room-id";
-import { canAccessDocumentRoom } from "@/lib/document-activity/auth-policy";
+import { parseDocumentRoomId } from "@/lib/document-activity/domain";
+import { getDocumentRoundById } from "@/lib/document-activity/server/persistence";
+import { authorizeClassroomActivity } from "@/lib/virtual-classroom/server/activity-access";
 import { canAccessWhiteboardRoom } from "@/lib/whiteboard/liveblocks/auth-policy";
 import {
   decodeWhiteboardPlayerToken,
@@ -118,20 +120,20 @@ export async function POST(request: Request) {
         timer.setContext({ role: player.role });
       }
     } else if (product === "document") {
-      const hostCookie = cookieStore.get(VC_HOST_COOKIE)?.value ?? null;
-      const memberCookie = cookieStore.get(VC_MEMBER_COOKIE)?.value ?? null;
-      authorized = canAccessDocumentRoom({
-        room: authRequest.room,
-        role: authRequest.role,
-        hostCookie,
-        memberCookie,
-      });
-      const member = decodeVcMemberToken(memberCookie);
-      if (authorized && member) {
-        authRequest.userId = member.userId;
-        authRequest.displayName = member.displayName;
-        authRequest.role = member.role === "host" ? "host" : "player";
-        timer.setContext({ role: authRequest.role });
+      const parsed = parseDocumentRoomId(authRequest.room);
+      if (parsed) {
+        const round = await getDocumentRoundById(parsed.roundId);
+        const classroom = await getVirtualClassroomSessionById(parsed.vcSessionId);
+        if (round && round.liveblocksRoomId === authRequest.room && round.sessionId === parsed.vcSessionId && classroom) {
+          const reader = await authorizeClassroomActivity({ session: classroom, round });
+          authorized = Boolean(reader);
+          if (reader) {
+            authRequest.userId = reader.userId;
+            authRequest.displayName = reader.displayName;
+            authRequest.role = reader.role === "host" ? "host" : "player";
+            timer.setContext({ role: authRequest.role });
+          }
+        }
       }
     } else if (product === "word-cards") {
       const playerCookie = cookieStore.get(WORD_CARDS_PLAYER_COOKIE)?.value ?? null;

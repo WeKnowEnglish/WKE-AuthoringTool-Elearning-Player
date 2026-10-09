@@ -331,7 +331,8 @@ export function VirtualClassroomLearnStage({
         {learnStage === "activity" && activeActivity?.kind === "document" && (activeActivity.roundId || activeActivity.joinCode) ? (
           <div className="h-full overflow-y-auto rounded-xl border border-sky-200 bg-white">
             <VirtualClassroomDocumentEmbed key={activeActivity.roundId ?? activeActivity.joinCode}
-              roundId={(activeActivity.roundId ?? activeActivity.joinCode)!} />
+              roundId={(activeActivity.roundId ?? activeActivity.joinCode)!}
+              isolatedLiveblocksProvider={isolatedWhiteboardProvider} />
           </div>
         ) : learnStage === "activity" && isHost && documentLaunchOpen ? (
           <div className="h-full overflow-y-auto">

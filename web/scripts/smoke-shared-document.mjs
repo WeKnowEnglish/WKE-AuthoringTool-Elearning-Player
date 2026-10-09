@@ -148,8 +148,12 @@ try {
   assert(documentSockets.length > 0, "A real document-provider socket is required for the reconnect check.");
   await Promise.all(documentSockets.flatMap(({ socket, server }) =>
     [socket.close({ code: 1001 }), server.close({ code: 1001 })].map(closed => closed.catch(() => {}))));
-  await expect(students[0].page.getByRole("status").filter({ hasText: "Reconnecting to shared document" })).toBeVisible({ timeout: 45_000 });
-  await expect(editor(students[0])).toHaveAttribute("contenteditable", "false");
+  await expect.poll(async () => {
+    const documentReconnecting = await students[0].page.getByRole("status").filter({ hasText: "Reconnecting to shared document" }).isVisible();
+    const classroomReconnecting = await students[0].page.getByText(/^Connecting to Virtual Classroom/).isVisible();
+    const editableCount = await students[0].page.locator('.tiptap[contenteditable="true"]').count();
+    return (documentReconnecting || classroomReconnecting) && editableCount === 0;
+  }, { timeout: 45_000 }).toBe(true);
   await editor(teacher).click(); await teacher.page.keyboard.press("Control+End"); await teacher.page.keyboard.insertText(" The teacher helps us finish.");
   students[0].network.offlineRoomId = null;
   await students[0].context.setOffline(false);

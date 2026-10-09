@@ -14,6 +14,8 @@ type Props = {
   sessionEnded: boolean;
   /** dock = Learn (full-height left video rail); stage = Meeting (viewport-filling video). */
   layout?: "dock" | "stage";
+  /** Shared writing needs the phone's full width; keep the call mounted behind a video toggle. */
+  mobileDocumentMode?: boolean;
   /** Host: leave Meeting layout for Learn (materials + dock). */
   onExitToLearn?: () => void;
   /** Host: enter Meeting layout from Learn. */
@@ -44,6 +46,7 @@ export function DailyVideoDock({
   isHost,
   sessionEnded,
   layout = "dock",
+  mobileDocumentMode = false,
   onExitToLearn,
   onEnterMeeting,
   onEndSession,
@@ -51,6 +54,7 @@ export function DailyVideoDock({
   onLeaveClassroom,
 }: Props) {
   const isStage = layout === "stage";
+  const [mobileVideoOpen, setMobileVideoOpen] = useState(false);
   const teacherTheme = useSyncExternalStore(
     teacherThemeStore.subscribe,
     teacherThemeStore.getSnapshot,
@@ -401,7 +405,12 @@ export function DailyVideoDock({
   // Single shell + containerRef — Learn = in-flow full-height left rail; Meeting = fixed stage.
   const shellClass = isStage
     ? "pointer-events-auto fixed inset-0 z-40 flex flex-col overflow-hidden"
-    : "pointer-events-auto relative z-20 flex h-dvh w-[min(42vw,400px)] min-w-[240px] max-w-[420px] shrink-0 flex-col overflow-hidden border-r";
+    : "pointer-events-auto relative z-20 flex h-dvh w-[min(42vw,400px)] min-w-[240px] max-w-[420px] shrink-0 flex-col overflow-hidden border-r" +
+      (mobileDocumentMode
+        ? mobileVideoOpen
+          ? " max-sm:fixed max-sm:inset-x-3 max-sm:top-16 max-sm:z-40 max-sm:h-[65dvh] max-sm:w-auto max-sm:min-w-0 max-sm:max-w-none max-sm:rounded-xl max-sm:border max-sm:shadow-xl"
+          : " max-sm:hidden"
+        : "");
 
   const frameHeightClass = "min-h-0 w-full flex-1";
 
@@ -414,6 +423,13 @@ export function DailyVideoDock({
 
   return (
     <>
+      {mobileDocumentMode && !isStage ? (
+        <button type="button" aria-expanded={mobileVideoOpen}
+          onClick={() => setMobileVideoOpen(value => !value)}
+          className="fixed bottom-20 right-3 z-40 rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800 shadow-md sm:hidden">
+          {mobileVideoOpen ? "Hide class video" : "Show class video"}
+        </button>
+      ) : null}
       {showEntryGate ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-6"

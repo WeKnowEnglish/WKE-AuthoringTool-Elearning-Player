@@ -45,13 +45,14 @@ async function surface(credentials, mobile = false) {
   const result = await auth.auth.signInWithPassword(credentials);
   assert.ifError(result.error);
   const context = await browser.newContext({ baseURL: origin, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 } });
-  const network = { offline: false, sockets: [] };
+  const network = { offlineRoomId: null, sockets: [] };
   // Browser offline emulation leaves established WebSockets open. Forward real
   // provider traffic, but explicitly sever its socket for the reconnect check.
   await context.routeWebSocket(/liveblocks/, socket => {
-    if (network.offline) { void socket.close({ code: 1001 }); return; }
+    const roomId = new URL(socket.url()).searchParams.get("roomId");
+    if (network.offlineRoomId === roomId) { void socket.close({ code: 1001 }); return; }
     const server = socket.connectToServer();
-    network.sockets.push({ socket, server });
+    network.sockets.push({ socket, server, roomId });
   });
   contexts.push(context);
   await context.addCookies(cookies.map(cookie => ({ name: cookie.name, value: cookie.value, url: origin, sameSite: "Lax", secure: origin.startsWith("https:") })));
@@ -141,20 +142,27 @@ try {
   for (const text of contributions) await expect(editor(students[1])).toContainText(text.trim());
   await expect(editor(students[1])).toHaveAttribute("contenteditable", "true");
   check("Student refresh restores the document and editing access");
-  students[0].network.offline = true;
+  students[0].network.offlineRoomId = launched.roomId;
   await students[0].context.setOffline(true);
-  await Promise.all(students[0].network.sockets.flatMap(({ socket, server }) =>
+  const documentSockets = students[0].network.sockets.filter(socket => socket.roomId === launched.roomId);
+  assert(documentSockets.length > 0, "A real document-provider socket is required for the reconnect check.");
+  await Promise.all(documentSockets.flatMap(({ socket, server }) =>
     [socket.close({ code: 1001 }), server.close({ code: 1001 })].map(closed => closed.catch(() => {}))));
   await expect(students[0].page.getByRole("status").filter({ hasText: "Reconnecting to shared document" })).toBeVisible({ timeout: 45_000 });
   await expect(editor(students[0])).toHaveAttribute("contenteditable", "false");
   await editor(teacher).click(); await teacher.page.keyboard.press("Control+End"); await teacher.page.keyboard.insertText(" The teacher helps us finish.");
-  students[0].network.offline = false;
+  students[0].network.offlineRoomId = null;
   await students[0].context.setOffline(false);
   await expect(editor(students[0])).toHaveAttribute("contenteditable", "true");
   await expectWriting(surfaces, "The teacher helps us finish.");
   check("Disconnected student sees reconnect status, pauses editing, and recovers all writing on reconnect");
   const bounds = await students[2].page.evaluate(() => ({ width: innerWidth, content: document.documentElement.scrollWidth }));
   assert(bounds.content <= bounds.width + 2, `Mobile horizontal overflow: ${JSON.stringify(bounds)}`);
+  assert((await editor(students[2]).boundingBox()).width >= 280, "Phone writing needs a usable full-width editor.");
+  await students[2].page.getByRole("button", { name: "Show class video", exact: true }).click();
+  await expect(students[2].page.getByText("Class video", { exact: true })).toBeVisible();
+  await students[2].page.getByRole("button", { name: "Hide class video", exact: true }).click();
+  await expect(editor(students[2])).toHaveAttribute("contenteditable", "true");
   await teacher.page.screenshot({ path: resolve(output, "teacher-shared-writing.png"), fullPage: true });
   await students[2].page.screenshot({ path: resolve(output, "student-mobile-writing.png"), fullPage: true });
   check("Mobile student can write without page overflow; desktop and mobile screenshots captured");
@@ -185,8 +193,12 @@ try {
   assert.equal(report.requestFailures.length, 0, JSON.stringify(report.requestFailures));
   report.passed = true;
 } catch (error) {
-  report.passed = false; report.error = String(error.message ?? error).split("\n")[0];
-  if (teacher) await teacher.page.screenshot({ path: resolve(output, "failure.png"), fullPage: true }).catch(() => {});
+  const message = String(error.message ?? error);
+  report.passed = false;
+  report.error = /^(?:expect\(|locator\.)/.test(message) ? message.slice(0, 2000) : message.split("\n")[0];
+  for (const [index, context] of contexts.entries()) {
+    await context.pages()[0]?.screenshot({ path: resolve(output, `failure-${index}.png`), fullPage: true }).catch(() => {});
+  }
   throw new Error(report.error);
 } finally {
   // End only this script's newly-created session, then remove disposable records.

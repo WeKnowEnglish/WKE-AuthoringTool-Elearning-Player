@@ -519,6 +519,7 @@ export function VirtualClassroomSessionView({
         isHost={role === "host"}
         sessionEnded={ended || status === "ended"}
         layout={isMeeting ? "stage" : "dock"}
+        mobileDocumentMode={activeActivity?.kind === "document"}
         onExitToLearn={
           role === "host" ? () => setUiMode("learn") : undefined
         }

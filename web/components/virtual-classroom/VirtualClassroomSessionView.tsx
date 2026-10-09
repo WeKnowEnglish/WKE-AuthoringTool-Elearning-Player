@@ -14,22 +14,7 @@ import { GlobalTimerBanner } from "@/components/virtual-classroom/GlobalTimerPan
 import { StudentSessionChrome } from "@/components/virtual-classroom/StudentSessionChrome";
 import { useLobbyPresence } from "@/components/virtual-classroom/useLobbyPresence";
 import { useClassroomRealtimeShadowPresence } from "@/components/virtual-classroom/useClassroomRealtimeShadowPresence";
-// Keep meeting entry independent of tools that are only used in Learn.
-const VirtualClassroomLearnControls = dynamic(
-  () => import("@/components/virtual-classroom/VirtualClassroomLearnControls").then((module) => module.VirtualClassroomLearnControls),
-  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening learning tools…</p> },
-);
-// Keep meeting entry independent of tools that are only used in Learn.
-const VirtualClassroomLearnStage = dynamic(
-  () => import("@/components/virtual-classroom/VirtualClassroomLearnStage").then((module) => module.VirtualClassroomLearnStage),
-  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening learning tools…</p> },
-);
 import { VirtualClassroomLiveProvider } from "@/components/virtual-classroom/VirtualClassroomLiveProvider";
-// Keep meeting entry independent of tools that are only used in Learn.
-const VirtualClassroomNativeSessionView = dynamic(
-  () => import("@/components/virtual-classroom/VirtualClassroomNativeSessionView").then((module) => module.VirtualClassroomNativeSessionView),
-  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening classroom…</p> },
-);
 import { ClassroomConnectionStatus, VirtualClassroomRoomShell } from "@/components/virtual-classroom/VirtualClassroomRoomShell";
 import { launchWhiteboardInLearn } from "@/lib/virtual-classroom/client/launch-whiteboard";
 import {
@@ -95,6 +80,22 @@ import {
   normalizeVirtualClassroomPresentation,
   type VirtualClassroomPresentation,
 } from "@/lib/virtual-classroom/presentation";
+
+// Load learning tools only when their view is opened; keep video entry light.
+const VirtualClassroomLearnControls = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomLearnControls").then((module) => module.VirtualClassroomLearnControls),
+  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening learning tools…</p> },
+);
+
+const VirtualClassroomLearnStage = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomLearnStage").then((module) => module.VirtualClassroomLearnStage),
+  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening learning tools…</p> },
+);
+
+const VirtualClassroomNativeSessionView = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomNativeSessionView").then((module) => module.VirtualClassroomNativeSessionView),
+  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening classroom…</p> },
+);
 
 type Props = {
   sessionId: string;

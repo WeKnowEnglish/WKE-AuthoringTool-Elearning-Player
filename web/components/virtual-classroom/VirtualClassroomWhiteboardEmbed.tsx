@@ -141,7 +141,7 @@ export function VirtualClassroomWhiteboardEmbed({
         >
           <VirtualClassroomSharedBoard
             sessionId={currentContext.sessionId}
-            role={context.role}
+            role={currentContext.role}
             userId={wbUserId}
             studentPensEnabled={studentPensEnabled}
             onToggleStudentPens={role === "host" ? onToggleStudentPens : undefined}

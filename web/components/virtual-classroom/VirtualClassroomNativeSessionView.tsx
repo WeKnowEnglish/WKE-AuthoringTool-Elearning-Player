@@ -10,16 +10,6 @@ import { GlobalTimerBannerContent } from "@/components/virtual-classroom/GlobalT
 import { StudentSessionChromeContent } from "@/components/virtual-classroom/StudentSessionChrome";
 import { useClassroomRealtimeShadowPresence } from "@/components/virtual-classroom/useClassroomRealtimeShadowPresence";
 import { useLobbyPresence } from "@/components/virtual-classroom/useLobbyPresence";
-// Keep meeting entry independent of tools that are only used in Learn.
-const VirtualClassroomLearnControlsContent = dynamic(
-  () => import("@/components/virtual-classroom/VirtualClassroomLearnControls").then((module) => module.VirtualClassroomLearnControlsContent),
-  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening learning tools…</p> },
-);
-// Keep meeting entry independent of tools that are only used in Learn.
-const VirtualClassroomLearnStage = dynamic(
-  () => import("@/components/virtual-classroom/VirtualClassroomLearnStage").then((module) => module.VirtualClassroomLearnStage),
-  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening learning tools…</p> },
-);
 import { launchWhiteboardInLearn } from "@/lib/virtual-classroom/client/launch-whiteboard";
 import { classroomRecoveryFeedback } from "@/lib/classroom-realtime/recovery-feedback";
 import { resolveClassroomRuntimeViewState } from "@/lib/classroom-realtime/runtime-view-state";
@@ -57,6 +47,17 @@ import type {
 } from "@/lib/virtual-classroom/liveblocks/initial-storage";
 import type { VirtualClassroomPresentation } from "@/lib/virtual-classroom/presentation";
 import type { WhiteboardSessionContext } from "@/lib/whiteboard/liveblocks/identity";
+
+// Load learning tools only when their view is opened; keep video entry light.
+const VirtualClassroomLearnControlsContent = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomLearnControls").then((module) => module.VirtualClassroomLearnControlsContent),
+  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening learning tools…</p> },
+);
+
+const VirtualClassroomLearnStage = dynamic(
+  () => import("@/components/virtual-classroom/VirtualClassroomLearnStage").then((module) => module.VirtualClassroomLearnStage),
+  { ssr: false, loading: () => <p role="status" className="p-3 text-sm text-slate-600">Opening learning tools…</p> },
+);
 
 type Props = {
   sessionId: string;

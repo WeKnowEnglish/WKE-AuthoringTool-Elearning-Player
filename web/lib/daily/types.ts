@@ -14,6 +14,8 @@ export type DailyMeetingTokenInput = {
   role: DailyCallRole;
   /** Unix seconds */
   exp: number;
+  /** Returning to the same call after refresh or a fatal network failure. */
+  resume?: { audioOff: boolean; videoOff: boolean };
 };
 
 export type DailyMeetingTokenResult = {

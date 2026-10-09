@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { useDailyCall } from "@/components/virtual-classroom/daily/useDailyCall";
+import { dailyResumeKey, parseDailyResume } from "@/lib/daily/recovery";
 import { dailyThemeFromTeacherTheme } from "@/lib/daily/theme-from-teacher";
 import {
   resolveTeacherThemeCssVars,
@@ -10,6 +11,7 @@ import {
 
 type Props = {
   sessionId: string;
+  userId: string;
   isHost: boolean;
   sessionEnded: boolean;
   /** dock = Learn (full-height left video rail); stage = Meeting (viewport-filling video). */
@@ -45,6 +47,7 @@ function entrySkipKey(sessionId: string) {
  */
 export function DailyVideoDock({
   sessionId,
+  userId,
   isHost,
   sessionEnded,
   layout = "dock",
@@ -80,8 +83,11 @@ export function DailyVideoDock({
     connect,
     requestFullscreen,
     retryProbe,
+    reconnecting,
+    cancelRecovery,
   } = useDailyCall({
     sessionId,
+    userId,
     isHost,
     sessionEnded,
     theme: dailyTheme,
@@ -90,6 +96,7 @@ export function DailyVideoDock({
   const [disabledDismissed, setDisabledDismissed] = useState(false);
   const [entrySkipped, setEntrySkipped] = useState(false);
   const [entryStarted, setEntryStarted] = useState(false);
+  const [entryPreferencesReady, setEntryPreferencesReady] = useState(false);
   const [hasCompletedEntry, setHasCompletedEntry] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [transcriptBusy, setTranscriptBusy] = useState(false);
@@ -108,11 +115,13 @@ export function DailyVideoDock({
       const skipped = sessionStorage.getItem(entrySkipKey(sessionId)) === "1";
       setEntrySkipped(skipped);
       if (skipped) setHasCompletedEntry(true);
+      if (parseDailyResume(sessionStorage.getItem(dailyResumeKey(sessionId, userId)))) setHasCompletedEntry(true);
     } catch {
       setDisabledDismissed(false);
       setEntrySkipped(false);
     }
-  }, [sessionId]);
+    setEntryPreferencesReady(true);
+  }, [sessionId, userId]);
 
   const busy = phase === "connecting" || phase === "probing";
   const joined = phase === "joined";
@@ -141,7 +150,7 @@ export function DailyVideoDock({
 
   // Everyone: probe then connect once on entry (layout switches stay joined).
   useEffect(() => {
-    if (sessionEnded || entrySkipped || entryStarted) return;
+    if (!entryPreferencesReady || sessionEnded || entrySkipped || entryStarted) return;
     if (phase === "joined") {
       setEntryStarted(true);
       return;
@@ -150,14 +159,17 @@ export function DailyVideoDock({
     setEntryStarted(true);
     setExpanded(true);
     setPendingConnect(true);
-  }, [sessionEnded, entrySkipped, entryStarted, phase, setExpanded]);
+  }, [entryPreferencesReady, sessionEnded, entrySkipped, entryStarted, phase, setExpanded]);
 
   const requestConnect = () => {
+    setEntrySkipped(false);
+    try { sessionStorage.removeItem(entrySkipKey(sessionId)); } catch { /* Storage unavailable. */ }
     setExpanded(true);
     setPendingConnect(true);
   };
 
   const skipEntry = () => {
+    cancelRecovery();
     setEntrySkipped(true);
     try {
       sessionStorage.setItem(entrySkipKey(sessionId), "1");
@@ -599,6 +611,11 @@ export function DailyVideoDock({
         style={shellStyle}
         aria-hidden={showEntryGate}
       >
+        {showDockChrome && reconnecting ? (
+          <p role="status" className="shrink-0 border-b border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+            Reconnecting video… Your lesson stays open.
+          </p>
+        ) : null}
         {showDockChrome ? (
           <div
             className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-3 py-2"

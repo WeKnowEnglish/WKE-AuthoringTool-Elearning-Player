@@ -18,7 +18,7 @@ const admin = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: {
 const stamp = Date.now().toString(36);
 const output = resolve("../.codex-build/classroom-live-smoke", stamp);
 mkdirSync(output, { recursive: true });
-const report = { origin, checks: [], browserErrors: [], requestFailures: [], classId: null, sessionId: null, roundId: null };
+const report = { origin, checks: [], browserErrors: [], browserErrorOrigins: [], requestFailures: [], classId: null, sessionId: null, roundId: null };
 const check = message => { report.checks.push(message); console.log(message); };
 const createdUsers = [];
 const contexts = [];
@@ -45,7 +45,12 @@ async function surface(credentials, mobile = false) {
   const result = await auth.auth.signInWithPassword(credentials);
   assert.ifError(result.error);
   const context = await browser.newContext({ baseURL: origin, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 } });
-  const network = { offlineRoomId: null, sockets: [] };
+  const network = { offlineRoomId: null, sockets: [], dailyOffline: false, dailySockets: [] };
+  if (process.argv.includes('--require-recovery')) await context.routeWebSocket(/daily\.co/, socket => {
+    if (network.dailyOffline) { void socket.close({ code: 1001 }); return; }
+    const server = socket.connectToServer();
+    network.dailySockets.push({ socket, server });
+  });
   // Browser offline emulation leaves established WebSockets open. Forward real
   // provider traffic, but explicitly sever its socket for the reconnect check.
   await context.routeWebSocket(/liveblocks/, socket => {
@@ -58,6 +63,15 @@ async function surface(credentials, mobile = false) {
   await context.addCookies(cookies.map(cookie => ({ name: cookie.name, value: cookie.value, url: origin, sameSite: "Lax", secure: origin.startsWith("https:") })));
   await context.grantPermissions(["camera", "microphone"]);
   const page = await context.newPage();
+  await page.exposeBinding('__wkeSmokeErrorOrigin', ({ frame }, detail) => {
+    const frameUrl = frame.url();
+    report.browserErrorOrigins.push({ origin: frameUrl.startsWith('http') ? new URL(frameUrl).origin : frameUrl, name: detail.name, message: detail.message });
+  });
+  await page.addInitScript(() => {
+    const observeError = detail => { void window.__wkeSmokeErrorOrigin(detail).catch(() => {}); };
+    window.addEventListener('unhandledrejection', event => observeError({ name: event.reason?.name ?? 'Unknown', message: String(event.reason?.message ?? event.reason) }));
+    window.addEventListener('error', event => observeError({ name: event.error?.name ?? 'Error', message: event.message }));
+  });
   page.setDefaultTimeout(60_000);
   await page.addLocatorHandler(page.getByRole("button", { name: "Continue without video", exact: true }), async button => {
     await button.click();
@@ -143,10 +157,27 @@ try {
   await expect.poll(()=>teacher.page.evaluate(()=>Boolean(document.fullscreenElement))).toBe(false);
   report.learnSwitchMs=[];
   report.teacherLearnSwitchMs=[];
+  report.teacherRenderMs=[];
   for(let attempt=0;attempt<3;attempt++){
-    const started=Date.now();
-    await teacher.page.getByRole('button',{name:'Learn',exact:true}).click();
+    const learnButton=teacher.page.getByRole('button',{name:'Learn',exact:true});
+    // Exclude waiting for the preceding command's disabled button. Measure from
+    // the actual click; observe the teacher's first DOM update inside the browser.
+    await expect(learnButton).toBeEnabled();
+    await learnButton.evaluate(button=>button.addEventListener('click',()=>{
+      const measurement={startedAt:Date.now(),renderMs:null};
+      window.__wkeSmokeNavigation=measurement;
+      const clickedAt=performance.now();
+      const observer=new MutationObserver(()=>{
+        const tab=[...document.querySelectorAll('[role="tab"]')].find(element=>element.textContent.trim()==='Whiteboard'&&element.getClientRects().length>0);
+        if(tab){measurement.renderMs=Math.round(performance.now()-clickedAt);observer.disconnect();}
+      });
+      observer.observe(document.querySelector('[data-classroom-shell]'),{childList:true,subtree:true,attributes:true});
+    },{once:true,capture:true}));
+    await learnButton.click();
     await expect(teacher.page.getByRole('tab',{name:'Whiteboard',exact:true})).toBeVisible();
+    const measured=await teacher.page.evaluate(()=>window.__wkeSmokeNavigation);
+    const started=measured.startedAt;
+    report.teacherRenderMs.push(measured.renderMs);
     report.teacherLearnSwitchMs.push(Date.now()-started);
     for(const current of surfaces)await expect(current.page.getByRole('tab',{name:'Whiteboard',exact:true})).toBeVisible();
     report.learnSwitchMs.push(Date.now()-started);
@@ -224,6 +255,45 @@ try {
   }));
   for(const text of contributions)await expectWriting(surfaces,text.trim());
   check('All four participants write together while the same video call continues');
+  if (process.argv.includes('--require-recovery')) {
+    report.automaticRejoins=[];
+    for (const [current, loseContext] of [[students[0], false], [teacher, false], [students[1], true]]) {
+      await current.page.evaluate(clearContext => {
+        sessionStorage.removeItem('wke:app-diagnostics:v1');
+        if(clearContext) sessionStorage.removeItem('wke-vc-session-context');
+      }, loseContext);
+      const began=Date.now();
+      await current.page.reload({ waitUntil:'domcontentloaded',timeout:120000 });
+      // No Join click or class-code submission is allowed in this check.
+      await expect.poll(async()=>(await diagnostics(current)).some(e=>e.name==='daily_join'&&e.kind==='span'),{timeout:90000}).toBe(true);
+      await expect(editor(current)).toContainText('Our video lesson is ready.');
+      for(const text of contributions)await expect(editor(current)).toContainText(text.trim());
+      report.automaticRejoins.push({ role:current===teacher?'teacher':'student',contextRestored:loseContext,ms:Date.now()-began });
+      const index=surfaces.indexOf(current);
+      iframeHandles[index]=await current.page.locator('iframe').elementHandle();
+      joinsBefore[index]=(await diagnostics(current)).filter(e=>e.name==='daily_join_start').length;
+    }
+    check('Teacher and student refresh automatically rejoin video and restore the same writing; missing classroom context is recovered without a join code');
+
+    const current=students[2];
+    const index=surfaces.indexOf(current);
+    const joins=(await diagnostics(current)).filter(e=>e.name==='daily_join'&&e.kind==='span').length;
+    assert(current.network.dailySockets.length>0,'A real Daily signaling socket is required for the network-loss check.');
+    current.network.dailyOffline=true;
+    for(const pair of current.network.dailySockets) await Promise.all([pair.socket.close({code:1001}),pair.server.close({code:1001})].map(p=>p.catch(()=>{})));
+    await expect(current.page.getByRole('status').filter({hasText:'Reconnecting video'})).toBeVisible({timeout:30000});
+    // Beyond Daily's signaling grace: exercise application recovery, not only
+    // the provider's brief-interruption path. Only this fixture is disconnected.
+    await current.page.waitForTimeout(30000);
+    const restoredAt=Date.now(); current.network.dailyOffline=false;
+    await expect.poll(async()=>(await diagnostics(current)).filter(e=>e.name==='daily_join'&&e.kind==='span').length,{timeout:90000}).toBeGreaterThan(joins);
+    await expect(editor(current)).toContainText('Our video lesson is ready.');
+    for(const text of contributions)await expect(editor(current)).toContainText(text.trim());
+    report.videoRecoveryMs=Date.now()-restoredAt;
+    iframeHandles[index]=await current.page.locator('iframe').elementHandle();
+    joinsBefore[index]=(await diagnostics(current)).filter(e=>e.name==='daily_join_start').length;
+    check('A prolonged real video-signaling interruption automatically rejoins without resetting the shared document');
+  }
   const collectResponse=teacher.page.waitForResponse(r=>r.url().endsWith(`/api/document/${report.roundId}/commands`)&&r.request().postDataJSON()?.type==='COLLECT');
   await teacher.page.getByRole('button',{name:'Collect',exact:true}).click();
   await json(await collectResponse);
@@ -237,6 +307,13 @@ try {
     assert.equal((await diagnostics(current)).filter(e=>e.name==='daily_join_start').length,joinsBefore[index],'Switching Learn must not rejoin video.');
   }
   check('Video iframe and joined call survive Learn navigation and whiteboard launch');
+  report.playingVideoCounts=[];
+  for(const current of surfaces) {
+    const videos=current.page.frameLocator('iframe').locator('video');
+    await expect.poll(()=>videos.evaluateAll(elements=>elements.filter(video=>!video.paused&&video.readyState>=2&&video.videoWidth>0).length)).toBeGreaterThan(0);
+    report.playingVideoCounts.push(await videos.evaluateAll(elements=>elements.filter(video=>!video.paused&&video.readyState>=2&&video.videoWidth>0).length));
+  }
+  check('Every participant still has playable video after navigation, reconnect and writing');
   report.javascript=await teacher.page.evaluate(()=>performance.getEntriesByType('resource').filter(e=>e.name.includes(location.origin)&&/\.js(?:\?|$)/.test(e.name)).map(e=>({path:new URL(e.name).pathname,bytes:e.encodedBodySize,ms:Math.round(e.duration)})));
   await teacher.page.screenshot({path:resolve(output,'teacher-document-video.png'),fullPage:true});
   assert.equal(report.browserErrors.length,0,JSON.stringify(report.browserErrors));

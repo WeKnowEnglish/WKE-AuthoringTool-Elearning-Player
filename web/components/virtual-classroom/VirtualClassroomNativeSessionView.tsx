@@ -483,6 +483,7 @@ export function VirtualClassroomNativeSessionView(props: Props) {
 
       <DailyVideoDock
         sessionId={sessionId}
+        userId={userId}
         isHost={role === "host"}
         sessionEnded={false}
         layout={isMeeting ? "stage" : "dock"}

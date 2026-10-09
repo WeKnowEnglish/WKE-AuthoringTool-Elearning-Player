@@ -11,6 +11,7 @@ export function gradedTrackTemplateGradingPolicy(
     kind === "question_writing" ||
     kind === "writing_prompt" ||
     kind === "creative_presentation" ||
+    kind === "mini_play" ||
     kind === "free_response" ||
     kind === "speaking_prompt"
   ) {

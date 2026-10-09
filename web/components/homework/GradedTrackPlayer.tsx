@@ -22,6 +22,7 @@ import {
 } from "@/lib/graded-tracks";
 import { acceptPrimaryRewardReceipt } from "@/lib/primary-player/client";
 import { CreativePresentationViewer } from "@/components/homework/CreativePresentationViewer";
+import { MiniPlayViewer } from "@/components/homework/MiniPlayViewer";
 import { StudentActionFailureNotice } from "@/components/homework/StudentActionFailureNotice";
 import { useStudentActionAuthFailure } from "@/lib/auth/use-student-action-auth-failure";
 
@@ -167,7 +168,9 @@ export function GradedTrackPlayer({
   const [speakingRecordings, setSpeakingRecordings] = useState<
     AssessmentSpeakingRecording[]
   >(() => [...initialSpeakingRecordings]);
-  const [finished, setFinished] = useState(alreadyCompleted);
+  const [finished, setFinished] = useState(alreadyCompleted || initialCollectionAttempt?.status === "submitted");
+  const [submitted, setSubmitted] = useState(alreadyCompleted || initialCollectionAttempt?.status === "submitted");
+  const [draftSaved, setDraftSaved] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const { authFailure, captureAuthFailure, clearAuthFailure } =
     useStudentActionAuthFailure();
@@ -215,7 +218,7 @@ export function GradedTrackPlayer({
     setNotice(null);
     clearAuthFailure();
     startTransition(async () => {
-      if (hasCollectionSegments && homeworkId) {
+      if (hasCollectionSegments && homeworkId && !submitted) {
         const result = await saveCollectionDraft(false);
         if (!result.ok) {
           if (captureAuthFailure(result, "save_graded_track_draft")) return;
@@ -224,6 +227,7 @@ export function GradedTrackPlayer({
         }
       }
       setActiveIndex(nextIndex);
+      setDraftSaved(hasCollectionSegments && !submitted);
     });
   };
 
@@ -255,6 +259,7 @@ export function GradedTrackPlayer({
           acceptPrimaryRewardReceipt(completion.receipt.rewardReceipt);
         }
       }
+      setSubmitted(true);
       setFinished(true);
     });
   };
@@ -280,6 +285,17 @@ export function GradedTrackPlayer({
             />
           </section>
         ))}
+        {freeze.collectionDocument?.parts.filter((part) => part.kind === "mini_play").map((part) => <MiniPlayViewer key={part.id} part={part} answers={collectionResponses[part.id]?.answers ?? {}} />)}
+        {freeze.collectionDocument?.parts.some((part) => part.kind === "mini_play") ? <section className="rounded-2xl border border-violet-200 bg-white p-4" aria-label="Teacher feedback">
+          <h2 className="text-lg font-extrabold text-violet-950">Teacher feedback</h2>
+          {initialCollectionAttempt?.review ? <div className="mt-3 space-y-3">
+            {freeze.collectionDocument.parts.filter((part) => part.kind === "mini_play").map((part) => {
+              const review = initialCollectionAttempt.review?.parts[part.id];
+              return <div key={part.id}><h3 className="font-bold text-stone-900">{part.title}</h3>{review ? <><p className="mt-1 font-semibold text-violet-800">{review.score} / {review.maxScore} points</p><p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-stone-700">{review.feedback || "Your teacher has reviewed this play."}</p></> : <p className="mt-1 text-sm text-stone-600">Waiting for your teacher to review this play.</p>}</div>;
+            })}
+            {initialCollectionAttempt.review.feedback ? <p className="whitespace-pre-wrap text-sm leading-6 text-stone-700">{initialCollectionAttempt.review.feedback}</p> : null}
+          </div> : <p className="mt-2 text-sm text-stone-600">Waiting for your teacher. Open this homework again later to read their feedback.</p>}
+        </section> : null}
       </div>
     );
   }
@@ -395,6 +411,7 @@ export function GradedTrackPlayer({
             <button
               key={entry.partId}
               type="button"
+              disabled={pending}
               onClick={() => handleNavigate(index)}
               aria-label={`Activity ${index + 1}: ${entry.label}`}
               className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-xs font-extrabold ${
@@ -420,18 +437,18 @@ export function GradedTrackPlayer({
           accentClass={theme.accent}
         />
 
-        <div className="mt-6">
+        <fieldset disabled={pending} className="mt-6 min-w-0">
           {segment.type === "collection" ? (
             <HomeworkCollectionPlayer
               document={{ version: 1, parts: [segment.part] }}
               homeworkId={homeworkId}
               initialAttempt={initialCollectionAttempt}
-              alreadyCompleted={alreadyCompleted}
+              alreadyCompleted={submitted}
               mode={mode}
               focusPartId={segment.partId}
               segmentMode
               responses={collectionResponses}
-              onResponsesChange={setCollectionResponses}
+              onResponsesChange={(next) => { setCollectionResponses(next); setDraftSaved(false); }}
               speakingRecordings={speakingRecordings}
               onSpeakingRecordingSaved={(recording) => {
                 setSpeakingRecordings((current) => {
@@ -483,7 +500,7 @@ export function GradedTrackPlayer({
               deferOverallCompletion
             />
           ) : null}
-        </div>
+        </fieldset>
 
         {authFailure && homeworkId ? (
           <StudentActionFailureNotice
@@ -500,8 +517,10 @@ export function GradedTrackPlayer({
           </p>
         ) : null}
 
-        {!authoringPreview ? (
+        {draftSaved ? <p role="status" className="mt-4 text-sm font-semibold text-emerald-800">Draft saved. You can return to this homework later.</p> : null}
+        {!authoringPreview && !submitted ? (
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-4">
+            {hasCollectionSegments ? <button type="button" disabled={pending} onClick={() => handleNavigate(displayIndex)} className="min-h-11 rounded-xl border border-stone-300 px-4 text-sm font-bold disabled:opacity-50">{pending ? "Saving…" : "Save draft"}</button> : null}
             <button
               type="button"
               disabled={pending || displayIndex === 0}

@@ -37,7 +37,14 @@ export async function getMyHomeworkCollectionAttempt(
     .eq("student_id", user.id)
     .maybeSingle();
   if (error || !data) return null;
-  return homeworkCollectionAttemptFromRow(data as Record<string, unknown>);
+  const attempt = homeworkCollectionAttemptFromRow(data as Record<string, unknown>);
+  if (attempt.status !== "submitted") return attempt;
+  const reviewResult = await supabase.from("homework_collection_reviews")
+    .select("parts, feedback, reviewed_at")
+    .eq("attempt_id", attempt.id)
+    .eq("student_id", user.id)
+    .maybeSingle();
+  return { ...attempt, review: reviewResult.error ? null : homeworkCollectionReviewFromRow(reviewResult.data) };
 }
 
 export async function listHomeworkCollectionAttemptsForTeacher(input: {

@@ -23,6 +23,7 @@ import {
   isCollectionReadingModuleFormat,
 } from "@/lib/homework-collections/document-module";
 import { isHomeworkStudioFormat } from "@/lib/class-homework/types";
+import { createMiniPlayContent, miniPlayAuthoringIssues, parseMiniPlayContent } from "./mini-play";
 import {
   createCreativePresentationContent,
   creativePresentationAnswerIds,
@@ -83,6 +84,7 @@ export function homeworkCollectionPartLabel(kind: HomeworkCollectionPartKind): s
   if (kind === "document_module") return "Reading activity";
   if (kind === "speaking_prompt") return "Speaking prompt";
   if (kind === "creative_presentation") return "Creative presentation";
+  if (kind === "mini_play") return "Mini play";
   return "Free response";
 }
 
@@ -91,7 +93,7 @@ export function homeworkCollectionGradingMode(
 ): "automatic" | "teacher_review" {
   return kind === "free_response" ||
     kind === "speaking_prompt" ||
-    kind === "creative_presentation"
+    kind === "creative_presentation" || kind === "mini_play"
     ? "teacher_review"
     : "automatic";
 }
@@ -423,6 +425,8 @@ export function homeworkCollectionPartValidationIssues(raw: unknown): string[] {
     return issues;
   }
 
+  if (raw.kind === "mini_play") return [...issues, ...miniPlayAuthoringIssues(raw)];
+
   if (raw.kind === "creative_presentation") {
     const part = {
       schemaVersion: HOMEWORK_COLLECTION_VERSION,
@@ -571,6 +575,9 @@ export function createHomeworkCollectionPart(
       maxDurationSeconds: 60,
       maxPoints: 5,
     };
+  }
+  if (kind === "mini_play") {
+    return { ...base, kind, title: "Write a mini play", instructions: "Plan your characters and setting. Write your script, then read it aloud before submitting.", ...createMiniPlayContent() };
   }
   if (kind === "creative_presentation") {
     return {
@@ -862,6 +869,11 @@ export function parseHomeworkCollectionPart(raw: unknown): HomeworkCollectionPar
     return creativePresentationValidationIssues(part).length === 0 ? part : null;
   }
 
+  if (kind === "mini_play") {
+    const content = parseMiniPlayContent(raw);
+    return content ? { ...base, kind, ...content } : null;
+  }
+
   if (kind !== "free_response") return null;
 
   const prompts = (Array.isArray(raw.prompts) ? raw.prompts : [])
@@ -902,6 +914,7 @@ export function parseHomeworkCollectionDocument(
 }
 
 export function homeworkCollectionPartItemCount(part: HomeworkCollectionPart): number {
+  if (part.kind === "mini_play") return 4;
   if (part.kind === "multiple_choice") return part.questions.length;
   if (part.kind === "line_match") return part.pairs.length;
   if (part.kind === "free_response") return part.prompts.length;
@@ -916,6 +929,7 @@ export function homeworkCollectionPartItemCount(part: HomeworkCollectionPart): n
 }
 
 export function homeworkCollectionPartMaxScore(part: HomeworkCollectionPart): number {
+  if (part.kind === "mini_play") return part.maxPoints;
   if (part.kind === "free_response") {
     return part.prompts.reduce((total, prompt) => total + prompt.maxPoints, 0);
   }

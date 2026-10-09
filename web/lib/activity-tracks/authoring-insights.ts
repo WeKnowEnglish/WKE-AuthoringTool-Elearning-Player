@@ -49,6 +49,7 @@ export function activityItemCount(part: ActivityTrackPart): number {
   if (part.source.type === "homework_part") {
     const record = part.source.part as unknown as Record<string, unknown>;
     if (part.source.part.kind === "creative_presentation") return 4;
+    if (part.source.part.kind === "mini_play") return 4;
     if (part.source.part.kind === "speaking_prompt") return 1;
     if (part.source.part.kind === "document_module") {
       const nested = part.source.part.document;
@@ -86,6 +87,7 @@ export function activityItemCount(part: ActivityTrackPart): number {
 
 export function activityItemNoun(part: ActivityTrackPart): string {
   if (part.kind === "creative_presentation") return "step";
+  if (part.kind === "mini_play") return "section";
   if (part.kind === "multiple_choice" || part.kind === "secondary_questions") {
     return "question";
   }

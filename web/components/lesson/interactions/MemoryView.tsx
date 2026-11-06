@@ -71,6 +71,8 @@ export function MemoryView({
   const gridHostRef = useRef<HTMLDivElement>(null);
   const [gridHostSize, setGridHostSize] = useState({ width: 0, height: 0 });
   const [standalonePanelHeight, setStandalonePanelHeight] = useState<number | null>(null);
+  const hasLongText = cards.some((card) => card.textKind === "definition" || card.textKind === "example");
+  const minimumCardHeight = hasLongText ? 192 : 112;
 
   useEffect(() => {
     if (stageFooter) return;
@@ -145,19 +147,25 @@ export function MemoryView({
         cards.length,
         gridHostSize.width,
         gridHostSize.height,
+        12,
+        hasLongText ? 128 : 96,
       ),
-    [cards.length, gridHostSize.height, gridHostSize.width],
+    [cards.length, gridHostSize.height, gridHostSize.width, hasLongText],
   );
   return (
-    <div className={interactionLessonShellClass(controlsPlacement)}>
+    <div className={clsx(interactionLessonShellClass(controlsPlacement), stageFooter && "!px-2 sm:!px-4")}>
       <div
         ref={panelRef}
         className={clsx(
           "min-h-0",
-          stageFooter ? "flex-1" : "h-[min(72dvh,44rem)]",
+          stageFooter ? "shrink-0" : "h-[min(72dvh,44rem)]",
         )}
         style={
-          !stageFooter && standalonePanelHeight
+          stageFooter
+            // Embedded homework has natural height rather than a sized stage.
+            // Size-contained cards cannot give that stage an intrinsic height.
+            ? { height: "clamp(18rem, 65dvh, 44rem)" }
+            : standalonePanelHeight
             ? { height: `${standalonePanelHeight}px` }
             : undefined
         }
@@ -169,12 +177,15 @@ export function MemoryView({
             {passed ? `All pairs found in ${moves} moves!` : `${matched.size}/${parsed.pairs.length} pairs · ${moves} moves`}
           </p>
         </div>
-        <div ref={gridHostRef} className="mt-3 flex min-h-0 flex-1 items-center justify-center overflow-hidden">
+        <div ref={gridHostRef} className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <div
-            className="grid h-full w-full max-w-5xl gap-2 sm:gap-3"
+            className="mx-auto grid h-full w-full max-w-5xl gap-2 sm:gap-3"
             style={{
+              // Keep pictures and sentences readable on short/narrow screens;
+              // the board scrolls instead of compressing cards into strips.
+              minHeight: `${gridLayout.rows * minimumCardHeight + (gridLayout.rows - 1) * 12}px`,
               gridTemplateColumns: `repeat(${gridLayout.columns}, minmax(0, 1fr))`,
-              gridTemplateRows: `repeat(${gridLayout.rows}, minmax(0, 1fr))`,
+              gridTemplateRows: `repeat(${gridLayout.rows}, minmax(${minimumCardHeight}px, 1fr))`,
             }}
           >
             {cards.map((card) => {
@@ -187,7 +198,7 @@ export function MemoryView({
                   disabled={passed || checking || matched.has(card.pairId)}
                   aria-label={visible ? (card.kind === "text" ? card.text ?? card.word : `Picture for ${card.word}`) : "Hidden memory card"}
                   className={clsx(
-                    "relative h-full min-h-0 w-full overflow-hidden rounded-xl border-2 border-kid-ink bg-kid-cta p-1 text-kid-ink shadow-md transition [container-type:size] hover:-translate-y-0.5 disabled:hover:translate-y-0 sm:border-4 sm:p-1.5",
+                    "relative h-full min-h-0 w-full overflow-hidden rounded-xl border-2 border-kid-ink bg-kid-cta p-1 text-kid-ink shadow-md transition [container-type:inline-size] hover:-translate-y-0.5 disabled:hover:translate-y-0 sm:border-4 sm:p-1.5",
                     visible && "bg-white",
                     matched.has(card.pairId) && "border-emerald-700 bg-emerald-50 opacity-75",
                   )}
@@ -195,12 +206,12 @@ export function MemoryView({
                   {visible ? (
                     card.kind === "text" ? (
                       <span className="flex h-full flex-col items-center justify-center gap-1 break-words text-center">
-                        {card.textKind !== "word" ? (
-                          <span className="text-[clamp(0.4rem,8cqw,0.68rem)] font-black uppercase tracking-wide text-kid-ink/45">
+                        {card.textKind && card.textKind !== "word" ? (
+                          <span className="text-[clamp(0.65rem,8cqw,0.75rem)] font-black uppercase tracking-wide text-kid-ink/45">
                             {card.textKind === "definition" ? "Definition" : "Example"}
                           </span>
                         ) : null}
-                        <span className="text-[clamp(0.52rem,13cqw,1.25rem)] font-black leading-tight">
+                        <span className="text-[clamp(0.875rem,11cqw,1.25rem)] font-black leading-tight">
                           {card.text ?? card.word}
                         </span>
                       </span>
@@ -208,7 +219,7 @@ export function MemoryView({
                       // eslint-disable-next-line @next/next/no-img-element -- activity media can be remote or a data URL
                       <img src={card.imageUrl} alt={card.word} className={clsx("h-full w-full rounded-lg", card.imageFit === "cover" ? "object-cover" : "object-contain")} />
                     ) : (
-                      <span className="flex h-full items-center justify-center break-words text-center text-[clamp(0.52rem,12cqw,1.1rem)] font-extrabold leading-tight">{card.clue || card.word}</span>
+                      <span className="flex h-full items-center justify-center break-words text-center text-[clamp(0.875rem,11cqw,1.1rem)] font-extrabold leading-tight">{card.clue || card.word}</span>
                     )
                   ) : (
                     <span className="flex h-full items-center justify-center text-[clamp(1.2rem,28cqw,3.5rem)] font-black text-kid-ink/70" aria-hidden>?</span>
